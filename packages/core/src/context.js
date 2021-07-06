@@ -7,29 +7,61 @@ const node = Symbol();
 const mb = Symbol();
 const pid = Symbol();
 const forward = Symbol();
+const forwardWithSelf = Symbol();
+const links = Symbol();
 
 export class Context {
     constructor(owner) {
         this[node] = owner;
         this[mb] = new MessageBox();
         this[pid] = owner.pid();
+        this[links] = new Set();
 
         this[forward]('ref');
         this[forward]('deliver', 'send')
         this[forward]('spawn');
-        this[forward]('spawnLink');
+        this[forwardWithSelf]('spawnLink');
         this[forward]('register')
         this[forward]('unregister')
         this[forward]('whereis');
 
-        this.death = new Promise(resolve => this.die = resolve);
+        this.death = new Promise(
+            resolve => this.die = resolve
+        );
+
+        this.death.then(
+            (reason) => this.notify(reason)
+        );
+        this.death.then(
+            (reason) => this.destroy(reason)
+        );
     }
 
-    destroy() {
-        log('destroy()');
+    link(other) {
+        this[links].add(other.self());
+        other[links].add(this.self());
+    }
+
+    notify(reason) {
+        const pid = this.self();
+        const exit = true;
+        this[links].forEach(
+            link => this.send(
+                link,
+                {
+                    exit,
+                    pid,
+                    reason
+                }
+            )
+        );
+    }
+
+    destroy(reason) {
         this[mb] = null;
         this[pid] = null;
         this[node] = null;
+        this[links] = null;
     }
 
     _deliver(message) {
@@ -40,6 +72,15 @@ export class Context {
     [forward](operation, name = operation) {
         this[name] = (...args) => {
             return this[node][operation](
+                ...args
+            );
+        }
+    }
+
+    [forwardWithSelf](operation, name = operation) {
+        this[name] = (...args) => {
+            return this[node][operation](
+                this,
                 ...args
             );
         }

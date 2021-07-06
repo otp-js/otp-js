@@ -3,8 +3,6 @@ import { Context } from './context.js';
 import debug from 'debug';
 import { v4 } from 'uuid';
 
-const log = debug('otpjs:core:node');
-
 export class Node {
     constructor() {
         this._id = v4();
@@ -30,12 +28,9 @@ export class Node {
     }
 
     register(pid, name) {
-        log('register(%o, %o)', pid, name);
         const ref = this._processes.get(pid.process);
-        log('register(%o, %o) : ref : %o', pid, name, ref)
         if (ref) {
             const proc = ref.deref();
-            log('register(%o, %o) : proc : %o', pid, name, proc);
             if (proc) {
                 if (this._registrations.has(name)) {
                     throw Error('badarg');
@@ -64,7 +59,6 @@ export class Node {
     }
 
     whereis(name) {
-        log('whereis(%o: this._registrations : %o', name, this._registrations);
         if (this._registrations.has(name)) {
             return this._registrations.get(name);
         } else {
@@ -81,21 +75,36 @@ export class Node {
     }
 
     makeContext() {
-        return new Context(this);
+        const ctx = new Context(this);
+        this._processes.set(
+            ctx.self().process,
+            new WeakRef(ctx)
+        );
+        return ctx;
     }
 
     spawn(fun) {
         const ctx = this.makeContext();
 
-        this._processes.set(
-            ctx.self().process,
-            new WeakRef(ctx)
-        );
-
         Promise.resolve(fun(ctx)).finally(() => {
             this._processes.delete(ctx.self().process);
             ctx.die();
         })
+
+        return ctx.self();
+    }
+
+    spawnLink(linked, fun) {
+        const ctx = this.makeContext();
+        ctx.link(linked);
+        Promise.resolve(fun(ctx)).then(
+            () => ctx.die(),
+            (err) => ctx.die(err.message)
+        ).finally(
+            () => this._processes.delete(
+                ctx.self().process
+            )
+        );
 
         return ctx.self();
     }
@@ -106,22 +115,16 @@ export class Node {
         } else {
             to = this._registrations.get(to);
         }
-        log('deliver(%o, %o)', to, message);
         if (to.node == Pid.LOCAL) {
-            log('deliver(%o, %o) : LOCAL', to, message);
             const ref = this._processes.get(to.process);
             if (ref) {
                 const ctx = ref.deref();
-                log('deliver(%o, %o) : LOCAL : ctx : %o', to, message, ctx);
                 ctx._deliver(message);
             }
         } else {
-            log('deliver(%o, %o) : REMOTE', to, message);
-            log('deliver(%o, %o) : REMOTE : this._processes : %o', to, message, this._processes);
             const ref = this._processes.get(to.node);
             if (ref) {
                 const ctx = ref.deref();
-                log('deliver(%o, %o) : REMOTE : ctx : %o', to, message, ctx);
                 ctx._deliver({
                     to,
                     message
