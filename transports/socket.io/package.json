@@ -1,17 +1,19 @@
 {
-  "name": "@otpjs/core",
+  "name": "@otpjs/transports-socket.io",
   "version": "0.1.0",
-  "description": "Open Telecom Platform",
+  "description": "A transport for communicating with OTP nodes over socket.io",
   "keywords": [
     "otp",
+    "open",
+    "telecom",
+    "platform",
     "erlang",
     "javascript"
   ],
   "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
-  "homepage": "https://github.com/otp-js/otp-js#readme",
+  "homepage": "https://otpjs.dev",
   "license": "MIT",
   "main": "lib/index.js",
-  "type": "module",
   "directories": {
     "lib": "lib",
     "test": "__tests__"

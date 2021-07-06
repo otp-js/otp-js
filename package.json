@@ -9,6 +9,10 @@
     "@babel/cli": "^7.14.5",
     "@babel/core": "^7.14.6",
     "@babel/preset-env": "^7.14.7",
-    "lerna": "^4.0.0"
+    "@otpjs/core": "file:packages/core",
+    "jest": "^27.0.6",
+    "lerna": "^4.0.0",
+    "socket.io": "^4.1.2",
+    "socket.io-client": "^4.1.2"
   }
 }

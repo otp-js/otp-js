@@ -1,20 +1,14 @@
-const presets = require('ts-jest/presets');
 module.exports = {
-    testRegex: "(/test/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-    moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+    testRegex: "(/test/.*|(\\.|/)(test|spec))\\.(jsx?)$",
+    setupFilesAfterEnv: ['./tools/regenerator.js'],
+    moduleFileExtensions: ["js", "jsx", "json", "node"],
     collectCoverage: true,
     collectCoverageFrom: [
-        "packages/*/src/**/*.{js,ts}"
-    ],
-    coveragePathIgnorePatterns: [
-        "\\.d\\.ts$"
+        "packages/*/src/**/*.js",
+        "transports/*/src/**/*.js"
     ],
     rootDir: __dirname,
     testEnvironment: 'node',
-    preset: 'ts-jest/presets/js-with-ts',
-    transform: {
-        "^.+\\.[jt]sx?$": "ts-jest"
-    },
     coverageReporters: [
         "json",
         "text",
@@ -22,4 +16,3 @@ module.exports = {
         ["lcov", { projectRoot: __dirname }]
     ]
 };
-console.error('module.exports : %O', module.exports);
