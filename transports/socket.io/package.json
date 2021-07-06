@@ -36,5 +36,12 @@
   },
   "bugs": {
     "url": "https://github.com/otp-js/otp-js/issues"
+  },
+  "dependencies": {
+    "@otpjs/core": "file:../../packages/core"
+  },
+  "peerDependencies": {
+    "socket.io": "^4.1.2",
+    "socket.io-client": "^4.1.2"
   }
 }
