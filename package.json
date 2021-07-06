@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "build": "lerna run build --parallel",
-    "watch": "lerna run watch --parallel"
+    "watch": "lerna run watch --parallel",
+    "test": "jest --coverage --verbose"
   },
   "devDependencies": {
     "@babel/cli": "^7.14.5",

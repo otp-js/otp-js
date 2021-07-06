@@ -1,7 +1,3 @@
-import debug from 'debug';
-
-const log = debug('otpjs:core:types');
-
 export class Ref extends String {
     static LOCAL = 0;
     static regex = /^Ref<(?<node>[0-9]+)\.(?<ref>[0-9]+)>\.(?<count>[0-9]+)$/;

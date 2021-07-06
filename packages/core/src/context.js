@@ -1,7 +1,4 @@
-import debug from 'debug';
 import { MessageBox } from './message-box.js';
-
-const log = debug('otpjs:core:context');
 
 const node = Symbol();
 const mb = Symbol();
@@ -65,7 +62,6 @@ export class Context {
     }
 
     _deliver(message) {
-        log('_deliver() : this[mb].push(%o)', message)
         this[mb].push(message);
     }
 

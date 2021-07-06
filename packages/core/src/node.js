@@ -1,11 +1,9 @@
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
-import debug from 'debug';
-import { v4 } from 'uuid';
 
 export class Node {
-    constructor() {
-        this._id = v4();
+    constructor(id = Symbol()) {
+        this._id = id;
         this._processes = new Map();
         this._processesCount = 0;
         this._routers = new Map();
@@ -18,12 +16,10 @@ export class Node {
     }
 
     async system(ctx) {
-        const log = debug('otpjs:core:node:system');
         let running = true;
         while (running) {
-            log('awaiting message');
             const message = await ctx.receive();
-            log('message : %o', message);
+            // TODO: do something
         }
     }
 
