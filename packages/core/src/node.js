@@ -81,28 +81,36 @@ export class Node {
 
     spawn(fun) {
         const ctx = this.makeContext();
+        const pid = ctx.self();
 
-        Promise.resolve(fun(ctx)).finally(() => {
-            this._processes.delete(ctx.self().process);
-            ctx.die();
-        })
+        Promise.resolve(fun(ctx)).then(
+            () => ctx.die(),
+            (err) => ctx.die(err.message)
+        ).finally(
+            () => {
+                this._processes.delete(pid.process);
+            }
+        )
 
-        return ctx.self();
+        return pid;
     }
 
     spawnLink(linked, fun) {
         const ctx = this.makeContext();
+        const pid = ctx.self();
+
         ctx.link(linked);
+
         Promise.resolve(fun(ctx)).then(
             () => ctx.die(),
             (err) => ctx.die(err.message)
         ).finally(
             () => this._processes.delete(
-                ctx.self().process
+                pid.process
             )
         );
 
-        return ctx.self();
+        return pid;
     }
 
     deliver(to, message) {

@@ -1,9 +1,5 @@
-import debug from 'debug';
 import * as OTP from '@otpjs/core';
-
 import * as ProcLib from '../src';
-
-const log = debug('open-telecom:test:otp:ProcLib');
 
 describe('ProcLib', function() {
     let node = null;
@@ -20,12 +16,10 @@ describe('ProcLib', function() {
         expect(ProcLib).toHaveProperty('start');
         expect(ProcLib.start).toBeInstanceOf(Function);
 
-        log('start');
         const result = await ProcLib.start(ctx, async (ctx, spawner) => {
-            log('initAck');
             ProcLib.initAck(ctx, spawner);
+            await ctx.receive();
         });
-        log('started : %o', result);
 
         expect(result).toBeInstanceOf(Object);
         expect(result.ok).toBe(true);

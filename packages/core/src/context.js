@@ -27,10 +27,10 @@ export class Context {
         );
 
         this.death.then(
-            (reason) => this.notify(reason)
-        );
-        this.death.then(
-            (reason) => this.destroy(reason)
+            (reason) => {
+                this.notify(reason);
+                this.destroy(reason);
+            }
         );
     }
 
