@@ -36,5 +36,8 @@
   },
   "bugs": {
     "url": "https://github.com/otp-js/otp-js/issues"
+  },
+  "dependencies": {
+    "@otpjs/core": "file:../core"
   }
 }
