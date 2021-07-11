@@ -1,5 +1,6 @@
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
+import { normal } from './symbols.js';
 
 export class Node {
     constructor(id = Symbol()) {
@@ -12,14 +13,13 @@ export class Node {
         this._refCount = 0;
         this._registrations = new Map();
 
-        this.spawn((ctx) => this.system(ctx));
+        this._system = this.spawn((ctx) => this.system(ctx));
     }
 
     async system(ctx) {
         let running = true;
         while (running) {
             const message = await ctx.receive();
-            // TODO: do something
         }
     }
 
@@ -83,14 +83,7 @@ export class Node {
         const ctx = this.makeContext();
         const pid = ctx.self();
 
-        Promise.resolve(fun(ctx)).then(
-            () => ctx.die(),
-            (err) => ctx.die(err.message)
-        ).finally(
-            () => {
-                this._processes.delete(pid.process);
-            }
-        )
+        this.doSpawn(ctx, fun);
 
         return pid;
     }
@@ -100,17 +93,23 @@ export class Node {
         const pid = ctx.self();
 
         ctx.link(linked);
-
-        Promise.resolve(fun(ctx)).then(
-            () => ctx.die(),
-            (err) => ctx.die(err.message)
-        ).finally(
-            () => this._processes.delete(
-                pid.process
-            )
-        );
+        this.doSpawn(ctx, fun);
 
         return pid;
+    }
+
+    async doSpawn(ctx, fun) {
+        const pid = ctx.self();
+        try {
+            await fun(ctx);
+            ctx.die(normal);
+        } catch(err) {
+            ctx.die(err.message);
+        } finally {
+            this._processes.delete(
+                pid.process
+            )
+        }
     }
 
     deliver(to, message) {

@@ -1,5 +1,13 @@
 const resolvers = Symbol();
 
+function attempt(predicate, message) {
+    try {
+        return predicate(message);
+    } catch(err) {
+        return false;
+    }
+}
+
 export class MessageBox extends Array {
     constructor(...args) {
         super(...args);
@@ -14,7 +22,7 @@ export class MessageBox extends Array {
                     _resolve,
                     _reject,
                     predicate
-                ]) => predicate(message)
+                ]) => attempt(predicate,message)
             );
 
             if (index >= 0) {

@@ -1,29 +1,47 @@
+import debug from 'debug';
+const INIT_ACK = Symbol.for('otp.proc_lib.init_ack');
+
 export async function start(ctx, fun, timeout = 5000) {
-    const self    = ctx.self();
+    const self = ctx.self();
     const spawned = ctx.spawn((ctx) => fun(ctx, self));
 
-    await ctx.receive(({initAck, pid}) => {
-        return initAck && pid === spawned;
-    }, timeout);
+    const { response } = await ctx.receive(
+        (
+            {
+                [INIT_ACK]: initAck,
+                pid
+            }
+        ) => initAck && pid === spawned,
+        timeout
+    );
 
-    const ok = true;
-    return {ok, pid: spawned};
+    return response;
+
 }
 
 export async function startLink(ctx, fun, timeout = 5000) {
-    const self    = ctx.self();
+    const self = ctx.self();
     const spawned = ctx.spawnLink(ctx => fun(ctx, self));
 
-    await ctx.receive(({initAck, pid}) => {
-        return initAck && pid === spawned;
-    }, timeout);
+    const { response } = await ctx.receive(
+        (
+            {
+                [INIT_ACK]: initAck,
+                pid
+            }
+        ) => initAck && pid === spawned,
+        timeout
+    );
 
-    const ok = true;
-    return {ok, pid: spawned};
+    return response;
 }
 
-export async function initAck(ctx, sender) {
+export function initAck(ctx, sender, response) {
     const initAck = true;
-    const pid      = ctx.self();
-    ctx.send(sender, {initAck, pid});
+    const pid = ctx.self();
+    ctx.send(sender, {
+        [INIT_ACK]: initAck,
+        pid,
+        response
+    });
 }
