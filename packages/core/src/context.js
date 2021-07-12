@@ -163,7 +163,7 @@ export class Context {
         return message;
     }
 
-    async receiveOf(...predicates) {
+    async receiveWithPredicate(...predicates) {
         let timeout = Infinity;
 
         if (typeof predicates[predicate.length - 1] === 'number') {
