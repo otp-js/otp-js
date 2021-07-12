@@ -1,4 +1,4 @@
-import '@otp-js/test_utils';
+import '@otpjs/test_utils';
 
 import { Node, Ref, Pid, caseOf, Symbols, OTPError } from '@otpjs/core';
 import * as GenServer from '../src';
