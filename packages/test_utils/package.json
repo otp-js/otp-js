@@ -1,21 +1,11 @@
 {
-  "name": "@otpjs/gen_server",
+  "name": "@otpjs/test_utils",
   "version": "0.1.1",
-  "description": "A gen_server implementation for @otpjs/core",
-  "keywords": [
-    "open",
-    "telecom",
-    "platform",
-    "otp",
-    "javascript",
-    "erlang",
-    "gen_server"
-  ],
+  "description": "> TODO: description",
   "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
-  "homepage": "https://otpjs.dev",
+  "homepage": "https://github.com/otp-js/otp-js#readme",
   "license": "MIT",
   "main": "lib/index.js",
-  "type": "module",
   "directories": {
     "lib": "lib",
     "test": "__tests__"
@@ -38,8 +28,5 @@
   },
   "bugs": {
     "url": "https://github.com/otp-js/otp-js/issues"
-  },
-  "devDependencies": {
-    "@otpjs/test_utils": "file:../test_utils"
   }
 }

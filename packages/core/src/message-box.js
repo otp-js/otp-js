@@ -1,11 +1,17 @@
+import {ok} from './symbols';
+
 const resolvers = Symbol();
 
-function attempt(predicate, message) {
-    try {
-        return predicate(message);
-    } catch(err) {
-        return false;
+function attempt(predicates, message) {
+    for (let index = 0; index < predicates.length; index++) {
+        try {
+            const predicate = predicates[index];
+            return predicate(message);
+        } catch (err) {
+        }
     }
+
+    return false;
 }
 
 export class MessageBox extends Array {
@@ -13,6 +19,22 @@ export class MessageBox extends Array {
         super(...args);
 
         this[resolvers] = [];
+    }
+
+    clear(reason) {
+        this.splice(
+            0,
+            this.length
+        );
+
+        const droppedReceivers = this[resolvers].splice(
+            0,
+            this[resolvers].length
+        );
+
+        for (let [_resolve, reject, _predicate] of droppedReceivers) {
+            reject(reason);
+        }
     }
 
     push(message) {
@@ -29,9 +51,9 @@ export class MessageBox extends Array {
                 const [[
                     resolve,
                     _reject,
-                    _predicate
+                    predicate
                 ]] = this[resolvers].splice(index, 1);
-                resolve(message);
+                resolve([ ok, message, predicate ]);
             } else {
                 super.push(message);
             }
@@ -40,32 +62,43 @@ export class MessageBox extends Array {
         }
     }
 
-    async pop(predicate = () => true, timeout = Infinity) {
-        if (typeof predicate === 'number') {
-            timeout = predicate;
-            predicate = () => true;
+    async pop(predicates = () => true, timeout = Infinity) {
+        if (typeof predicates === 'number') {
+            timeout = predicates;
+            predicates = () => true;
+        }
+
+        if (!Array.isArray(predicates)) {
+            predicates = [predicates];
         }
 
         return new Promise((resolve, reject) => {
             if (this.length > 0) {
-                const index = this.findIndex(predicate);
-                if (index >= 0) {
-                    resolve(
-                        this._consume(index)
-                    )
-                } else {
-                    this._defer(
-                        resolve,
-                        reject,
-                        predicate,
-                        timeout
-                    );
+                for (let index = 0; index < this.length; index++) {
+                    const message = this[index];
+
+                    for (let predicate of predicates) {
+                        if (predicate(message)) {
+                            return resolve([
+                                ok,
+                                this._consume(index),
+                                predicate
+                            ]);
+                        }
+                    }
                 }
+
+                this._defer(
+                    resolve,
+                    reject,
+                    predicates,
+                    timeout
+                );
             } else {
                 this._defer(
                     resolve,
                     reject,
-                    predicate,
+                    predicates,
                     timeout
                 );
             }
@@ -82,6 +115,17 @@ export class MessageBox extends Array {
 
         if (timeout !== Infinity) {
             let originalResolve = resolve;
+            record[0] = resolve = (...args) => {
+                clearTimeout(timer);
+                originalResolve(...args);
+            };
+
+            let originalReject = reject;
+            record[1] = reject = (...args) => {
+                clearTimeout(timer);
+                originalReject(...args);
+            }
+
             timer = setTimeout(() => {
                 reject(Error('timeout'))
 
@@ -90,10 +134,6 @@ export class MessageBox extends Array {
                     this[resolvers].splice(index, 1);
                 }
             }, timeout);
-            record[0] = resolve = (...args) => {
-                clearTimeout(timer)
-                originalResolve(...args);
-            };
         }
 
         this[resolvers].push(record);

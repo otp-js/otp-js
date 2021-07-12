@@ -1,10 +1,11 @@
+import { OTPError } from "./error";
+
 export class Ref extends String {
     static LOCAL = 0;
     static regex = /^Ref<(?<node>[0-9]+)\.(?<ref>[0-9]+)>\.(?<count>[0-9]+)$/;
 
-    static isRef(string) {
-        return string instanceof Ref;
-    }
+    static isRef = (string) => string instanceof Ref;
+    static for = (node, ref) => new Ref(`Ref<${node}.${ref}>`);
 
     get node() {
         return this.match(Ref.regex).groups.node;
@@ -20,10 +21,6 @@ export class Ref extends String {
         }
         return null;
     }
-
-    static for(node, ref) {
-        return new Ref(`Ref<${node}.${ref}>`)
-    }
 }
 
 
@@ -31,19 +28,24 @@ export class Pid extends String {
     static LOCAL = 0;
     static regex = /^Pid<(?<node>[0-9]+)\.(?<process>[0-9]+)>$/;
 
-    static isPid(string) {
-        return string instanceof Pid;
-    }
+    static isPid = (string) => string instanceof Pid;
+    static of = (node, process) => new Pid(`Pid<${node}.${process}>`);
 
     get node() {
-        return this.match(Pid.regex).groups.node;
+        const match = this.match(Pid.regex);
+        if (match !== null) {
+            return match.groups.node;
+        } else {
+            throw new OTPError(['invalid_pid', this.toString()])
+        }
     }
 
     get process() {
-        return this.match(Pid.regex).groups.process;
-    }
-
-    static of(node, process) {
-        return new Pid(`Pid<${node}.${process}>`)
+        const match = this.match(Pid.regex);
+        if (match !== null) {
+            return match.groups.process;
+        } else {
+            throw new OTPError(['invalid_pid', this.toString()])
+        }
     }
 }

@@ -1,4 +1,6 @@
-import * as OTP from '@otpjs/core';
+import '@otpjs/test_utils';
+
+import * as OTP from '@otpjs/core/src';
 import * as ProcLib from '../src';
 
 describe('ProcLib', function() {
@@ -42,25 +44,32 @@ describe('ProcLib', function() {
         expect(ProcLib).toHaveProperty('startLink');
         expect(ProcLib.startLink).toBeInstanceOf(Function);
 
-        const { ok, pid } = await ProcLib.startLink(ctx, async (ctx, spawner) => {
+        ctx.processFlag(OTP.Symbols.trapExit, true);
+
+        const result = await ProcLib.startLink(ctx, async (ctx, spawner) => {
             await ProcLib.initAck(
                 ctx,
                 spawner,
-                {
-                    ok: true,
-                    pid: ctx.self()
-                }
+                [OTP.Symbols.ok, ctx.self()]
             );
         });
 
-        expect(ok).toBe(true);
-        expect(pid).toBeInstanceOf(OTP.Pid);
+        expect(
+            OTP.compare(
+                [
+                    OTP.Symbols.ok,
+                    OTP.Pid.isPid
+                ],
+                result
+            )
+        ).toBe(true);
 
         const exitMessage = await ctx.receive();
 
-        expect(exitMessage).toBeInstanceOf(Object);
-        expect(exitMessage.exit).toBe(true);
-        expect(exitMessage.pid).toBeInstanceOf(OTP.Pid);
-        expect(exitMessage.pid).toBe(pid);
+        expect(exitMessage).toMatchPattern([
+            OTP.Symbols.EXIT,
+            OTP.Pid.isPid,
+            OTP.Symbols._,
+        ])
     })
 })

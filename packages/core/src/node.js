@@ -1,6 +1,7 @@
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
-import { normal } from './symbols.js';
+import { ok, _, normal } from './symbols';
+import { OTPError } from './error';
 
 export class Node {
     constructor(id = Symbol()) {
@@ -29,7 +30,7 @@ export class Node {
             const proc = ref.deref();
             if (proc) {
                 if (this._registrations.has(name)) {
-                    throw Error('badarg');
+                    throw new OTPError('badarg');
                 } else {
                     this._registrations.set(name, pid);
 
@@ -99,16 +100,11 @@ export class Node {
     }
 
     async doSpawn(ctx, fun) {
-        const pid = ctx.self();
         try {
             await fun(ctx);
             ctx.die(normal);
-        } catch(err) {
+        } catch (err) {
             ctx.die(err.message);
-        } finally {
-            this._processes.delete(
-                pid.process
-            )
         }
     }
 

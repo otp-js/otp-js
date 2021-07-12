@@ -43,6 +43,7 @@
     "@otpjs/core": "file:../core"
   },
   "devDependencies": {
+    "@otpjs/test_utils": "file:../test_utils",
     "babel-jest": "^27.0.6",
     "jest": "^27.0.6"
   }

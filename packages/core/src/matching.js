@@ -1,11 +1,52 @@
-import debug from 'debug';
 import { _, spread } from './symbols';
+import { OTPError } from './error';
+import { Pid, Ref } from './types';
 
-const log = debug('otpjs:core:matching');
+const patterns = new WeakMap();
 
-export function compile(pattern, name = 'compiledPattern') {
+export function caseOf(value) {
+    return (pattern) => compare(pattern, value);
+}
+
+export function match(...patterns) {
+    let compiled = patterns.map(compile);
+
+    return function matchAny(message) {
+        for (let compare of compiled) {
+            if (compare(message)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+export function compare(pattern, value) {
+    const compiled = compile(pattern);
+    return compiled(value);
+}
+
+export function compile(pattern) {
+    if (typeof pattern === 'function') {
+        return pattern;
+    } else {
+        if (patterns.has(pattern)) {
+            const compiledPattern = patterns.get(pattern);
+            return compiledPattern;
+        } else if (typeof pattern === 'object') {
+            const compiledPattern = doCompile(pattern);
+            patterns.set(pattern, compiledPattern);
+            return compiledPattern;
+        } else {
+            return doCompile(pattern);
+        }
+    }
+}
+
+function doCompile(pattern) {
     const comparisons = comparator(pattern);
-    const fun = function compiledPattern(message) {
+    return compiledPattern;
+    function compiledPattern(message) {
         for (let compare of comparisons) {
             if (!compare(message)) {
                 return false;
@@ -13,30 +54,23 @@ export function compile(pattern, name = 'compiledPattern') {
         }
         return true;
     }
-
-    if (name != fun.name) {
-        Object.defineProperty(
-            fun,
-            'name',
-            {
-                value: name,
-                configurable: true
-            }
-        );
-    }
-
-    return fun;
 }
 
 function comparator(pattern, comparisons = []) {
     if (Array.isArray(pattern)) {
         arrayComparator(pattern, comparisons);
+    } else if (pattern instanceof Pid) {
+        simpleComparator(pattern, comparisons);
+    } else if (pattern instanceof Ref) {
+        simpleComparator(pattern, comparisons);
     } else if (typeof pattern === 'object') {
         objectComparator(pattern, comparisons);
     } else if (typeof pattern === 'function') {
         comparisons.push(pattern);
     } else if (pattern === _) {
-        // No comparison needed
+        comparisons.push(
+            underscore
+        )
     } else {
         simpleComparator(pattern, comparisons);
     }
@@ -62,7 +96,7 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
     const spreadIndex = pattern.indexOf(spread);
     if (spreadIndex >= 0) {
         if (spreadIndex != pattern.length - 1) {
-            throw Error('invalid_match_pattern');
+            throw new OTPError('invalid_match_pattern');
         }
         const length = spreadIndex;
         comparisons.push(
@@ -84,7 +118,7 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
         if (subPattern === spread) {
             break;
         } else {
-            const subComparison = compile(subPattern, `compareArrayItem-${index}`);
+            const subComparison = compile(subPattern);
             subComparisons.push(subComparison);
         }
     }
@@ -127,15 +161,13 @@ function objectComparator(pattern, comparisons) {
         const subPattern = subPatterns[index];
 
         if (subPattern === _) {
-            subComparisons[key] = function underscore(_message) {
-                return true;
-            }
+            subComparisons[key] = underscore;
         } else {
             let keyName = key;
             if (typeof key === 'symbol') {
                 keyName = key.toString();
             }
-            subComparisons[key] = compile(subPattern, `compareObjectKey-${keyName}`);
+            subComparisons[key] = compile(subPattern);
         }
     }
 
@@ -160,4 +192,8 @@ function objectComparator(pattern, comparisons) {
 
         return true;
     });
+}
+
+function underscore(_message) {
+    return true;
 }

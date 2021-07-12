@@ -1,7 +1,25 @@
-import debug from 'debug';
 import * as core from '../src';
 
-const log = debug('otpjs:core:__tests__:node');
+expect.extend({
+    toMatchPattern(received, pattern) {
+        const compiled = OTP.compile(pattern);
+        const pass = compiled(received);
+
+        if (pass) {
+            return {
+                message: () =>
+                `expected ${core.serialize(received)} not to match ${core.serialize(pattern)}`,
+                pass: true
+            };
+        } else {
+            return {
+                message: () =>
+                `expected ${core.serialize(received)} to match ${core.serialize(pattern)}`,
+                pass: false
+            };
+        }
+    }
+});
 
 async function wait(ms) {
     return new Promise(
@@ -18,7 +36,6 @@ describe('@otpjs/core.Node', () => {
 
     beforeEach(function() {
         node = new core.Node();
-        log('node : %o', node);
     });
 
     it('can create refs', function() {
@@ -135,7 +152,6 @@ describe('@otpjs/core.Node', () => {
         const proc = node.spawn(async (ctx) => {
             ctx.register(ctx.self(), 'test');
             const message = await ctx.receive();
-            log('unregisters... : node.spawn() : received : %o', message);
         });
 
         await wait(10);
