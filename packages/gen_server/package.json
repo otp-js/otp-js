@@ -1,5 +1,5 @@
 {
-  "name": "@otp-js/gen_server",
+  "name": "@otpjs/gen_server",
   "version": "0.2.2",
   "description": "A gen_server implementation for @otp-js/core",
   "keywords": [
@@ -40,6 +40,7 @@
     "url": "https://github.com/otp-js/otp-js/issues"
   },
   "devDependencies": {
-    "@otp-js/test_utils": "file:../test_utils"
-  }
+    "@otpjs/test_utils": "file:../test_utils"
+  },
+  "gitHead": "682392b97a0f094ada36496dfb5351ff7aeca9f3"
 }
