@@ -1,7 +1,7 @@
 {
-  "name": "@otpjs/gen_server",
+  "name": "@otp-js/gen_server",
   "version": "0.2.0",
-  "description": "A gen_server implementation for @otpjs/core",
+  "description": "A gen_server implementation for @otp-js/core",
   "keywords": [
     "open",
     "telecom",
@@ -40,6 +40,6 @@
     "url": "https://github.com/otp-js/otp-js/issues"
   },
   "devDependencies": {
-    "@otpjs/test_utils": "file:../test_utils"
+    "@otp-js/test_utils": "file:../test_utils"
   }
 }
