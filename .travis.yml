@@ -1,3 +1,9 @@
 language: node_js
 node_js:
     - 16
+
+jobs:
+  include:
+    - stage: Produce Coverage
+      node_js: node_js
+      script: jest --coverage && cat .coverage/lcov.info | ./node_modules/.bin/coveralls
