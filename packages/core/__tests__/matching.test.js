@@ -1,3 +1,4 @@
+import "./extend";
 import { _, spread } from '../src/symbols';
 import { match, compile } from '../src/matching';
 

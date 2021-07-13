@@ -23,6 +23,10 @@ export class MessageBox extends Array {
         this[resolvers] = [];
     }
 
+    get pending() {
+        return this[resolvers].length;
+    }
+
     clear(reason) {
         this.splice(
             0,
@@ -78,12 +82,15 @@ export class MessageBox extends Array {
                     const message = this[index];
 
                     for (let predicate of predicates) {
-                        if (predicate(message)) {
-                            return resolve([
-                                ok,
-                                this._consume(index),
-                                predicate
-                            ]);
+                        try {
+                            if (predicate(message)) {
+                                return resolve([
+                                    ok,
+                                    this._consume(index),
+                                    predicate
+                                ]);
+                            }
+                        } catch(err) {
                         }
                     }
                 }
