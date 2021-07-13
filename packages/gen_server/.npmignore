@@ -1,0 +1,6 @@
+.*
+*.config.js
+.log
+tsfmt.json
+coverage
+src
