@@ -4,7 +4,8 @@
   "scripts": {
     "build": "lerna run build --parallel",
     "watch": "lerna run watch --parallel",
-    "test": "jest --coverage --verbose"
+    "test": "jest --coverage --verbose",
+    "prepublish": "npm run build"
   },
   "devDependencies": {
     "@babel/cli": "^7.14.5",
