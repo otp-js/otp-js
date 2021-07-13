@@ -16,7 +16,6 @@ export class Node {
 
         this._system = this.spawn((ctx) => this.system(ctx));
     }
-
     async system(ctx) {
         let running = true;
         while (running) {
@@ -43,9 +42,15 @@ export class Node {
             }
         }
     }
-
     unregister(name) {
         this._registrations.delete(name);
+    }
+    whereis(name) {
+        if (this._registrations.has(name)) {
+            return this._registrations.get(name);
+        } else {
+            return undefined;
+        }
     }
 
     registerRouter(name, pid) {
@@ -55,18 +60,9 @@ export class Node {
         return id;
     }
 
-    whereis(name) {
-        if (this._registrations.has(name)) {
-            return this._registrations.get(name);
-        } else {
-            return undefined;
-        }
-    }
-
     ref() {
         return Ref.for(Pid.LOCAL, this._refCount++);
     }
-
     pid() {
         return Pid.of(Pid.LOCAL, this._processesCount++)
     }
@@ -79,7 +75,6 @@ export class Node {
         );
         return ctx;
     }
-
     spawn(fun) {
         const ctx = this.makeContext();
         const pid = ctx.self();
@@ -88,7 +83,6 @@ export class Node {
 
         return pid;
     }
-
     spawnLink(linked, fun) {
         const ctx = this.makeContext();
         const pid = ctx.self();
@@ -98,7 +92,6 @@ export class Node {
 
         return pid;
     }
-
     async doSpawn(ctx, fun) {
         try {
             await fun(ctx);

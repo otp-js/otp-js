@@ -14,6 +14,8 @@ function attempt(predicates, message) {
     return false;
 }
 
+// [1]
+// index++ is the same as index += 1
 export class MessageBox extends Array {
     constructor(...args) {
         super(...args);
@@ -36,7 +38,6 @@ export class MessageBox extends Array {
             reject(reason);
         }
     }
-
     push(message) {
         if (this[resolvers].length > 0) {
             const index = this[resolvers].findIndex(
@@ -61,7 +62,6 @@ export class MessageBox extends Array {
             super.push(message);
         }
     }
-
     async pop(predicates = () => true, timeout = Infinity) {
         if (typeof predicates === 'number') {
             timeout = predicates;
@@ -138,7 +138,6 @@ export class MessageBox extends Array {
 
         this[resolvers].push(record);
     }
-
     _consume(index) {
         const [message] = this.splice(index, 1);
         return message;

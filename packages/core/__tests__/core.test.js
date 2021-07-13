@@ -30,7 +30,7 @@ async function wait(ms) {
     );
 }
 
-describe('@otpjs/core.Node', () => {
+describe('@otpjs/core.OTPNode', () => {
     let node = null;
     let proc = null;
 
@@ -43,12 +43,10 @@ describe('@otpjs/core.Node', () => {
         const refA = node.ref();
         expect(core.Ref.isRef(refA)).toBe(true);
     });
-
-    it('can spawn message boxes', function() {
+    it('can spawn contexts (processes)', function() {
         proc = node.spawn(() => ({}));
         expect(proc).toBeInstanceOf(core.Pid);
     });
-
     it('can look up processes', function() {
         expect(node).toHaveProperty('processInfo');
         expect(node.processInfo).toBeInstanceOf(Function);
@@ -56,6 +54,84 @@ describe('@otpjs/core.Node', () => {
         proc = node.spawn(() => ({}));
 
         expect(node.processInfo(proc)).toBeInstanceOf(core.Context);
+    });
+    it('fails silently when a message is undeliverable', async function() {
+        proc = node.spawn(async (ctx) => {
+            // noop
+        });
+
+        await wait(100);
+
+        expect(node.deliver).toBeInstanceOf(Function);
+        expect(() => node.deliver(proc, 1)).not.toThrow();
+    });
+    it('can register contexts under names', async function() {
+        expect(node.register).toBeInstanceOf(Function);
+        const ctx = node.makeContext();
+        expect(() => node.register(ctx.self(), 'test')).not.toThrow();
+    });
+    it('can look up processes by their names', async function() {
+        expect(node.whereis).toBeInstanceOf(Function);
+
+        const proc = node.spawn(async (ctx) => {
+            ctx.register(ctx.self(), 'test');
+            await ctx.receive();
+        });
+        const ctx = node.makeContext();
+
+        expect(await node.whereis('test')).toBe(proc);
+        expect(await ctx.whereis('test')).toBe(proc);
+        expect(node.whereis('test_b')).toBe(undefined);
+    });
+    it('only allows one process to register a name', async function() {
+        const result = new Promise(async (resolve, reject) => {
+            node.spawn(async (ctx) => {
+                ctx.register(ctx.self(), 'test');
+                await ctx.receive();
+            });
+            node.spawn(async (ctx) => {
+                try {
+                    const result = ctx.register(ctx.self(), 'test');
+                    resolve(result);
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        });
+
+        expect(result).rejects.toThrow(Error('badarg'));
+    });
+    it('can route messages to a name', async function() {
+        const message = Math.floor(Math.random() * Number.MAX_VALUE);
+        const result = await new Promise(async (resolve, reject) => {
+            const pid = node.spawn(async ctx => {
+                ctx.register(ctx.self(), 'test');
+                const result = await ctx.receive();
+                resolve(result);
+            });
+
+            await wait(10);
+
+            expect(node.whereis('test')).toBe(pid);
+            expect(() => node.deliver('test', message)).not.toThrow();
+        });
+
+        expect(result).toBe(message);
+    });
+    it('unregisters contexts when they die', async function() {
+        const proc = node.spawn(async (ctx) => {
+            ctx.register(ctx.self(), 'test');
+            const message = await ctx.receive();
+        });
+
+        await wait(10);
+
+        expect(node._registrations.has('test')).toBe(true);
+        node.deliver(proc, 'stop');
+
+        await wait(10);
+
+        expect(node._registrations.has('test')).toBe(false);
     });
 
     describe('deliver', function() {
@@ -79,91 +155,4 @@ describe('@otpjs/core.Node', () => {
             expect(() => node.deliver(proc, 'test')).not.toThrow();
         });
     });
-
-    it('fails silently when a message is undeliverable', async function() {
-        proc = node.spawn(async (ctx) => {
-            // noop
-        });
-
-        await wait(100);
-
-        expect(node.deliver).toBeInstanceOf(Function);
-        expect(() => node.deliver(proc, 1)).not.toThrow();
-    });
-
-    it('can register contexts under names', async function() {
-        expect(node.register).toBeInstanceOf(Function);
-        const ctx = node.makeContext();
-        expect(() => node.register(ctx.self(), 'test')).not.toThrow();
-    });
-
-    it('can look up processes by their names', async function() {
-        expect(node.whereis).toBeInstanceOf(Function);
-
-        const proc = node.spawn(async (ctx) => {
-            ctx.register(ctx.self(), 'test');
-            await ctx.receive();
-        });
-        const ctx = node.makeContext();
-
-        expect(await node.whereis('test')).toBe(proc);
-        expect(await ctx.whereis('test')).toBe(proc);
-        expect(node.whereis('test_b')).toBe(undefined);
-    });
-
-    it('only allows one process to register a name', async function() {
-        const result = new Promise(async (resolve, reject) => {
-            node.spawn(async (ctx) => {
-                ctx.register(ctx.self(), 'test');
-                await ctx.receive();
-            });
-            node.spawn(async (ctx) => {
-                try {
-                    const result = ctx.register(ctx.self(), 'test');
-                    resolve(result);
-                } catch (err) {
-                    reject(err);
-                }
-            });
-        });
-
-        expect(result).rejects.toThrow(Error('badarg'));
-    });
-
-    it('can route messages to a name', async function() {
-        const message = Math.floor(Math.random() * Number.MAX_VALUE);
-        const result = await new Promise(async (resolve, reject) => {
-            const pid = node.spawn(async ctx => {
-                ctx.register(ctx.self(), 'test');
-                const result = await ctx.receive();
-                resolve(result);
-            });
-
-            await wait(10);
-
-            expect(node.whereis('test')).toBe(pid);
-            expect(() => node.deliver('test', message)).not.toThrow();
-        });
-
-        expect(result).toBe(message);
-    });
-
-    it('unregisters contexts when they die', async function() {
-        const proc = node.spawn(async (ctx) => {
-            ctx.register(ctx.self(), 'test');
-            const message = await ctx.receive();
-        });
-
-        await wait(10);
-
-        expect(node._registrations.has('test')).toBe(true);
-        node.deliver(proc, 'stop');
-
-        await wait(10);
-
-        expect(node._registrations.has('test')).toBe(false);
-    });
-});
-
-describe('OTPNode', function describeOTPNode() {
 });
