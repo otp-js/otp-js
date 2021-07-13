@@ -6,4 +6,4 @@ jobs:
   include:
     - stage: Produce Coverage
       node_js: 16
-      script: jest --coverage && cat .coverage/lcov.info | ./node_modules/.bin/coveralls
+      script: jest --coverage && cat ./coverage/lcov.info | ./node_modules/.bin/coveralls
