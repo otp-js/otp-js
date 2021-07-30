@@ -2,7 +2,7 @@ import debug from 'debug';
 import { OTPError } from './error';
 import { match, compile } from './matching';
 import { MessageBox } from './message-box.js';
-import { EXIT, _, trapExit } from './symbols';
+import { EXIT, _, trap_exit } from './symbols';
 
 const log = debug('otpjs:core:context');
 
@@ -83,22 +83,22 @@ export class Context {
         this[links] = null;
     }
 
-    get [trapExit]() {
-        return this[flags].get(trapExit);
+    get [trap_exit]() {
+        return this[flags].get(trap_exit);
     }
 
-    set [trapExit](value) {
-        this[flags].set(trapExit, value);
+    set [trap_exit](value) {
+        this[flags].set(trap_exit, value);
     }
 
     _deliver(message) {
         if (
             isExitMessage(message)
-            && !this[trapExit]
+            && !this[trap_exit]
         ) {
             const self = this.self();
-            this.die(message.reason);
-            throw new OTPError([EXIT, self, message.reason]);
+            this.die(message[message.length - 1]);
+            throw new OTPError([EXIT, self, message[message.length - 1]]);
         } else {
             try {
                 this[mb].push(message);

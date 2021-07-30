@@ -44,7 +44,7 @@ describe('ProcLib', function() {
         expect(ProcLib).toHaveProperty('startLink');
         expect(ProcLib.startLink).toBeInstanceOf(Function);
 
-        ctx.processFlag(OTP.Symbols.trapExit, true);
+        ctx.processFlag(OTP.Symbols.trap_exit, true);
 
         const result = await ProcLib.startLink(ctx, async (ctx, spawner) => {
             await ProcLib.initAck(
