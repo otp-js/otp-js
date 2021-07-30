@@ -34,17 +34,30 @@ export class Node {
                     this._registrations.set(name, pid);
 
                     const node = this;
-                    (async function() {
-                        await proc.death;
-                        node.unregister(name);
-                    })();
+                    proc.death.finally(
+                        () => {
+                            node.unregister(pid, name)
+                        }
+                    );
+
+                    return ok;
                 }
+            } else {
+                throw new OTPError('badarg');
             }
+        } else {
+            throw new OTPError('badarg');
         }
     }
-    unregister(name) {
-        this._registrations.delete(name);
+    unregister(pid, name) {
+        if (
+            this._registrations.has(name)
+            && this._registrations.get(name) === pid
+        ) {
+            this._registrations.delete(name);
+        }
     }
+
     whereis(name) {
         if (this._registrations.has(name)) {
             return this._registrations.get(name);

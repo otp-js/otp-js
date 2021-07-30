@@ -7,4 +7,4 @@ export * from './error';
 export * from './serializer';
 
 import * as Symbols from './symbols';
-export {Symbols};
+export { Symbols };

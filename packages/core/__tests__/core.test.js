@@ -48,30 +48,30 @@ describe('@otpjs/core.OTPNode', () => {
     it('can register contexts under names', async function() {
         expect(node.register).toBeInstanceOf(Function);
         const ctx = node.makeContext();
-        expect(() => node.register(ctx.self(), 'test')).not.toThrow();
+        expect(() => node.register(ctx, 'test')).not.toThrow();
     });
     it('can look up processes by their names', async function() {
         expect(node.whereis).toBeInstanceOf(Function);
 
-        const proc = node.spawn(async (ctx) => {
-            ctx.register(ctx.self(), 'test');
+        const pid = node.spawn(async (ctx) => {
+            ctx.register('test');
             await ctx.receive();
         });
         const ctx = node.makeContext();
 
-        expect(await node.whereis('test')).toBe(proc);
-        expect(await ctx.whereis('test')).toBe(proc);
-        expect(node.whereis('test_b')).toBe(undefined);
+        expect(await node.whereis('test')).toBe(pid);
+        expect(await ctx.whereis('test')).toBe(pid);
+        expect(await node.whereis('test_b')).toBe(undefined);
     });
     it('only allows one process to register a name', async function() {
         const result = new Promise(async (resolve, reject) => {
             node.spawn(async (ctx) => {
-                ctx.register(ctx.self(), 'test');
+                ctx.register('test');
                 await ctx.receive();
             });
             node.spawn(async (ctx) => {
                 try {
-                    const result = ctx.register(ctx.self(), 'test');
+                    const result = ctx.register('test');
                     resolve(result);
                 } catch (err) {
                     reject(err);
@@ -85,7 +85,7 @@ describe('@otpjs/core.OTPNode', () => {
         const message = Math.floor(Math.random() * Number.MAX_VALUE);
         const result = await new Promise(async (resolve, reject) => {
             const pid = node.spawn(async ctx => {
-                ctx.register(ctx.self(), 'test');
+                ctx.register('test');
                 const result = await ctx.receive();
                 resolve(result);
             });
@@ -100,7 +100,7 @@ describe('@otpjs/core.OTPNode', () => {
     });
     it('unregisters contexts when they die', async function() {
         const proc = node.spawn(async (ctx) => {
-            ctx.register(ctx.self(), 'test');
+            ctx.register('test');
             const message = await ctx.receive();
         });
 

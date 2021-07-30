@@ -11,6 +11,7 @@ const mb = Symbol();
 const pid = Symbol();
 const forward = Symbol();
 const forwardWithSelf = Symbol();
+const forwardWithPid = Symbol();
 const links = Symbol();
 const flags = Symbol();
 
@@ -31,8 +32,8 @@ export class Context {
         this[forward]('deliver', 'send')
         this[forward]('spawn');
         this[forwardWithSelf]('spawnLink');
-        this[forward]('register')
-        this[forward]('unregister')
+        this[forwardWithPid]('register')
+        this[forwardWithPid]('unregister')
         this[forward]('whereis');
 
         this.death = new Promise(
@@ -74,8 +75,6 @@ export class Context {
     }
 
     destroy(reason) {
-        this.notify(reason);
-
         this[mb].clear();
 
         this[mb] = null;
@@ -103,7 +102,7 @@ export class Context {
         } else {
             try {
                 this[mb].push(message);
-            } catch(err) {
+            } catch (err) {
                 log('_deliver(%o) : undeliverable : %o', message, err);
             }
         }
@@ -121,6 +120,15 @@ export class Context {
         this[name] = (...args) => {
             return this[node][operation](
                 this,
+                ...args
+            );
+        }
+    }
+
+    [forwardWithPid](operation, name = operation) {
+        this[name] = (...args) => {
+            return this[node][operation](
+                this.self(),
                 ...args
             );
         }
