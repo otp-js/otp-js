@@ -1,18 +1,9 @@
-import {ok} from './symbols';
+import { ok } from './symbols';
+import debug from 'debug';
+
+const log = debug('otpjs:core:message-box');
 
 const resolvers = Symbol();
-
-function attempt(predicates, message) {
-    for (let index = 0; index < predicates.length; index++) {
-        try {
-            const predicate = predicates[index];
-            return predicate(message);
-        } catch (err) {
-        }
-    }
-
-    return false;
-}
 
 // [1]
 // index++ is the same as index += 1
@@ -44,24 +35,28 @@ export class MessageBox extends Array {
     }
     push(message) {
         if (this[resolvers].length > 0) {
-            const index = this[resolvers].findIndex(
-                ([
-                    _resolve,
-                    _reject,
-                    predicate
-                ]) => attempt(predicate,message)
-            );
-
-            if (index >= 0) {
-                const [[
-                    resolve,
-                    _reject,
-                    predicate
-                ]] = this[resolvers].splice(index, 1);
-                resolve([ ok, message, predicate ]);
-            } else {
-                super.push(message);
+            let index = 0;
+            for (let [_resolve, _reject, predicates] of this[resolvers]) {
+                for (let predicate of predicates) {
+                    try {
+                        if (predicate(message)) {
+                            const [[
+                                resolve,
+                                _reject,
+                                _predicates
+                            ]] = this[resolvers].splice(index, 1);
+                            return resolve([ok, message, predicate]);
+                        }
+                    } catch (err) {
+                        continue;
+                    }
+                }
+                index++;
             }
+
+            // If we get here, we didn't bail out above, so the message
+            // is unhandled
+            super.push(message);
         } else {
             super.push(message);
         }
@@ -90,7 +85,8 @@ export class MessageBox extends Array {
                                     predicate
                                 ]);
                             }
-                        } catch(err) {
+                        } catch (err) {
+                            continue;
                         }
                     }
                 }

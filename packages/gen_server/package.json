@@ -42,5 +42,8 @@
   "devDependencies": {
     "@otpjs/test_utils": "file:../test_utils"
   },
-  "gitHead": "682392b97a0f094ada36496dfb5351ff7aeca9f3"
+  "gitHead": "682392b97a0f094ada36496dfb5351ff7aeca9f3",
+  "dependencies": {
+    "@otpjs/gen": "file:../gen"
+  }
 }

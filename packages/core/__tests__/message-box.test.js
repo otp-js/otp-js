@@ -13,7 +13,7 @@ describe('@otpjs/core.MessageBox', function() {
         expect(Array.isArray(mb)).toBe(true);
     })
 
-    describe('push', function() {
+    describe('after pushing', function() {
         describe('when there are no pending resolvers', function() {
             it('increases its length by 1', function() {
                 const length = mb.length;
@@ -86,7 +86,7 @@ describe('@otpjs/core.MessageBox', function() {
                     mb.push({ iam: 'not_iterable' });
                     let promise = mb.pop(
                         () => {
-                            throw Error('bad_arg')
+                            throw Error('badarg')
                         },
                         100
                     );

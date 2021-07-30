@@ -29,7 +29,10 @@
     "url": "git+https://github.com/otp-js/otp-js.git"
   },
   "scripts": {
-    "test": "echo \"Error: run tests from root\" && exit 1"
+    "build": "babel src --out-dir lib",
+    "watch": "babel src --out-dir lib --watch",
+    "prepublish": "npm run build",
+    "test": "jest --coverage --verbose"
   },
   "bugs": {
     "url": "https://github.com/otp-js/otp-js/issues"

@@ -1,11 +1,15 @@
+import debug from 'debug';
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
-import { ok, _, normal } from './symbols';
+import { ok, _, normal, DOWN } from './symbols';
 import { OTPError } from './error';
+
+const log = debug('otpjs:core:node');
 
 export class Node {
     constructor(id = Symbol()) {
         this._id = id;
+        this._monitors = new Map();
         this._processes = new Map();
         this._processesCount = 0;
         this._routers = new Map();
@@ -16,6 +20,44 @@ export class Node {
 
         this._system = this.spawn((ctx) => this.system(ctx));
     }
+
+    monitor(watcherPid, watcheePid) {
+        const ref = this.ref();
+
+        const watchee = this._processes.get(watcheePid.process);
+        if (watchee) {
+            const ctx = watchee.deref();
+            if (ctx) {
+                this._monitors.set(ref, ctx);
+            } else {
+                this.deliver(
+                    watcherPid,
+                    [
+                        DOWN,
+                        watcheePid,
+                        'noproc'
+                    ]
+                )
+            }
+        } else {
+            this.deliver(
+                watcherPid,
+                [
+                    DOWN,
+                    watcheePid,
+                    'noproc'
+                ]
+            )
+        }
+
+        return ref;
+    }
+
+    demonitor(ref) {
+        this._monitors.delete(ref);
+    }
+
+
     async system(ctx) {
         let running = true;
         while (running) {
@@ -105,13 +147,14 @@ export class Node {
 
         return pid;
     }
+
     async doSpawn(ctx, fun) {
         try {
             await fun(ctx);
-            console.error('doSpawn() : ctx.die(normal)');
+            log('doSpawn() : ctx.die(normal)');
             ctx.die(normal);
         } catch (err) {
-            console.error('doSpawn() : error : %o', err);
+            log('doSpawn() : error : %o', err);
             ctx.die(err.message);
         }
     }
@@ -129,7 +172,7 @@ export class Node {
                     const ctx = ref.deref();
                     ctx._deliver(message);
                 } catch (err) {
-                    console.error('ctx._deliver(%o) : error : %o', message, err);
+                    log('ctx._deliver(%o) : error : %o', message, err);
                 }
             }
         } else {

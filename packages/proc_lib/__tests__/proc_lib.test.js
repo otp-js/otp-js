@@ -70,6 +70,7 @@ describe('ProcLib', function() {
             OTP.Symbols.EXIT,
             OTP.Pid.isPid,
             OTP.Symbols._,
+            OTP.Symbols._
         ])
     })
 })

@@ -3,7 +3,7 @@ module.exports = function(api) {
     return {
         sourceMaps: 'both',
         sourceRoot: __dirname,
-        'presets': [
+        presets: [
             [
                 '@babel/preset-env',
                 {

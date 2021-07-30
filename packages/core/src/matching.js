@@ -59,10 +59,10 @@ function doCompile(pattern) {
 function comparator(pattern, comparisons = []) {
     if (Array.isArray(pattern)) {
         arrayComparator(pattern, comparisons);
-    } else if (pattern instanceof Pid) {
-        simpleComparator(pattern, comparisons);
-    } else if (pattern instanceof Ref) {
-        simpleComparator(pattern, comparisons);
+    } else if (Pid.isPid(pattern)) {
+        pidComparator(pattern, comparisons);
+    } else if (Ref.isRef(pattern)) {
+        refComparator(pattern, comparisons);
     } else if (typeof pattern === 'object') {
         objectComparator(pattern, comparisons);
     } else if (typeof pattern === 'function') {
@@ -76,6 +76,22 @@ function comparator(pattern, comparisons = []) {
     }
 
     return comparisons;
+}
+
+function pidComparator(pattern, comparisons) {
+    comparisons.push(
+        value => Pid.isPid(value)
+            && pattern.node === value.node
+            && pattern.process === value.process
+    );
+}
+
+function refComparator(pattern, comparisons) {
+    comparisons.push(
+        value => Ref.isRef(value)
+            && pattern.node === value.node
+            && pattern.ref === value.ref
+    );
 }
 
 function simpleComparator(pattern, comparisons) {

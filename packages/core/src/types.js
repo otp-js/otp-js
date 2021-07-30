@@ -2,7 +2,7 @@ import { OTPError } from "./error";
 
 export class Ref extends String {
     static LOCAL = 0;
-    static regex = /^Ref<(?<node>[0-9]+)\.(?<ref>[0-9]+)>\.(?<count>[0-9]+)$/;
+    static regex = /^Ref<(?<node>[0-9]+)\.(?<ref>[0-9]+)>$/;
 
     static isRef = (string) => string instanceof Ref;
     static for = (node, ref) => new Ref(`Ref<${node}.${ref}>`);
