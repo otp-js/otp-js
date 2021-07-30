@@ -1,3 +1,4 @@
+import debug from 'debug';
 import * as ProcLib from '@otpjs/proc_lib';
 import * as Core from '@otpjs/core';
 import * as Symbols from './symbols';
@@ -6,15 +7,17 @@ import { exit, normal } from '@otpjs/core/lib/symbols';
 
 export { Symbols };
 
+const log = debug('otpjs:gen_server');
+
 const { ok, error, EXIT, _ } = Core.Symbols;
 const { noreply } = Symbols;
 
-async function start(ctx, callbacks) {
-    return ProcLib.start(ctx, initializer(callbacks));
+async function start(ctx, callbacks, args = []) {
+    return ProcLib.start(ctx, initializer(callbacks, args));
 }
 
-async function startLink(ctx, callbacks) {
-    return ProcLib.startLink(ctx, initializer(callbacks));
+async function startLink(ctx, callbacks, args = []) {
+    return ProcLib.startLink(ctx, initializer(callbacks, args));
 }
 
 const callReplyPattern = ref => [
@@ -40,6 +43,7 @@ async function call(ctx, pid, message, timeout = 5000) {
 
         return ret;
     } catch (err) {
+        log('call(%o, %o, %o) : error : %o', pid, message, timeout, err);
         throw new OTPError([
             EXIT,
             self,
@@ -62,19 +66,20 @@ async function reply(ctx, [pid, ref], response) {
     ]);
 }
 
-function initializer(callbacks) {
+function initializer(callbacks, args) {
     return async function initialize(ctx, caller) {
+        let state = null;
         try {
-            const response = await callbacks.init(ctx);
+            const response = await callbacks.init(ctx, ...args);
             const compare = caseOf(response);
             if (compare([ok, _])) {
-                const [ok, state] = response;
+                const [ok, initialState] = response;
+                state = initialState;
                 ProcLib.initAck(
                     ctx,
                     caller,
                     [ok, ctx.self()]
                 )
-                return enterLoop(ctx, callbacks, state);
             } else if (compare([Symbols.stop, _])) {
                 const [_stop, reason] = response;
                 throw new OTPError(reason);
@@ -87,6 +92,7 @@ function initializer(callbacks) {
                 ])
             }
         } catch (err) {
+            log('initialize() : error : %o', err);
             ProcLib.initAck(
                 ctx,
                 caller,
@@ -94,6 +100,9 @@ function initializer(callbacks) {
             );
             throw err;
         }
+
+        // If we get this far, we haven't thrown an error.
+        return enterLoop(ctx, callbacks, state);
     };
 }
 
@@ -122,21 +131,21 @@ const castPattern = [Symbols.cast, _]
 async function loop(ctx, callbacks, incoming, state) {
     const compare = caseOf(incoming);
     if (compare(callPattern)) {
-        const [, from, message] = incoming;
+        const [, from, call] = incoming;
         const result = await tryHandleCall(
             ctx,
             callbacks,
-            message,
+            call,
             from,
             state
         );
         return handleCallReply(ctx, callbacks, from, state, result);
     } else if (compare(castPattern)) {
-        const [, message] = incoming;
+        const [, cast] = incoming;
         const result = await tryDispatch(
             ctx,
             callbacks.handleCast,
-            message,
+            cast,
             state
         );
         return handleCommonReply(ctx, callbacks, result, state)
@@ -178,7 +187,8 @@ async function handleCallReply(ctx, callbacks, from, state, result) {
         const [ok, [_stop, reason, response, nextState]] = result;
         try {
             await terminate(ctx, callbacks, exit, reason, nextState, Error().stack);
-        } catch(err) {
+        } catch (err) {
+            log('handleCallReply(%o, %o) : error : %o', callbacks, response, err);
             reply(ctx, from, response);
             throw err;
         }
@@ -197,6 +207,7 @@ const exitPattern = [EXIT, _, _, _];
 
 async function handleCommonReply(ctx, callbacks, result, state) {
     const compare = caseOf(result);
+    log('handleCommonReply(%o, %o)', callbacks, result);
     if (compare([ok, stopPattern])) {
         const [ok, [_stop, reason, state]] = result;
         await terminate(
@@ -248,6 +259,7 @@ async function tryHandleCall(ctx, callbacks, message, from, state) {
         return [ok, callbacks.handleCall(ctx, message, from, state)];
     } catch (err) {
         if (err instanceof Error) {
+            log('tryHandleCall() : error : %o', err.message);
             return [EXIT, err.name, err.message, err.stack];
         } else {
             return [ok, err];
@@ -260,6 +272,7 @@ async function tryDispatch(ctx, callback, message, state) {
         return [ok, callback(ctx, message, state)];
     } catch (err) {
         if (err instanceof Error) {
+            log('tryDispatch(%o, %o) : error : %o', callback, message, err);
             return [EXIT, err.name, err.message, err.stack];
         } else {
             return [ok, err];
@@ -277,14 +290,17 @@ async function terminate(ctx, callbacks, type, reason, state, stack = null) {
 
     const compare = caseOf(response);
     if (compare(exitPattern)) {
+        log('terminate(%o, %o, %o) : exitPattern<%o> : throw OTPError(%o)', callbacks, type, reason, exitPattern, response);
         throw new OTPError(response);
     } else {
-        throw new OTPError([
+        const exitMessage = [
             EXIT,
             type,
             reason,
             stack
-        ]);
+        ];
+        log('terminate(%o, %o, %o) : throw OTPError(%o)', callbacks, type, reason, exitMessage)
+        throw new OTPError(exitMessage);
     }
 }
 
@@ -293,10 +309,12 @@ async function tryTerminate(ctx, callbacks, reason, state) {
         if ('terminate' in callbacks) {
             return callbacks.terminate(ctx, reason, state);
         } else {
+            log('tryTerminate(%o, %o) : terminate not implemented', callbacks, reason);
             return ok;
         }
     } catch (err) {
         if (err instanceof Error) {
+            log('tryTerminate(%o, %o) : error : %o', callbacks, reason, err);
             return [
                 EXIT,
                 err.name,

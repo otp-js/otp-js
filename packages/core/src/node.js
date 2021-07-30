@@ -95,8 +95,10 @@ export class Node {
     async doSpawn(ctx, fun) {
         try {
             await fun(ctx);
+            console.error('doSpawn() : ctx.die(normal)');
             ctx.die(normal);
         } catch (err) {
+            console.error('doSpawn() : error : %o', err);
             ctx.die(err.message);
         }
     }
@@ -110,8 +112,12 @@ export class Node {
         if (to.node == Pid.LOCAL) {
             const ref = this._processes.get(to.process);
             if (ref) {
-                const ctx = ref.deref();
-                ctx._deliver(message);
+                try {
+                    const ctx = ref.deref();
+                    ctx._deliver(message);
+                } catch (err) {
+                    console.error('ctx._deliver(%o) : error : %o', message, err);
+                }
             }
         } else {
             const ref = this._processes.get(to.node);

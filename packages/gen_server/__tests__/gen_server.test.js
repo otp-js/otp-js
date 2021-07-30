@@ -2,7 +2,7 @@ import '@otpjs/test_utils';
 
 import { Node, Ref, Pid, caseOf, Symbols, OTPError } from '@otpjs/core';
 import * as GenServer from '../src';
-import { error, EXIT, trapExit } from '@otpjs/core/lib/symbols';
+import { error, EXIT, trap_exit } from '@otpjs/core/lib/symbols';
 
 const { ok, _ } = Symbols;
 const { reply, noreply, stop } = GenServer.Symbols;
@@ -67,7 +67,7 @@ function describeGenServer() {
     beforeEach(function() {
         node = new Node();
         ctx = node.makeContext();
-        ctx.processFlag(trapExit, true);
+        ctx.processFlag(trap_exit, true);
     });
 
     it('starts a process', async function() {
