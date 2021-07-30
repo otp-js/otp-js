@@ -2,7 +2,7 @@ import debug from 'debug';
 import { OTPError } from './error';
 import { match, compile } from './matching';
 import { MessageBox } from './message-box.js';
-import { EXIT, _, trap_exit } from './symbols';
+import { DOWN, EXIT, _, trap_exit } from './symbols';
 
 const log = debug('otpjs:core:context');
 
@@ -11,7 +11,9 @@ const mb = Symbol();
 const pid = Symbol();
 const forward = Symbol();
 const forwardWithSelf = Symbol();
+const forwardWithPid = Symbol();
 const links = Symbol();
+const monitors = Symbol();
 const flags = Symbol();
 
 const isExitMessage = match(
@@ -25,15 +27,18 @@ export class Context {
         this[mb] = new MessageBox();
         this[pid] = owner.pid();
         this[links] = new Set();
+        this[monitors] = new Map();
         this[flags] = new Map();
 
+        this[forward]('deliver', 'send');
+        this[forward]('demonitor');
         this[forward]('ref');
-        this[forward]('deliver', 'send')
         this[forward]('spawn');
-        this[forwardWithSelf]('spawnLink');
-        this[forward]('register')
-        this[forward]('unregister')
         this[forward]('whereis');
+        this[forwardWithSelf]('spawnLink');
+        this[forwardWithPid]('monitor');
+        this[forwardWithPid]('register');
+        this[forwardWithPid]('unregister');
 
         this.death = new Promise(
             resolve => this.die = resolve
@@ -67,10 +72,25 @@ export class Context {
                 [
                     EXIT,
                     pid,
-                    reason
+                    reason,
+                    null
                 ]
             )
         );
+    }
+
+    notifyMonitors(reason) {
+        const pid = this.self();
+        this[monitors].forEach(
+            monitor => this.send(
+                monitor,
+                [
+                    DOWN,
+                    pid,
+                    reason
+                ]
+            )
+        )
     }
 
     destroy(reason) {
@@ -82,6 +102,7 @@ export class Context {
         this[pid] = null;
         this[node] = null;
         this[links] = null;
+
     }
 
     get [trap_exit]() {
@@ -93,13 +114,17 @@ export class Context {
     }
 
     _deliver(message) {
+        log('_deliver(%o)', message);
         if (
             isExitMessage(message)
             && !this[trap_exit]
         ) {
-            const self = this.self();
-            this.die(message[message.length - 1]);
-            throw new OTPError([EXIT, self, message[message.length - 1]]);
+            if (message.length === 3) {
+                this.die(message[message.length - 1]);
+            } else if (message.length === 4) {
+                this.die(message[message.length - 2]);
+            }
+            throw new OTPError(message[message.length - 1]);
         } else {
             try {
                 this[mb].push(message);
@@ -121,6 +146,15 @@ export class Context {
         this[name] = (...args) => {
             return this[node][operation](
                 this,
+                ...args
+            );
+        }
+    }
+
+    [forwardWithPid](operation, name = operation) {
+        this[name] = (...args) => {
+            return this[node][operation](
+                this.self(),
                 ...args
             );
         }
@@ -166,13 +200,13 @@ export class Context {
     async receiveWithPredicate(...predicates) {
         let timeout = Infinity;
 
-        if (typeof predicates[predicate.length - 1] === 'number') {
+        if (typeof predicates[predicates.length - 1] === 'number') {
             timeout = predicates.pop();
         }
 
         predicates = predicates.map(compile);
 
-        const [, message, predicate] = this[mb].pop(
+        const [, message, predicate] = await this[mb].pop(
             predicates,
             timeout
         );

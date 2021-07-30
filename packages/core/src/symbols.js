@@ -1,5 +1,6 @@
 export const normal = Symbol.for('otp.symbol.normal');
 export const EXIT = Symbol.for('otp.symbol.exit');
+export const DOWN = Symbol.for('otp.symbol.down');
 export const exit = EXIT;
 export const error = Symbol.for('otp.symbol.error');
 export const ok = Symbol.for('otp.symbol.ok');

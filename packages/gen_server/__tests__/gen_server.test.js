@@ -1,10 +1,13 @@
+import { caseOf, Node, OTPError, Pid, Symbols } from '@otpjs/core';
 import '@otpjs/test_utils';
-
-import { Node, Ref, Pid, caseOf, Symbols, OTPError } from '@otpjs/core';
+import debug from 'debug';
 import * as GenServer from '../src';
-import { error, EXIT, trap_exit } from '@otpjs/core/lib/symbols';
 
-const { ok, _ } = Symbols;
+const { error, EXIT, trap_exit } = Symbols;
+
+const log = debug('otpjs:gen_server:__tests__');
+
+const { ok, _, error, EXIT, trap_exit } = Symbols;
 const { reply, noreply, stop } = GenServer.Symbols;
 
 async function wait(ms) {
@@ -97,13 +100,15 @@ function describeGenServer() {
             ['set', value]
         );
 
+        log('resultA : %o', resultA);
+        expect(resultA).toBe(ok);
+
         const resultB = await GenServer.call(
             ctx,
             pid,
             'get'
         );
 
-        expect(resultA).toBe(ok);
         expect(resultB).toBe(value);
     });
 
@@ -195,6 +200,7 @@ function describeGenServer() {
             EXIT,
             _,
             'init_failed',
+            _
         ]);
 
         function init(_ctx) {
@@ -229,14 +235,19 @@ function describeGenServer() {
         ],
     ]
 
+    //it.only(`dies when the ${methods[0][0]} callback handler throws an error`, async function() {
     methods.forEach(
-      ([type, method]) => it(`dies when the ${type} callback handler throws an error`, async function() {
+        ([type, method]) => it(`dies when the ${type} callback handler throws an error`, async function() {
             const [_ok, pid] = await GenServer.startLink(ctx, callbacks);
             const message = 'die';
-            await method(ctx, pid, message);
+            methods[0][1](ctx, pid, message);
+
+            await wait(10);
+
             await expect(ctx.receive()).resolves.toMatchPattern([
                 EXIT,
                 pid,
+                _,
                 _
             ]);
         })

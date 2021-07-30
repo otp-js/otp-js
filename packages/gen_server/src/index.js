@@ -1,11 +1,24 @@
 import debug from 'debug';
 import * as ProcLib from '@otpjs/proc_lib';
 import * as Core from '@otpjs/core';
+import { caseOf, OTPError, Pid, Ref } from '@otpjs/core';
+import { exit } from '@otpjs/core/lib/symbols';
+import * as gen from '@otpjs/gen';
+import * as ProcLib from '@otpjs/proc_lib';
+import debug from 'debug';
 import * as Symbols from './symbols';
-import { OTPError, Pid, caseOf, Ref } from '@otpjs/core';
-import { exit, normal } from '@otpjs/core/lib/symbols';
 
 export { Symbols };
+export {
+    call,
+    cast,
+    enterLoop,
+    reply,
+    start,
+    startLink,
+};
+
+const log = debug('otpjs:gen_server');
 
 const log = debug('otpjs:gen_server');
 
@@ -20,50 +33,17 @@ async function startLink(ctx, callbacks, args = []) {
     return ProcLib.startLink(ctx, initializer(callbacks, args));
 }
 
-const callReplyPattern = ref => [
-    Symbols.reply,
-    ref,
-    Core.Symbols._
-];
 async function call(ctx, pid, message, timeout = 5000) {
-    const self = ctx.self();
-    const ref = ctx.ref();
-
-    try {
-        ctx.send(pid, [
-            Symbols.call,
-            [self, ref],
-            message
-        ]);
-
-        const [, , ret] = await ctx.receive(
-            [callReplyPattern(ref)],
-            timeout
-        );
-
-        return ret;
-    } catch (err) {
-        log('call(%o, %o, %o) : error : %o', pid, message, timeout, err);
-        throw new OTPError([
-            EXIT,
-            self,
-            err.message,
-            err.stack
-        ]);
-    }
+    return gen.call(ctx, pid, message, timeout);
 }
 
 async function cast(ctx, pid, message) {
-    ctx.send(pid, [Symbols.cast, message]);
+    gen.cast(ctx, pid, message);
     return ok;
 }
 
-async function reply(ctx, [pid, ref], response) {
-    ctx.send(pid, [
-        Symbols.reply,
-        ref,
-        response
-    ]);
+async function reply(ctx, to, response) {
+    return gen.reply(ctx, to, response);
 }
 
 function initializer(callbacks, args) {
@@ -84,12 +64,7 @@ function initializer(callbacks, args) {
                 const [_stop, reason] = response;
                 throw new OTPError(reason);
             } else {
-                throw new OTPError([
-                    EXIT,
-                    'Error',
-                    'invalid_init_response',
-                    Error().stack
-                ])
+                throw new OTPError('invalid_init_response')
             }
         } catch (err) {
             log('initialize() : error : %o', err);
@@ -125,8 +100,8 @@ async function enterLoop(ctx, callbacks, state) {
     }
 }
 
-const callPattern = [Symbols.call, [Pid.isPid, Ref.isRef], _];
-const castPattern = [Symbols.cast, _]
+const callPattern = [gen.Symbols.call, [Pid.isPid, Ref.isRef], _];
+const castPattern = [gen.Symbols.cast, _]
 
 async function loop(ctx, callbacks, incoming, state) {
     const compare = caseOf(incoming);
@@ -162,15 +137,17 @@ async function loop(ctx, callbacks, incoming, state) {
 }
 
 const replyWithNoTimeout = [Symbols.reply, _, _];
-const replyWithTimeout = [Symbols.reply, _, _, (num) => typeof num === 'number'];
+const replyWithTimeout = [Symbols.reply, _, _, Number.isInteger];
 const noreplyWithNoTimeout = [noreply, _];
-const noreplyWithTimeout = [noreply, _, (num) => typeof num === 'number'];
+const noreplyWithTimeout = [noreply, _, Number.isInteger];
 const stopDemand = [Symbols.stop, _, _, _];
 
 async function handleCallReply(ctx, callbacks, from, state, result) {
     const compare = caseOf(result);
+    log('handleCallReply(%o) : result : %o', from, result);
     if (compare([ok, replyWithNoTimeout])) {
         const [ok, [, message, nextState]] = result;
+        log('handleCallReply(%o) : message : %o', from, message);
         reply(ctx, from, message);
         return [ok, nextState, Infinity];
     } else if (compare([ok, replyWithTimeout])) {
@@ -327,11 +304,4 @@ async function tryTerminate(ctx, callbacks, reason, state) {
     }
 }
 
-export {
-    call,
-    cast,
-    enterLoop,
-    reply,
-    start,
-    startLink,
-};
+
