@@ -4,8 +4,6 @@ import { match, compile } from './matching';
 import { MessageBox } from './message-box.js';
 import { DOWN, EXIT, _, trap_exit } from './symbols';
 
-const log = debug('otpjs:core:context');
-
 const node = Symbol();
 const mb = Symbol();
 const pid = Symbol();
@@ -15,6 +13,7 @@ const forwardWithPid = Symbol();
 const links = Symbol();
 const monitors = Symbol();
 const flags = Symbol();
+const lastMessage = Symbol();
 
 const isExitMessage = match(
     [EXIT, _, _],
@@ -40,12 +39,23 @@ export class Context {
         this[forwardWithPid]('register');
         this[forwardWithPid]('unregister');
 
+        const logComponents = [
+            'otpjs',
+            this[pid].toLowerCase()
+        ]
+        this.log = debug(logComponents.join(':'));
+        this._log = this.log.extend('context');
+
         this.death = new Promise(
-            resolve => this.die = resolve
+            resolve => this.die = (reason) => {
+                this.log('die(%o) : lastMessage : %o', reason, this[lastMessage]);
+                resolve(reason);
+            }
         );
 
         this.death.then(
             (reason) => {
+                this.dead = true;
                 this.destroy(reason);
             }
         );
@@ -73,7 +83,7 @@ export class Context {
                     EXIT,
                     pid,
                     reason,
-                    null
+                    Error().stack
                 ]
             )
         );
@@ -102,7 +112,6 @@ export class Context {
         this[pid] = null;
         this[node] = null;
         this[links] = null;
-
     }
 
     get [trap_exit]() {
@@ -114,22 +123,23 @@ export class Context {
     }
 
     _deliver(message) {
-        log('_deliver(%o)', message);
-        if (
-            isExitMessage(message)
-            && !this[trap_exit]
-        ) {
-            if (message.length === 3) {
-                this.die(message[message.length - 1]);
-            } else if (message.length === 4) {
-                this.die(message[message.length - 2]);
-            }
-            throw new OTPError(message[message.length - 1]);
-        } else {
-            try {
-                this[mb].push(message);
-            } catch (err) {
-                log('_deliver(%o) : undeliverable : %o', message, err);
+        this._log('_deliver(%o)', message);
+        if (!this.dead) {
+            if (
+                isExitMessage(message)
+                && !this[trap_exit]
+            ) {
+                if (message.length === 3) {
+                    this.die(message[message.length - 1]);
+                } else if (message.length === 4) {
+                    this.die(message[message.length - 2]);
+                }
+            } else {
+                try {
+                    this[mb].push(message);
+                } catch (err) {
+                    this._log('_deliver(%o) : undeliverable : %o', message, err);
+                }
             }
         }
     }
@@ -193,6 +203,8 @@ export class Context {
             predicates,
             timeout
         );
+
+        this[lastMessage] = message;
 
         return message;
     }

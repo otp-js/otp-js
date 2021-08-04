@@ -1,13 +1,14 @@
 import debug from 'debug';
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
-import { ok, _, normal, DOWN } from './symbols';
+import { ok, _, normal, badarg, DOWN } from './symbols';
 import { OTPError } from './error';
 
 const log = debug('otpjs:core:node');
 
 export class Node {
-    constructor(id = Symbol()) {
+    static nodes = 0;
+    constructor(id = Symbol.for(`$otpjs.node.${Node.nodes++}`)) {
         this._id = id;
         this._monitors = new Map();
         this._processes = new Map();
@@ -71,7 +72,7 @@ export class Node {
             const proc = ref.deref();
             if (proc) {
                 if (this._registrations.has(name)) {
-                    throw new OTPError('badarg');
+                    throw new OTPError(badarg);
                 } else {
                     this._registrations.set(name, pid);
 
@@ -85,10 +86,10 @@ export class Node {
                     return ok;
                 }
             } else {
-                throw new OTPError('badarg');
+                throw new OTPError(badarg);
             }
         } else {
-            throw new OTPError('badarg');
+            throw new OTPError(badarg);
         }
     }
     unregister(pid, name) {
@@ -128,6 +129,7 @@ export class Node {
             ctx.self().process,
             new WeakRef(ctx)
         );
+        log('makeContext() : pid : %o', ctx.self());
         return ctx;
     }
     spawn(fun) {
@@ -150,11 +152,12 @@ export class Node {
 
     async doSpawn(ctx, fun) {
         try {
-            await fun(ctx);
-            log('doSpawn() : ctx.die(normal)');
+            log('doSpawn() : fun : %o', fun);
+            let result = await fun(ctx);
+            ctx.log('doSpawn() : ctx.die(normal) (result: %o)', result);
             ctx.die(normal);
         } catch (err) {
-            log('doSpawn() : error : %o', err);
+            ctx.log('doSpawn() : error : %o', err);
             ctx.die(err.message);
         }
     }
@@ -172,7 +175,7 @@ export class Node {
                     const ctx = ref.deref();
                     ctx._deliver(message);
                 } catch (err) {
-                    log('ctx._deliver(%o) : error : %o', message, err);
+                    log('_deliver(%o, %o) : error : %o', to, message, err);
                 }
             }
         } else {

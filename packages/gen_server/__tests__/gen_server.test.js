@@ -3,8 +3,6 @@ import '@otpjs/test_utils';
 import debug from 'debug';
 import * as GenServer from '../src';
 
-const { error, EXIT, trap_exit } = Symbols;
-
 const log = debug('otpjs:gen_server:__tests__');
 
 const { ok, _, error, EXIT, trap_exit } = Symbols;

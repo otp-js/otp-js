@@ -3,6 +3,10 @@ module.exports = {
     transform: {
         "\\.jsx?$": "babel-jest"
     },
+    moduleNameMapper: {
+        "@valkyrie/transports-(.*)": "<rootDir>/transports/$1/src/index.js",
+        "@valkyrie/(.*)": "<rootDir>/packages/$1/src/index.js"
+    },
     setupFilesAfterEnv: ['./tools/regenerator.js'],
     moduleFileExtensions: ["js", "jsx", "json", "node"],
     collectCoverage: true,

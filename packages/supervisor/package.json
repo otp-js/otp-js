@@ -16,7 +16,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "type": "module",
+  "type": "commonjs",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/otp-js/otp-js.git"

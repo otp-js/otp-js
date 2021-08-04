@@ -1,12 +1,19 @@
-import {Pid, Symbols, match} from '@otpjs/core';
+import { Pid, Symbols, match } from '@otpjs/core';
 
 const { ok, _ } = Symbols;
 const INIT_ACK = Symbol.for('otp.proc_lib.init_ack');
 
+function log(ctx, ...args) {
+    return ctx.log.extend('proc_lib')(...args);
+}
 
 export async function start(ctx, fun, timeout = 5000) {
     const self = ctx.self();
-    const spawned = ctx.spawn((ctx) => fun(ctx, self));
+    const spawned = ctx.spawn(function start(ctx) {
+        return fun(ctx, self);
+    });
+
+    log(ctx, 'start(%o) : spawned : %o', fun, spawned);
 
     const [, , response] = await ctx.receive(
         [[INIT_ACK, spawned, _]],
@@ -19,10 +26,14 @@ export async function start(ctx, fun, timeout = 5000) {
 
 export async function startLink(ctx, fun, timeout = 5000) {
     const self = ctx.self();
-    const spawned = ctx.spawnLink(ctx => fun(ctx, self));
+    const spawned = ctx.spawnLink(function startLink(ctx) {
+        return fun(ctx, self)
+    });
+
+    log(ctx, 'startLink(%o) : spawned : %o', fun, spawned);
 
     const [, , response] = await ctx.receive(
-        [[INIT_ACK, spawned, _]],
+        [INIT_ACK, spawned, _],
         timeout
     );
 
