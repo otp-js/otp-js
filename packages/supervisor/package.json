@@ -1,6 +1,6 @@
 {
   "name": "@otp-js/supervisor",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "Supervisor implementation for OTP-JS",
   "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
   "homepage": "https://github.com/otp-js/otp-js#readme",
