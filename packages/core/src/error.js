@@ -1,10 +1,15 @@
 import { error } from './symbols';
-import {serialize, deserialize} from './serializer';
+import { serialize, deserialize } from './serializer';
 
 export class OTPError extends Error {
     constructor(message) {
         let json = false;
-        if (Array.isArray(message)) {
+        if (
+            typeof message !== 'string'
+            && typeof message !== 'number'
+            && typeof message !== 'boolean'
+            && typeof message !== 'undefined'
+        ) {
             json = true;
             message = serialize(message);
         }

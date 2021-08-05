@@ -3,6 +3,7 @@ import { OTPError } from './error';
 import { match, compile } from './matching';
 import { MessageBox } from './message-box.js';
 import { DOWN, EXIT, _, trap_exit } from './symbols';
+import { Pid } from './types';
 
 const node = Symbol();
 const mb = Symbol();
@@ -22,9 +23,17 @@ const isExitMessage = match(
 
 export class Context {
     constructor(owner) {
-        this[node] = owner;
-        this[mb] = new MessageBox();
         this[pid] = owner.pid();
+        this[node] = owner;
+
+        const logComponents = [
+            'otpjs',
+            this[pid].toLowerCase()
+        ]
+        this.log = debug(logComponents.join(':'));
+        this._log = this.log.extend('context');
+
+        this[mb] = new MessageBox(this.log.extend('message-box'));
         this[links] = new Set();
         this[monitors] = new Map();
         this[flags] = new Map();
@@ -39,12 +48,6 @@ export class Context {
         this[forwardWithPid]('register');
         this[forwardWithPid]('unregister');
 
-        const logComponents = [
-            'otpjs',
-            this[pid].toLowerCase()
-        ]
-        this.log = debug(logComponents.join(':'));
-        this._log = this.log.extend('context');
 
         this.death = new Promise(
             resolve => this.die = (reason) => {
@@ -123,7 +126,7 @@ export class Context {
     }
 
     _deliver(message) {
-        this._log('_deliver(%o)', message);
+        this._log('_deliver() : message : %o', message);
         if (!this.dead) {
             if (
                 isExitMessage(message)
@@ -137,10 +140,13 @@ export class Context {
             } else {
                 try {
                     this[mb].push(message);
+                    this._log('_deliver() : mb : %o', this[mb]);
                 } catch (err) {
-                    this._log('_deliver(%o) : undeliverable : %o', message, err);
+                    this._log('_deliver() : undeliverable : %o', err);
                 }
             }
+        } else {
+            this._log('_deliver() : DEAD');
         }
     }
 
@@ -178,29 +184,23 @@ export class Context {
         return node.deliver(to, message);
     }
 
-    async receive(predicates, timeout) {
-        if (
-            typeof timeout === 'undefined'
-            && typeof predicates === 'number'
-        ) {
-            timeout = predicates;
-            predicates = [_];
-        } else if (
-            typeof timeout === 'undefined'
-            && typeof predicates === 'undefined'
-        ) {
-            predicates = [_];
-            timeout = Infinity;
+    async receive(...predicates) {
+        let timeout = Infinity;
+
+        if (predicates.length > 0) {
+            if (typeof predicates[predicates.length - 1] === 'number') {
+                timeout = predicates.pop();
+            }
         }
 
-        if (!Array.isArray(predicates)) {
-            predicates = [predicates]
+        if (predicates.length === 0) {
+            predicates.push(_);
         }
 
         predicates = predicates.map(compile);
 
         const [, message, _predicate] = await this[mb].pop(
-            predicates,
+            ...predicates,
             timeout
         );
 
@@ -219,10 +219,18 @@ export class Context {
         predicates = predicates.map(compile);
 
         const [, message, predicate] = await this[mb].pop(
-            predicates,
+            ...predicates,
             timeout
         );
 
         return [message, predicate];
+    }
+
+    exit(pid, reason) {
+        if (!Pid.isPid(pid)) {
+            reason = pid;
+            pid = this[pid];
+        }
+        return this[node].exit(pid, reason);
     }
 }

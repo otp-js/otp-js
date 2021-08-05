@@ -100,7 +100,9 @@ async function enterLoop(ctx, callbacks, state) {
     log(ctx, 'enterLoop()');
     try {
         while (true) {
+            log(ctx, 'enterLoop() : await receive()');
             const message = await ctx.receive(timeout);
+            log(ctx, 'enterLoop() : await receive() -> %o', message);
             const response = await loop(ctx, callbacks, message, state);
 
             const compare = caseOf(response);

@@ -9,6 +9,5 @@ export const _ = Symbol.for('otp:core:underscore');
 export const spread = Symbol.for('otp:core:spread');
 export const case_clause = Symbol.for('otp:core:case_clause');
 export const badarg = Symbol.for('otp:core:badarg');
-
-export const which_children = Symbol.for('$otp.supervisor.which_children');
-export const count_children = Symbol.for('$otp.supervisor.count_children');
+export const kill = Symbol.for('otp:core:kill');
+export const shutdown = Symbol.for('otp:core:shutdown');

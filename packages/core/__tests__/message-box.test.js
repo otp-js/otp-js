@@ -69,10 +69,18 @@ describe('@otpjs/core.MessageBox', function() {
                         mb.push('test2');
                         mb.push('test3');
                     })
+                    afterEach(function() {
+                        mb.clear();
+                    })
                     it('takes messages in the order they were inserted', async function() {
                         expect(await mb.pop(100)).toMatchPattern([ok, 'test', _]);
                         expect(await mb.pop(100)).toMatchPattern([ok, 'test2', _]);
                         expect(await mb.pop(100)).toMatchPattern([ok, 'test3', _]);
+                    });
+                    it('only takes messages that match the specified pattern', async function() {
+                        await expect(mb.pop(core.compile('test2'), 100)).resolves.toMatchPattern([ok, 'test2', _]);
+                        await expect(mb.pop(core.compile('test3'), 100)).resolves.toMatchPattern([ok, 'test3', _]);
+                        await expect(mb.pop(core.compile('test'), 100)).resolves.toMatchPattern([ok, 'test', _]);
                     });
                 });
                 describe('when there are no available messages', function() {

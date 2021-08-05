@@ -48,7 +48,7 @@ describe('@otpjs/core.OTPNode', () => {
     it('can register contexts under names', async function() {
         expect(node.register).toBeInstanceOf(Function);
         const ctx = node.makeContext();
-        expect(() => node.register(ctx, 'test')).not.toThrow();
+        expect(() => node.register(ctx.self(), 'test')).not.toThrow();
     });
     it('can look up processes by their names', async function() {
         expect(node.whereis).toBeInstanceOf(Function);
@@ -79,7 +79,7 @@ describe('@otpjs/core.OTPNode', () => {
             });
         });
 
-        expect(result).rejects.toThrow(Error('badarg'));
+        expect(result).rejects.toThrow(core.serialize(core.Symbols.badarg));
     });
     it('can route messages to a name', async function() {
         const message = Math.floor(Math.random() * Number.MAX_VALUE);

@@ -1,15 +1,17 @@
 import { ok } from './symbols';
 import debug from 'debug';
 
-const log = debug('otpjs:core:message-box');
+const defaultLogger = debug('otpjs:core:message-box');
 
 const resolvers = Symbol();
 
 // [1]
 // index++ is the same as index += 1
 export class MessageBox extends Array {
-    constructor(...args) {
+    constructor(log = defaultLogger, ...args) {
         super(...args);
+
+        this._log = log;
 
         this[resolvers] = [];
     }
@@ -61,17 +63,30 @@ export class MessageBox extends Array {
             super.push(message);
         }
     }
-    async pop(predicates = () => true, timeout = Infinity) {
-        if (typeof predicates === 'number') {
-            timeout = predicates;
-            predicates = () => true;
+    async pop(...predicates) {
+        let timeout = Infinity;
+        if (predicates.length > 0) {
+            if (typeof predicates[predicates.length - 1] === 'number') {
+                timeout = predicates.pop();
+            }
         }
 
-        if (!Array.isArray(predicates)) {
-            predicates = [predicates];
+        if (predicates.length === 0) {
+            predicates.push(() => true);
         }
 
-        return new Promise((resolve, reject) => {
+        this._log('pop() : predicates : %o', predicates);
+        this._log('pop() : timeout : %o', timeout);
+
+        return new Promise((innerResolve, innerReject) => {
+            const resolve = (result) => {
+                this._log('pop() : resolved : %o', result);
+                innerResolve(result);
+            };
+            const reject = (reason) => {
+                this._log('pop() : rejected : %o', reason);
+                innerReject(reason);
+            };
             if (this.length > 0) {
                 for (let index = 0; index < this.length; index++) {
                     const message = this[index];
@@ -139,6 +154,7 @@ export class MessageBox extends Array {
             }, timeout);
         }
 
+        this._log('_defer() : record : %o', record);
         this[resolvers].push(record);
     }
     _consume(index) {

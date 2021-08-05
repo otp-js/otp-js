@@ -1,8 +1,8 @@
 'use strict';
 
-import debug from 'debug';
+import { Node, Pid, Symbols } from '@otpjs/core';
 import '@otpjs/test_utils';
-import { Node, Symbols, Pid, compile } from '@otpjs/core';
+import debug from 'debug';
 import * as supervisor from '../src';
 import * as Adder from './adder';
 import * as Subtracter from './subtracter';
@@ -10,7 +10,13 @@ import * as Subtracter from './subtracter';
 const { ok, _, trap_exit, EXIT, normal, kill, spread } = Symbols;
 const { one_for_one, simple_one_for_one, one_for_all, rest_for_one } = supervisor.Symbols;
 
-const log = debug('otpjs:supervisor:__tests__')
+function log(ctx, ...args) {
+    return ctx.log.extend('supervisor:__tests__')(...args);
+}
+
+function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 describe('@otp-js/supervisor', () => {
     let node = null;
@@ -56,7 +62,7 @@ describe('@otp-js/supervisor', () => {
                     let received = null;
                     const callbacks = {
                         init: jest.fn((ctx, ...args) => {
-                            log('init(...%o)', args);
+                            log(ctx, 'init(...%o)', args);
                             received = args;
                             return [ok, null]
                         }),
@@ -99,7 +105,7 @@ describe('@otp-js/supervisor', () => {
 
                     callbacks = {
                         init: jest.fn((ctx, ...args) => {
-                            log('callbacks.init()');
+                            log(ctx, 'callbacks.init()');
                             return [ok, config];
                         })
                     };
@@ -117,22 +123,41 @@ describe('@otp-js/supervisor', () => {
 
                     await expect(supervisor.countChildren(ctx, pid)).resolves.toBe(2);
                     await expect(supervisor.whichChildren(ctx, pid)).resolves.toMatchPattern([
-                        { id: 'adder', pid: Pid.isPid, [spread]: _ },
-                        { id: 'subtracter', pid: Pid.isPid, [spread]: _ },
+                        ok,
+                        [
+                            { id: 'adder', pid: Pid.isPid, [spread]: _ },
+                            { id: 'subtracter', pid: Pid.isPid, [spread]: _ },
+                        ]
                     ])
+
+                    node.exit(pid, kill);
                 });
 
                 it('restarts the processes when they die', async function() {
                     let response;
                     const [, pid] = await supervisor.startLink(ctx, callbacks);
+                    log(ctx, 'spawned : %o', pid);
+
                     const [, children] = await supervisor.whichChildren(ctx, pid);
 
-                    const pids = children.map(
-                        ({ pid }) => pid
-                    );
+                    log(ctx, 'children() : %o', children);
+                    await wait(10);
 
-                    pids.forEach((pid) => ctx.exit(pid, kill));
-                    pids.forEach((pid) => expect(node.processInfo(pid)).toBe(null));
+                    for (let child of children) {
+                        const { pid } = child;
+                        log(ctx, 'exit(%o, kill)', pid);
+                        ctx.exit(pid, kill);
+                    }
+
+                    await wait(10);
+
+                    for (let child of children) {
+                        const { pid } = child;
+                        expect(node.processInfo(pid)).toMatchPattern({
+                            dead: true,
+                            [spread]: _
+                        });
+                    }
 
                     const [, nextChildren] = await supervisor.whichChildren(ctx, pid);
                     expect(nextChildren).toMatchPattern([

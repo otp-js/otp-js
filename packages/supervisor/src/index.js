@@ -39,26 +39,21 @@ async function init(ctx, callbacks, args) {
 }
 
 async function doStartChild(ctx, spec, retries) {
-    log(ctx, 'doStartChild(%o) : ctx.self() : %o', spec.id, ctx.self());
     const { id, start } = spec;
-    log(ctx, 'doStartChild(%o) : disassemble start : %o', spec.id, start)
     const [fun, args] = start;
 
-    log(ctx, 'doStartChild(%o) : await %o(...%o)', spec.id, fun, args);
     const response = await fun(ctx, ...args)
     const compare = core.caseOf(response)
 
-    log(ctx, 'doStartChild(%o) : response : %O', spec.id, response);
+    log(ctx, 'doStartChild(%o) : response : %o', spec.id, response);
     if (compare([ok, Pid.isPid])) {
         const [, pid] = response;
         return { id, pid };
-    } else if (compare(Pid.isPid)) {
-        const pid = response;
-        return { id, pid };
     } else if (retries < MAX_RETRIES) {
+        log(ctx, 'doStartChild(%o) : retry : %o', retries + 1);
         return doStartChild(ctx, spec, retries + 1);
     } else {
-        throw new OTPError(['cannot_start', spec]);
+        throw new OTPError(['cannot_start', spec.id, response]);
     }
 }
 
@@ -66,14 +61,16 @@ function handleCall(ctx, call, from, state) {
     const compare = core.caseOf(call);
 
     log(ctx, 'call : %o', call);
-
     try {
         if (compare(which_children)) {
             return [
                 reply,
-                state.children.map(
-                    ({ pid, id }) => ({ pid, id })
-                ),
+                [
+                    ok,
+                    state.children.map(
+                        ({ pid, id }) => ({ pid, id })
+                    ),
+                ],
                 state
             ];
         } else if (compare(count_children)) {
@@ -90,6 +87,8 @@ const exitPattern = core.compile([EXIT, Pid.isPid, _, _]);
 async function handleInfo(ctx, info, state) {
     const compare = core.caseOf(info);
 
+    log(ctx, 'handleInfo(%o)', info);
+
     if (compare(exitPattern)) {
         const [EXIT, pid, reason, _stack] = info;
         if (reason != normal) {
@@ -100,15 +99,27 @@ async function handleInfo(ctx, info, state) {
         }
     } else if (compare('start')) {
         const { childSpecs } = state;
-        const children = await Promise.all(
-            childSpecs.map(
-                spec => doStartChild(ctx, spec)
-            )
-        );
+        const children = await _startChildren(ctx, childSpecs);
         return [noreply, { ...state, children }];
     } else {
         return [noreply, state];
     }
+}
+
+async function _startChildren(ctx, specs) {
+    let responses = [];
+    for (let spec of specs) {
+        try {
+            const response = await doStartChild(ctx, spec);
+            responses.push(response);
+        } catch (err) {
+            responses.push({
+                id: spec.id,
+                pid: null
+            })
+        }
+    }
+    return responses;
 }
 
 const isSimpleOneForOne = core.compile(Symbols.simple_one_for_one);
@@ -142,7 +153,7 @@ async function doOneForOneRestart(ctx, state, id, pid) {
 }
 
 function getSpecById(ctx, id, specs) {
-    log(ctx, 'getSpecsById(%o, %O)', id, specs);
+    log(ctx, 'getSpecsById(%o, %o)', id, specs);
     return specs[id];
 }
 
@@ -157,7 +168,7 @@ const callbacks = {
     handleInfo
 };
 
-export function startLink(ctx, name, supCallbacks, args = []) {
+export async function startLink(ctx, name, supCallbacks, args = []) {
     if (typeof name === 'object') {
         args = supCallbacks || args;
         supCallbacks = name;

@@ -27,8 +27,8 @@ function kvCompose(...funs) {
 
 function reviveOTP(key, value) {
     if (typeof value === 'object') {
-        if (value['$otp.symbol']) {
-            return Symbol.for(value['$otp.symbol']);
+        if (value[0] === '$otp.symbol') {
+            return Symbol.for(value[1]);
         } else if (value['$otp.pid']) {
             return new Pid(value['$otp.pid']);
         } else if (value['$otp.ref']) {
@@ -45,7 +45,7 @@ function replaceOTP(key, value) {
     if (typeof value === 'symbol') {
         const key = Symbol.keyFor(value);
         if (key) {
-            return { '$otp.symbol': key };
+            return ['$otp:symbol', key];
         } else {
             return undefined;
         }

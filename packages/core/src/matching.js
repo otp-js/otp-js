@@ -1,6 +1,9 @@
+import debug from 'debug';
 import { _, spread } from './symbols';
 import { OTPError } from './error';
 import { Pid, Ref } from './types';
+
+const log = debug('otpjs:core:matching');
 
 const patterns = new WeakMap();
 
@@ -48,6 +51,7 @@ function doCompile(pattern) {
     return compiledPattern;
     function compiledPattern(message) {
         for (let compare of comparisons) {
+            log('%o(%o)', compare, message);
             if (!compare(message)) {
                 return false;
             }

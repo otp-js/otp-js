@@ -1,7 +1,7 @@
 import debug from 'debug';
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
-import { ok, _, normal, badarg, DOWN } from './symbols';
+import { ok, _, normal, badarg, DOWN, EXIT } from './symbols';
 import { OTPError } from './error';
 
 const log = debug('otpjs:core:node');
@@ -20,6 +20,11 @@ export class Node {
         this._registrations = new Map();
 
         this._system = this.spawn((ctx) => this.system(ctx));
+    }
+
+    exit(pid, reason) {
+        const message = [EXIT, reason, Error().stack];
+        return this.deliver(pid, message);
     }
 
     monitor(watcherPid, watcheePid) {
@@ -72,9 +77,12 @@ export class Node {
             const proc = ref.deref();
             if (proc) {
                 if (this._registrations.has(name)) {
+                    log('register(%o, %o) : registration.has(name)', pid, name);
                     throw new OTPError(badarg);
                 } else {
                     this._registrations.set(name, pid);
+
+                    log('register(%o, %o)', pid, name);
 
                     const node = this;
                     proc.death.finally(
@@ -86,9 +94,11 @@ export class Node {
                     return ok;
                 }
             } else {
+                log('register(%o, %o) : proc.deref() === undefined', pid, name);
                 throw new OTPError(badarg);
             }
         } else {
+            log('register(%o, %o) : processes.get(%o) === undefined', pid, name);
             throw new OTPError(badarg);
         }
     }
