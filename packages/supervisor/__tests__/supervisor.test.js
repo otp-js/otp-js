@@ -222,21 +222,32 @@ describe('@otp-js/supervisor', () => {
                         ]
                     ])
                 });
-                it.only('spawns processes when startChild is called', async function() {
+                it('spawns processes when startChild is called', async function() {
                     const [, pid] = await supervisor.startLink(ctx, callbacks);
-                    const rand = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)
-                    const response = supervisor.startChild(ctx, pid, [rand])
+                    for (let i = 0; i < 10; i++) {
+                        log(ctx, 'startChild(%o)', i);
+                        const response = supervisor.startChild(ctx, pid, [i])
 
-                    await expect(response).resolves.toMatchPattern([
-                        ok,
-                        Pid.isPid
-                    ]);
+                        await expect(response).resolves.toMatchPattern([
+                            ok,
+                            Pid.isPid
+                        ]);
 
-                    await response;
+                        const [, child] = await response;
 
-                    expect(start).toHaveBeenCalled();
-                    expect(start.mock.calls[0][4]).toMatchPattern(rand);
-                    expect(start.mock.results[0]).toMatchPattern(rand);
+                        expect(start).toHaveBeenCalledTimes(i + 1);
+                        expect(start.mock.calls[i][4]).toMatchPattern(i);
+                        await expect(start.mock.results[i].value).resolves.toMatchPattern([
+                            ok,
+                            Pid.isPid
+                        ]);
+
+                        // Adder adds six by default, we have extended with i
+                        await expect(Adder.get(ctx, child)).resolves.toMatchPattern(i + 6);
+                    }
+
+                    await expect(supervisor.countChildren(ctx, pid))
+                        .resolves.toMatchPattern(10)
                 });
             });
         })
