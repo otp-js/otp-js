@@ -1,11 +1,13 @@
 import { OTPError } from "./error";
 
 export class Ref extends String {
-    static LOCAL = 0;
+    static LOCAL = '0';
+    static REMOTE = '-1';
     static regex = /^Ref<(?<node>[0-9]+)\.(?<ref>[0-9]+)>$/;
 
     static isRef = (string) => string instanceof Ref;
     static for = (node, ref) => new Ref(`Ref<${node}.${ref}>`);
+    static compare = (a, b) => a.toString().localeCompare(b.toString());
 
     get node() {
         return this.match(Ref.regex).groups.node;
@@ -25,11 +27,13 @@ export class Ref extends String {
 
 
 export class Pid extends String {
-    static LOCAL = 0;
+    static LOCAL = '0';
+    static REMOTE = '-1';
     static regex = /^Pid<(?<node>[0-9]+)\.(?<process>[0-9]+)>$/;
 
     static isPid = (string) => string instanceof Pid;
     static of = (node, process) => new Pid(`Pid<${node}.${process}>`);
+    static compare = (a, b) => a.toString().localeCompare(b.toString());
 
     get node() {
         const match = this.match(Pid.regex);

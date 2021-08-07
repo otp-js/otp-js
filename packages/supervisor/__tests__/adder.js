@@ -1,4 +1,4 @@
-import { Symbols } from '@otpjs/core';
+import { Symbols, caseOf } from '@otpjs/core';
 import * as gen_server from '@otpjs/gen_server';
 
 const { ok } = Symbols;
@@ -10,8 +10,14 @@ function init(ctx, ...initial) {
 }
 
 function handleCall(ctx, call, from, state) {
-    const nextState = state + call;
-    return [reply, nextState, nextState];
+    const compare = caseOf(call);
+
+    if (compare((n) => typeof n === 'number')) {
+        const nextState = state + call;
+        return [reply, nextState, nextState];
+    } else if (compare('get')) {
+        return [reply, state, state];
+    }
 }
 
 function handleCast(ctx, cast, state) {
@@ -44,4 +50,8 @@ export function incr(ctx, pid, n) {
 
 export function plus(ctx, pid, n) {
     return ctx.send(pid, n);
+}
+
+export function get(ctx, pid) {
+    return gen_server.call(ctx, pid, 'get');
 }

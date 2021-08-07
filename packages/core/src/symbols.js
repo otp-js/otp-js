@@ -11,3 +11,4 @@ export const case_clause = Symbol.for('otp:core:case_clause');
 export const badarg = Symbol.for('otp:core:badarg');
 export const kill = Symbol.for('otp:core:kill');
 export const shutdown = Symbol.for('otp:core:shutdown');
+export const relay = Symbol.for('otp:core:relay');

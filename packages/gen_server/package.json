@@ -40,7 +40,8 @@
     "url": "https://github.com/otp-js/otp-js/issues"
   },
   "devDependencies": {
-    "@otpjs/test_utils": "file:../test_utils"
+    "@otpjs/test_utils": "file:../test_utils",
+    "babel-plugin-source-map-support": "^2.1.3"
   },
   "gitHead": "682392b97a0f094ada36496dfb5351ff7aeca9f3",
   "dependencies": {

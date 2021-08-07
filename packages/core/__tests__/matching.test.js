@@ -58,9 +58,13 @@ describe('@otpjs/core/matching/compile', function() {
                 })
             });
             describe('with a spread symbol', function() {
-                it('expects the spread to be the last element', function() {
-                    expect(() => compile([_, _, spread, _]))
+                it('expects the spread to be the second to last element or last element', function() {
+                    expect(() => compile([_, _, spread, _, _]))
                         .toThrow('invalid_match_pattern')
+                    expect(() => compile([_, _, spread, _]))
+                        .not.toThrow('invalid_match_pattern')
+                    expect(() => compile([_, _, spread]))
+                        .not.toThrow('invalid_match_pattern')
                 });
                 it('does allow extra elements', function() {
                     const compiled = compile([_, _, spread]);

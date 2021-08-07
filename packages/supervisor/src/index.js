@@ -10,7 +10,7 @@ function log(ctx, ...args) {
     return ctx.log.extend('supervisor')(...args);
 }
 
-const { ok, _, spread, trap_exit, EXIT, normal } = core.Symbols;
+const { ok, _, spread, trap_exit, EXIT, error, normal } = core.Symbols;
 const { reply, noreply, stop } = gen_server.Symbols;
 const { Pid, Ref } = core;
 const { which_children, count_children } = Symbols;
@@ -39,10 +39,12 @@ async function init(ctx, callbacks, args) {
 }
 
 async function doStartChild(ctx, spec, retries) {
-    const { id, start } = spec;
-    const [fun, args] = start;
+    const { id } = spec;
+    const [start, args] = spec.start;
 
-    const response = await fun(ctx, ...args)
+    log(ctx, 'doStartChild(%o) : start : %o', spec, start);
+
+    const response = await start(ctx, ...args)
     const compare = core.caseOf(response)
 
     log(ctx, 'doStartChild(%o) : response : %o', spec.id, response);
@@ -60,26 +62,26 @@ async function doStartChild(ctx, spec, retries) {
 function handleCall(ctx, call, from, state) {
     const compare = core.caseOf(call);
 
-    log(ctx, 'call : %o', call);
-    try {
-        if (compare(which_children)) {
-            return [
-                reply,
-                [
-                    ok,
-                    state.children.map(
-                        ({ pid, id }) => ({ pid, id })
-                    ),
-                ],
-                state
-            ];
-        } else if (compare(count_children)) {
-            return [reply, state.children.length, state];
-        } else {
-            return [noreply, state];
-        }
-    } catch (err) {
-        log(ctx, 'error : %o', err);
+    log(ctx, 'handleCall(%o)', call);
+    if (compare(which_children)) {
+        return [
+            reply,
+            [
+                ok,
+                state.children.map(
+                    ({ pid, id }) => ({ pid, id })
+                ),
+            ],
+            state
+        ];
+    } else if (compare(count_children)) {
+        return [reply, state.children.length, state];
+    } else if (compare(['start_child', _])) {
+        const [, specOrArgs] = call;
+        return _startChild(ctx, specOrArgs, state);
+    } else {
+        log(ctx, 'handleCall(%o) : unhandled', call);
+        return [noreply, state];
     }
 }
 
@@ -98,9 +100,15 @@ async function handleInfo(ctx, info, state) {
             return [noreply, state];
         }
     } else if (compare('start')) {
-        const { childSpecs } = state;
-        const children = await _startChildren(ctx, childSpecs);
-        return [noreply, { ...state, children }];
+        const { strategy, childSpecs } = state;
+        const compare = core.caseOf(strategy);
+
+        if (compare(Symbols.simple_one_for_one)) {
+            return [noreply, { ...state, children: [] }]
+        } else {
+            const children = await _startChildren(ctx, childSpecs);
+            return [noreply, { ...state, children }];
+        }
     } else {
         return [noreply, state];
     }
@@ -122,6 +130,85 @@ async function _startChildren(ctx, specs) {
     return responses;
 }
 
+async function _startChild(ctx, specOrArgs, state) {
+    const compare = core.caseOf(state.strategy);
+
+    log(ctx, '_startChild(%o, %o)', state.strategy, specOrArgs);
+
+    if (compare(isSimpleOneForOne)) {
+        log(ctx, '_startChild(simple_one_for_one, %o) : state : %o', specOrArgs, state);
+        const [base] = state.childSpecs;
+        const [start, args] = base.start;
+        log(ctx, '_startChild(simple_one_for_one, %o) : doStartChild()', specOrArgs);
+        const result = await doStartChild(
+            ctx,
+            {
+                ...base,
+                start: [start, [...args, ...specOrArgs]]
+            }
+        );
+        log(ctx, '_startChild(simple_one_for_one, %o) : result : %o', specOrArgs, result);
+
+        const compare = core.caseOf(result);
+        if (compare({ pid: Pid.isPid, [spread]: _ })) {
+            const { pid } = result;
+            const nextState = {
+                ...state,
+                children: [
+                    ...state.children,
+                    result,
+                ]
+            }
+            return _handleStartResult(
+                [ok, pid, nextState],
+                nextState
+            )
+        }
+    } else {
+        log(ctx, '_startChild(simple_one_for_one, %o) : doStartChild()', specOrArgs);
+        const result = await doStartChild(
+            ctx,
+            specOrArgs
+        );
+        const index = state.children.findIndex(({ id }) => id === specOrArgs.id);
+        let children = state.children;
+        if (index >= 0) {
+            children = [
+                ...children.slice(0, index),
+                result,
+                ...children.slice(index + 1, children.length)
+            ];
+
+        } else {
+            children = [
+                ...children,
+                result
+            ];
+        }
+        const nextState = {
+            ...state,
+            children
+        }
+        return _handleStartResult(
+            [ok, result.pid, nextState],
+            state
+        )
+    }
+}
+
+async function _handleStartResult(result, state) {
+    const compare = core.caseOf(result);
+    if (compare([ok, _, _])) {
+        const [, pid, nextState] = result;
+        return [reply, [ok, pid], nextState];
+    } else if (compare([error, _])) {
+        const [, reason] = result;
+        return [stop, reason];
+    } else {
+        return [stop, ['unrecognized_response', result]];
+    }
+}
+
 const isSimpleOneForOne = core.compile(Symbols.simple_one_for_one);
 const isOneForOne = core.compile(Symbols.one_for_one);
 const isOneForAll = core.compile(Symbols.one_for_all);
@@ -135,7 +222,7 @@ function doRestart(ctx, pid, state) {
     const compare = core.caseOf(state.strategy);
 
     if (compare(isSimpleOneForOne)) {
-        throw new OTPError('strategy_not_implemented');
+        return doOneForOneRestart(ctx, state, id, pid);
     } else if (compare(isOneForOne)) {
         return doOneForOneRestart(ctx, state, id, pid);
     } else if (compare(isOneForOne)) {
@@ -177,16 +264,20 @@ export async function startLink(ctx, name, supCallbacks, args = []) {
     return gen_server.startLink(ctx, name, callbacks, [supCallbacks, args]);
 }
 
-export function startChild() {
+export function startChild(ctx, pid, args) {
+    return gen_server.call(ctx, pid, ['start_child', args]);
 }
 
 export function restartChild() {
+    return gen_server.call(ctx, pid, ['restart_child', pid]);
 }
 
-export function deleteChild() {
+export function deleteChild(ctx, pid, target) {
+    return gen_server.call(ctx, pid, ['delete_child', target]);
 }
 
-export function terminateChild() {
+export function terminateChild(ctx, pid, target) {
+    return gen_server.call(ctx, pid, ['terminate_child', target]);
 }
 
 export function whichChildren(ctx, pid, timeout = Infinity) {

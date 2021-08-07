@@ -31,7 +31,7 @@ describe('@otp-js/supervisor', () => {
         args = [];
         callbacks = {
             init: jest.fn(() => {
-                return [ok, [one_for_one, []]]
+                return [ok, [{ strategy: one_for_one }, []]]
             }),
         };
     })
@@ -173,6 +173,82 @@ describe('@otp-js/supervisor', () => {
             describe('for a rest_for_one strategy', function() {
             });
             describe('for a simple_one_for_one strategy', function() {
+                let start;
+                beforeEach(function() {
+                    node = new Node();
+                    ctx = node.makeContext();
+                    ctx.processFlag(trap_exit, true);
+                    args = [];
+                    start = jest.fn(Adder.startLink);
+                    callbacks = {
+                        init: jest.fn(() => {
+                            return [
+                                ok,
+                                [
+                                    { strategy: simple_one_for_one },
+                                    [
+                                        {
+                                            start: [start, [1, 2, 3]]
+                                        },
+                                    ]
+                                ]
+                            ]
+                        }),
+                    };
+                });
+                it('spawns no processes after initializing', async function() {
+                    let response;
+                    expect(function() {
+                        response = supervisor.startLink(ctx, callbacks);
+                    }).not.toThrow();
+                    await expect(response).resolves.toMatchPattern([ok, Pid.isPid]);
+
+                    const [, pid] = await response;
+
+                    await expect(supervisor.countChildren(ctx, pid)).resolves.toBe(0);
+                    await expect(supervisor.whichChildren(ctx, pid)).resolves.toMatchPattern([
+                        ok,
+                        []
+                    ]);
+
+                    expect(start).not.toHaveBeenCalled();
+                    expect(callbacks.init.mock.results[0].value).toMatchPattern([
+                        ok,
+                        [
+                            { strategy: simple_one_for_one },
+                            [
+                                spread
+                            ]
+                        ]
+                    ])
+                });
+                it('spawns processes when startChild is called', async function() {
+                    const [, pid] = await supervisor.startLink(ctx, callbacks);
+                    for (let i = 0; i < 10; i++) {
+                        log(ctx, 'startChild(%o)', i);
+                        const response = supervisor.startChild(ctx, pid, [i])
+
+                        await expect(response).resolves.toMatchPattern([
+                            ok,
+                            Pid.isPid
+                        ]);
+
+                        const [, child] = await response;
+
+                        expect(start).toHaveBeenCalledTimes(i + 1);
+                        expect(start.mock.calls[i][4]).toMatchPattern(i);
+                        await expect(start.mock.results[i].value).resolves.toMatchPattern([
+                            ok,
+                            Pid.isPid
+                        ]);
+
+                        // Adder adds six by default, we have extended with i
+                        await expect(Adder.get(ctx, child)).resolves.toMatchPattern(i + 6);
+                    }
+
+                    await expect(supervisor.countChildren(ctx, pid))
+                        .resolves.toMatchPattern(10)
+                });
             });
         })
     });

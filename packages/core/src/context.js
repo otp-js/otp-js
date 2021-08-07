@@ -28,6 +28,7 @@ export class Context {
 
         const logComponents = [
             'otpjs',
+            owner.name,
             this[pid].toLowerCase()
         ]
         this.log = debug(logComponents.join(':'));
