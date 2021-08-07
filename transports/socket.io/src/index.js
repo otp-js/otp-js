@@ -1,4 +1,4 @@
-import { Pid, Ref } from '@otpjs/core';
+import { Pid, Ref, serialize, deserialize } from '@otpjs/core';
 
 export function register(node, socket, name = Symbol.for('socket.io')) {
     const ctx = node.makeContext();
@@ -6,7 +6,7 @@ export function register(node, socket, name = Symbol.for('socket.io')) {
 
     socket.on('otp-message', (to, message) => {
         to = JSON.parse(to, revive);
-        message = JSON.parse(message, revive);
+        message = deserialize(message, revive);
 
         node.deliver(to, message);
     });
@@ -18,8 +18,8 @@ export function register(node, socket, name = Symbol.for('socket.io')) {
     }
 
     function forward({ to, message }) {
-        to = JSON.stringify(to, replace);
-        message = JSON.stringify(message, replace);
+        to = serialize(to, replace);
+        message = serialize(message, replace);
         socket.emit(
             'otp-message',
             to,
@@ -28,19 +28,23 @@ export function register(node, socket, name = Symbol.for('socket.io')) {
     }
 
     function revive(key, value) {
-        if (typeof value === 'object' && value['$pid']) {
-            const pid = new Pid(value['$pid']);
-            if (pid.node === 'REMOTE') {
-                return Pid.of(routerId, pid.process);
+        if (value instanceof Pid) {
+            if (value.node === Pid.REMOTE) {
+                return Pid.of(routerId, value.process);
+            } else if (value.node === Pid.LOCAL) {
+                return value;
             } else {
-                return pid;
+                const id = node.getRouterId(value.node);
+                return Pid.of(id, value.process);
             }
-        } else if (typeof value === 'object' && value['$ref']) {
-            const ref = new Ref(value['$ref']);
-            if (ref.node === 'REMOTE') {
-                return Ref.for(routerId, ref.process);
+        } else if (value instanceof Ref) {
+            if (value.node === Ref.REMOTE) {
+                return Ref.for(routerId, value.ref);
+            } else if (value.node === Ref.LOCAL) {
+                return value;
             } else {
-                return ref;
+                const id = node.getRouterId(value.node);
+                return Ref.for(id, value.ref);
             }
         } else {
             return value;
@@ -48,37 +52,23 @@ export function register(node, socket, name = Symbol.for('socket.io')) {
     }
 
     function replace(key, value) {
-        if (value instanceof Symbol) {
-            return {
-                '$sym': Symbol.keyFor(value)
-            };
-        } else if (value instanceof Pid) {
+        if (value instanceof Pid) {
             if (value.node === Pid.LOCAL) {
-                return {
-                    '$pid': new String(
-                        Pid.of('REMOTE', value.process)
-                    )
-                };
+                return Pid.of(Pid.REMOTE, value.process);
             } else if (value.node === routerId) {
-                return {
-                    '$pid': new String(
-                        Pid.of(Pid.LOCAL, value.process)
-                    )
-                };
+                return Pid.of(Pid.LOCAL, value.process);
             } else {
-                // TODO: translate remote pids
+                const name = node.getRouterName();
+                return Pid.of(name, value.process);
             }
         } else if (value instanceof Ref) {
             if (value.node === Ref.LOCAL) {
-                return {
-                    '$ref': new String(Ref.for('REMOTE', value.ref))
-                };
+                return Ref.for(Ref.REMOTE, value.ref);
             } else if (value.node === routerId) {
-                return {
-                    '$ref': new String(Ref.for(Ref.LOCAL, value.ref))
-                };
+                return Ref.for(Ref.LOCAL, value.ref);
             } else {
-                // TODO: translate remote refs
+                const name = node.getRouterName();
+                return Ref.for(name, value.process);
             }
         } else {
             return value;

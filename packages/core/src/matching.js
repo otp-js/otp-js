@@ -101,31 +101,39 @@ function refComparator(pattern, comparisons) {
 function simpleComparator(pattern, comparisons) {
     comparisons.push(
         function simpleCompare(message) {
+            log('%o(%o, %o) = %o', simpleCompare, pattern, message, pattern === message);
             return message === pattern;
         }
     );
 }
 
 function arrayComparator(pattern, comparisons, subComparisons = []) {
+    const spreadIndex = pattern.indexOf(spread);
+    let spreadPattern = _;
+
     comparisons.push(
         function isArray(message) {
             return Array.isArray(message);
         }
     );
 
-    const spreadIndex = pattern.indexOf(spread);
     if (spreadIndex >= 0) {
-        if (spreadIndex != pattern.length - 1) {
+        log('%o(%o)', arrayComparator, pattern);
+        if (spreadIndex < pattern.length - 2) {
+            log('%o(%o) : invalid_pattern', arrayComparator, pattern);
             throw new OTPError('invalid_match_pattern');
+        } else {
+            const length = spreadIndex;
+            log('%o(%o) : containsAtLeast(%o)', arrayComparator, pattern, length);
+            comparisons.push(
+                function containsAtLeast(message) {
+                    return message.length >= length;
+                }
+            )
         }
-        const length = spreadIndex;
-        comparisons.push(
-            function containsAtLeast(message) {
-                return message.length >= length;
-            }
-        )
     } else {
         const length = pattern.length;
+        log('%o(%o) : matchesLength(%o)', arrayComparator, pattern, length);
         comparisons.push(
             function matchesLength(message) {
                 return message.length === length;
@@ -133,29 +141,65 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
         );
     }
 
+    log('%o(%o)', arrayComparator, pattern);
     for (let index = 0; index < pattern.length; index++) {
         const subPattern = pattern[index];
+        log('%o(%o) : compileSubPattern[%o](%o)', arrayComparator, pattern, index, subPattern);
         if (subPattern === spread) {
-            break;
-        } else {
+            log('%o(%o) : spread', arrayComparator, pattern);
+            if (pattern.length === spreadIndex + 2) {
+                log('%o(%o) : spreadPattern : %o', arrayComparator, pattern, spreadPattern);
+                spreadPattern = pattern[index + 1];
+            }
+        } else if (spreadIndex < 0 || index < spreadIndex) {
             const subComparison = compile(subPattern);
+            log('%o(%o) : subComparisons.push(%o)', arrayComparator, pattern, subComparison);
             subComparisons.push(subComparison);
         }
     }
 
     comparisons.push(
         function compareArrayItems(message) {
-            for (let index = 0; index < subComparisons.length; index++) {
+            let index;
+            let matches = true;
+
+            log('%o(%o) : begin : %o', compareArrayItems, message, subComparisons);
+
+            for (
+                index = 0;
+                index < subComparisons.length && matches;
+                index++
+            ) {
                 const compare = subComparisons[index]
-                if (!compare(message[index])) {
-                    return false;
-                } else {
-                    continue;
-                }
+                const match = compare(message[index]);
+                log('%o(%o) : %o(%o) = %o', compareArrayItems, message, compare, message[index], match);
+                matches &&= match;
             }
-            return true;
-        }
-    )
+
+            log('%o(%o) : end : %O', compareArrayItems, message, matches);
+
+            return matches;
+        },
+    );
+
+    if (spreadIndex >= 0) {
+        const compareSpread = compile(spreadPattern);
+        comparisons.push(
+            function compareArraySpreadItems(message) {
+                let matches = true;
+                for (
+                    let index = spreadIndex;
+                    index < message.length && matches;
+                    index++
+                ) {
+                    const match = compareSpread(message[index]);
+                    log('%o(%o) = %o', compareSpread, message[index], match);
+                    matches &&= match;
+                }
+                return matches;
+            }
+        )
+    }
 }
 
 function objectComparator(pattern, comparisons) {

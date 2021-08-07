@@ -2,7 +2,7 @@ import { createServer } from 'http';
 import io from 'socket.io';
 import clientIO from 'socket.io-client';
 
-import * as transport from '../src';
+import { register as useSocketIO } from '../src';
 import * as otp from '@otpjs/core';
 
 let serverNode = null;
@@ -50,8 +50,8 @@ afterEach(function() {
 
 describe('@otpjs/transports-socket.io', function() {
     it('can register from the client side', function() {
-        transport.register(clientNode, clientSocket);
-        transport.register(serverNode, serverSocket);
+        useSocketIO(clientNode, clientSocket);
+        useSocketIO(serverNode, serverSocket);
 
         return new Promise((resolve, reject) => {
             const pidA = serverNode.spawn(async (ctx) => {

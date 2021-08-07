@@ -11,7 +11,7 @@ export function deserialize(string, reviver = undefined) {
 
 export function serialize(data, replacer = undefined) {
     if (replacer) {
-        replacer = kvCopose(replacer, replaceOTP);
+        replacer = kvCompose(replaceOTP, replacer);
     } else {
         replacer = replaceOTP;
     }
