@@ -1,7 +1,7 @@
 import debug from 'debug';
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
-import { ok, _, normal, badarg, DOWN, EXIT } from './symbols';
+import { ok, _, normal, badarg, DOWN, EXIT, relay } from './symbols';
 import { OTPError } from './error';
 
 const log = debug('otpjs:core:node');
@@ -226,24 +226,23 @@ export class Node {
         } else {
             to = this._registrations.get(to);
         }
+        this._log('deliver(%o)', to);
         if (to.node == Pid.LOCAL) {
+            this._log('deliver(%o) : LOCAL', to);
             const ref = this._processes.get(to.process);
+            this._log('deliver(%o) : LOCAL : ref : %o', to, ref)
             if (ref) {
-                try {
-                    const ctx = ref.deref();
+                const ctx = ref.deref();
+                if (ctx) {
+                    this._log('deliver(%o) : LOCAL : ctx : %o', to, ctx);
                     ctx._deliver(message);
-                } catch (err) {
-                    this._log('_deliver(%o, %o) : error : %o', to, message, err);
                 }
             }
         } else {
-            const ref = this._routers.get(to.node);
-            if (ref) {
-                const ctx = ref.deref();
-                ctx._deliver({
-                    to,
-                    message
-                });
+            this._log('deliver(%o) : REMOTE', to, to.node);
+            const pid = this._routersById.get(to.node);
+            if (pid) {
+                this.deliver(pid, [relay, to, message]);
             }
         }
     }

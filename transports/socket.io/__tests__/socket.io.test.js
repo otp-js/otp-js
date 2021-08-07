@@ -5,6 +5,12 @@ import clientIO from 'socket.io-client';
 import { register as useSocketIO } from '../src';
 import * as otp from '@otpjs/core';
 
+function log(ctx, ...args) {
+    return ctx.log.extend('transports:socket.io:__tests__')(...args);
+}
+
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 let serverNode = null;
 let clientNode = null;
 let server = null;
@@ -49,19 +55,33 @@ afterEach(function() {
 })
 
 describe('@otpjs/transports-socket.io', function() {
-    it('can register from the client side', function() {
+    it('can register from the client side', async function() {
         useSocketIO(clientNode, clientSocket);
         useSocketIO(serverNode, serverSocket);
 
-        return new Promise((resolve, reject) => {
-            const pidA = serverNode.spawn(async (ctx) => {
-                const message = await ctx.receive();
-                expect(message).toBe('test');
-                resolve();
+        let pid;
+        await new Promise(async (resolve, reject) => {
+            const target = serverNode.spawn(async (ctx) => {
+                try {
+                    log(ctx, 'spawned');
+                    const message = await ctx.receive(500);
+                    expect(message).toBe('test');
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
             })
-            const pidB = clientNode.spawn((ctx) => {
-                ctx.send(otp.Pid.of(1, pidA.process), 'test');
+
+            await wait(10);
+
+            pid = clientNode.spawn((ctx) => {
+                const targetPid = otp.Pid.of(1, target.process);
+                log(ctx, 'send(%o, test)', targetPid);
+                ctx.send(targetPid, 'test');
+                return ctx.receive();
             })
-        })
+        });
+
+        clientNode.exit(pid, otp.Symbols.kill);
     });
 })
