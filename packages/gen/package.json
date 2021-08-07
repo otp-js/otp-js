@@ -36,5 +36,8 @@
   },
   "bugs": {
     "url": "https://github.com/otp-js/otp-js/issues"
+  },
+  "devDependencies": {
+    "babel-plugin-source-map-support": "^2.1.3"
   }
 }

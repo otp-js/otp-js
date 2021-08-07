@@ -31,5 +31,8 @@
   },
   "dependencies": {
     "@otpjs/core": "file:../core"
+  },
+  "devDependencies": {
+    "babel-plugin-source-map-support": "^2.1.3"
   }
 }
