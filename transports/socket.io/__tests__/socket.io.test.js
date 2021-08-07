@@ -82,6 +82,6 @@ describe('@otpjs/transports-socket.io', function() {
             })
         });
 
-        clientNode.exit(pid, otp.Symbols.kill);
+        clientNode.deliver(pid, 'die');
     });
 })
