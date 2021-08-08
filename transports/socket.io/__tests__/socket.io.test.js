@@ -55,7 +55,7 @@ afterEach(function() {
 })
 
 describe('@otpjs/transports-socket.io', function() {
-    it('can register from the client side', async function() {
+    it('can register from the both sides', async function() {
         useSocketIO(clientNode, clientSocket);
         useSocketIO(serverNode, serverSocket);
 
@@ -78,6 +78,36 @@ describe('@otpjs/transports-socket.io', function() {
                 const targetPid = otp.Pid.of(1, target.process);
                 log(ctx, 'send(%o, test)', targetPid);
                 ctx.send(targetPid, 'test');
+                return ctx.receive();
+            })
+        });
+
+        clientNode.deliver(pid, 'die');
+    });
+    it('can route to named remote processes', async function() {
+        useSocketIO(clientNode, clientSocket, 'server');
+        useSocketIO(serverNode, serverSocket, 'client');
+
+        let pid;
+        await new Promise(async (resolve, reject) => {
+            serverNode.spawn(async (ctx) => {
+                try {
+                    log(ctx, 'spawned');
+                    ctx.register('test');
+                    const message = await ctx.receive(500);
+                    expect(message).toBe('test');
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
+            })
+
+            await wait(10);
+
+            pid = clientNode.spawn((ctx) => {
+                const target = ['test', 'server'];
+                log(ctx, 'send(%o, test)', target);
+                ctx.send(target, 'test');
                 return ctx.receive();
             })
         });
