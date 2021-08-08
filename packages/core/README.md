@@ -1,7 +1,6 @@
-# OTPJS
 # @otpjs/core
-[![Build Status](https://travis-ci.com/fauxsoup/otpjs.svg?branch=master)](https://travis-ci.com/otpjs/otpjs)
-[![Coverage Status](https://coveralls.io/repos/github/fauxsoup/otpjs/badge.svg?branch=master)](https://coveralls.io/github/otpjs/otpjs?branch=master)
+[![Build Status](https://travis-ci.com/otp-js/otp-js.svg?branch=main)](https://travis-ci.com/otp-js/otp-js)
+[![Coverage Status](https://coveralls.io/repos/github/otp-js/otp-js/badge.svg?branch=main)](https://coveralls.io/github/otp-js/otp-js?branch=main)
 
 This project makes heavy use of ES6 features and as such requires NodeJS v16
 
@@ -437,6 +436,8 @@ pattern:
 import {Node, Symbols, compile, Pid} from '@otpjs/core';
 const node = new Node();
 
+const {ok, _} = Symbols;
+
 const predicates = {
     justOK: compile(ok),
     okWithPid: compile([ok, Pid.isPid]),
@@ -452,21 +453,38 @@ const pid = node.spawn(ctx => {
     );
     
     if (predicate === predicates.okWithPid) {
-        const [ok, pid] = message;
+        const [, pid] = message;
         // ...
     } else if (predicate === predicates.okWithRef) {
-        const [ok, ref] = message;
+        const [, ref] = message;
         // ...
     } // ...
 })
 ```
 
 However, this approach requires precompiling your patterns, and doesn't buy much
-with respect to resources. There's no significant difference between the above
-approach and the below:
+with respect to resources. The below approach is generally recommended if you don't
+need to receive specific patterns.
 
 ``` javascript
 import {Node, Symbols, caseOf, Pid} from '@otpjs/core'
+const node = new Node();
+
+const {ok, _} = Symbols;
+
+const pid = node.spawn(ctx => {
+    const message = ctx.receive();
+    const compare = caseOf(message);
+    
+    if (compare(ok)) {
+        // ...
+    } else if (compare([ok, Pid.isPid])) {
+        const [, pid] = message;
+        // ...
+    } else {
+        // ...
+    }
+})
 ```
 
 ## Processes
