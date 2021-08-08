@@ -3,6 +3,7 @@ import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
 import { ok, _, normal, badarg, DOWN, EXIT, relay } from './symbols';
 import { OTPError } from './error';
+import { caseOf } from './matching';
 
 const log = debug('otpjs:core:node');
 
@@ -221,30 +222,41 @@ export class Node {
     }
 
     deliver(to, message) {
-        if (Pid.isPid(to)) {
+        const compare = caseOf(to);
+        if (compare(Pid.isPid)) {
+            this._log('deliver(%o) : PID', to);
             to = new Pid(to);
-        } else {
-            to = this._registrations.get(to);
-        }
-        this._log('deliver(%o)', to);
-        if (to.node == Pid.LOCAL) {
-            this._log('deliver(%o) : LOCAL', to);
-            const ref = this._processes.get(to.process);
-            this._log('deliver(%o) : LOCAL : ref : %o', to, ref)
-            if (ref) {
-                const ctx = ref.deref();
-                if (ctx) {
-                    this._log('deliver(%o) : LOCAL : ctx : %o', to, ctx);
-                    ctx._deliver(message);
+            if (to.node == Pid.LOCAL) {
+                this._log('deliver(%o) : PID : LOCAL', to);
+                const ref = this._processes.get(to.process);
+                this._log('deliver(%o) : PID : LOCAL : ref : %o', to, ref)
+                if (ref) {
+                    const ctx = ref.deref();
+                    if (ctx) {
+                        this._log('deliver(%o) : PID : LOCAL : ctx : %o', to, ctx);
+                        ctx._deliver(message);
+                    }
+                }
+            } else {
+                this._log('deliver(%o) : PID : REMOTE', to, to.node);
+                const pid = this._routersById.get(to.node);
+                if (pid) {
+                    this.deliver(pid, [relay, to, message]);
                 }
             }
-        } else {
-            this._log('deliver(%o) : REMOTE', to, to.node);
-            const pid = this._routersById.get(to.node);
+        } else if (compare([_, _])) {
+            const [name, node] = to;
+            log('deliver(%o) : NAME : REMOTE', to);
+            const pid = this._routers.get(node)
             if (pid) {
-                this.deliver(pid, [relay, to, message]);
+                this.deliver(pid, [relay, name, message]);
             }
+        } else {
+            log('deliver(%o) : NAME : LOCAL', to);
+            to = this._registrations.get(to);
+            this.deliver(to, message);
         }
+        this._log('deliver(%o)', to);
     }
 
     processInfo(pid) {
