@@ -1,6 +1,6 @@
-# OTP-JS
-[![Build Status](https://travis-ci.com/fauxsoup/otp-js.svg?branch=master)](https://travis-ci.com/otp-js/otp-js)
-[![Coverage Status](https://coveralls.io/repos/github/fauxsoup/otp-js/badge.svg?branch=master)](https://coveralls.io/github/otp-js/otp-js?branch=master)
+# OTPJS
+[![Build Status](https://travis-ci.com/fauxsoup/otpjs.svg?branch=master)](https://travis-ci.com/otpjs/otpjs)
+[![Coverage Status](https://coveralls.io/repos/github/fauxsoup/otpjs/badge.svg?branch=master)](https://coveralls.io/github/otpjs/otpjs?branch=master)
 
 This project makes heavy use of ES6 features and as such requires NodeJS v16
 
@@ -13,8 +13,8 @@ Standard Library: OTP.
 For example, this script would print the string "Hello world"
 
 ```javascript
-import {OTPNode} from '@otp-js/core';
-const node = new OTPNode();
+import {Node} from '@otpjs/core';
+const node = new Node();
 
 const pid = node.spawn(async (ctx) => {
     const message = await ctx.receive();
@@ -28,7 +28,7 @@ node.spawn(async (ctx) => {
 
 ## Symbols
 
-Symbols are used in places to replicate the behavior of atoms in Erlang. `@otp-js/core`
+Symbols are used in places to replicate the behavior of atoms in Erlang. `@otpjs/core`
 provides its own serialize/deserialize functions for passing data over a text channel.
 These serialize/deserialize functions properly handle both `Symbol` types (as long as
 they are built with `Symbol.for(...)`), and the built-in `String` extensions `Pid`
@@ -42,23 +42,23 @@ a `replacer` and `reviver` parameter respectively so that you can handle your ow
 serialization as well.
 
 ``` javascript
-import {serialize, deserialize, Symbols} from '@otp-js/core';
-const [ok, _] = Symbols
+import {serialize, deserialize, Symbols} from '@otpjs/core';
+const { ok, _ } = Symbols
 
 const tuple = [ok, 'test', 123, false];
 const json = serialize(tuple);
 
-console.log(json); // [{"$otp.symbol": "$otp.symbol.ok"}, "test", 123, false]
+console.log(json); // [["$otp.symbol", "otp:core:ok"}, "test", 123, false]
 
 const tupleB = deserialize(json);
 
-console.log(tupleB); // [Symbol($otp.symbol.ok), "test", 123, false]
+console.log(tupleB); // [Symbol(otp:core:ok), "test", 123, false]
 ```
 
 ## Pattern Matching
 ### Usage
 This module may be broken out for further development, but for now it resides
-within `@otp-js/core`. Pattern matching is done by constructing a comparison
+within `@otpjs/core`. Pattern matching is done by constructing a comparison
 function using a provided pattern as a guide. When applied to a value, this
 comparison function returns either true or false.
 
@@ -68,12 +68,12 @@ insane pattern matching power.
 
 #### Underscore
 
-Understanding the underscore symbol is important. Its usage in `otp-js` reflects
+Understanding the underscore symbol is important. Its usage in `otpjs` reflects
 the underscore's usage in Erlang. When provided in a pattern, the underscore matches
 against *any* value.
 
 ``` javascript
-import {compare} from '@otp-js/core';
+import {compare} from '@otpjs/core';
 
 
 compare(_, undefined) // true;
@@ -84,9 +84,9 @@ compare(_, [1, 2, 3]) // true;
 #### API
 ##### `compile(pattern)`
 ``` javascript
-import {compile, Symbols} from '@otp-js/core';
+import {compile, Symbols} from '@otpjs/core';
 
-const {ok, _} = Symbols;
+const { ok, _ } = Symbols;
 
 const pattern = [ok, 'fixed string', Number.isInteger, _];
 
@@ -112,9 +112,9 @@ compiled([ok, 'fixed string', 1.1, {}]) // false
 
 ##### `compare(pattern, value)`
 ``` javascript
-import {compare, Symbols} from '@otp-js/core';
+import {compare, Symbols} from '@otpjs/core';
 
-const {ok, _} = Symbols;
+const { ok, _ } = Symbols;
 
 const pattern = [ok, 'fixed string', Number.isInteger, _];
 
@@ -125,11 +125,11 @@ compare(pattern, [ok, 'fixed string', 1, {}]) // true
 
 ##### `caseOf(value)`
 ``` javascript
-import {compile, Symbols} from '@otp-js/core';
+import {compile, Symbols} from '@otpjs/core';
 
-const {ok, _} = Symbols;
+const { ok, _ } = Symbols;
 
-// caseOf flips the compile/pattern theory on its head. It focuses on the incoming
+// caseOf flips the compile/pattern approach on its head. It focuses on the incoming
 // value, and provides a comparison function which accepts and compiles incoming
 // patterns to validate against the provided value.
 const compare = caseOf([1, '2', 3.3]);
@@ -139,8 +139,27 @@ compare([1, '2', Number.isInteger]); // false
 
 #### With Receive
 
-`receive` accepts a pattern or list of patterns as its first argument. These patterns
+`receive` accepts a pattern or list of patterns and a timeout paramter. These patterns
 are compiled if they are not already.
+
+``` javascript
+import {Node, Symbols} from '@otpjs/core';
+import * as gen_server from '@otpjs/gen_server';
+const node = new Node();
+
+const { ok, _ } = Symbols;
+const { call, cast } = gen_server.Symbols;
+
+node.spawn(async function(ctx) {
+    // Will either resolve with a message passing one of the two patterns
+    // or reject with a timeout error.
+    const message = await ctx.receive(
+        [call, _, _],
+        [cast, _],
+        100
+    );
+});
+```
 
 `receive` accepts multiple predicates to compare against incoming values for the
 individual call. However, to determine which predicate was satisified, one would
@@ -150,8 +169,8 @@ need to re-run each predicate until one is matched.
 pattern:
 
 ``` javascript
-import {OTPNode, Symbols, compile, Pid} from '@otp-js/core';
-const node = new OTPNode();
+import {Node, Symbols, compile, Pid} from '@otpjs/core';
+const node = new Node();
 
 const predicates = {
     justOK: compile(ok),
@@ -161,12 +180,10 @@ const predicates = {
 }
 const pid = node.spawn(ctx => {
     const [message, predicate] = ctx.receiveWithPredicate(
-        [
             predicates.justOK,
             predicates.okWithPd,
             predicates.okWithRef,
             predicates.okWithOther
-        ]
     );
     
     if (predicate === predicates.okWithPid) {
@@ -177,6 +194,14 @@ const pid = node.spawn(ctx => {
         // ...
     } // ...
 })
+```
+
+However, this approach requires precompiling your patterns, and doesn't buy much
+with respect to resources. There's no significant difference between the above
+approach and the below:
+
+``` javascript
+import {Node, Symbols, caseOf, Pid} from '@otpjs/core'
 ```
 
 ## Processes
@@ -191,25 +216,25 @@ your context/promise-chain as an Erlang process.
 
 ## Library
 ### proc_lib
-A limited `proc_lib` implementation is defined.
+A `proc_lib` implementation is defined.
 
 ``` sh
-npm i @otp-js/proc_lib
+npm i @otpjs/proc_lib
 ```
 
 ### gen_server
-A limited `gen_server` implementation is defined.
+A `gen_server` implementation is defined.
 
 #### Install
 ``` sh
-npm i @otp-js/gen_server
+npm i @otpjs/gen_server
 ```
 
 #### Usage
 
 ``` javascript
-import {OTPNode, caseOf, Symbols} from '@otp-js/core';
-import * as gen_server from '@otp-js/gen_server';
+import {Node, caseOf, Symbols} from '@otpjs/core';
+import * as gen_server from '@otpjs/gen_server';
 
 const {ok} = Symbols;
 const {reply} = gen_server.Symbols;
@@ -260,6 +285,74 @@ function terminate(ctx, reason, state) {
 }
 ```
 
+### supervisor
+
+A limited `supervisor` implementation is defined.
+
+Currently supported strategies include:
+
+* `one_for_one`
+* `simple_one_for_one`
+
+#### Install
+
+``` sh
+npm i @otpjs/supervisor
+```
+
+#### Usage
+
+``` javascript
+import * as supervisor from '@otpjs/supervisor';
+import * as argumentServer from './arguments';
+import * as numberServer from './numbers';
+
+const callbacks = {init};
+
+export function startLink(ctx, arg) {
+    return supervisor.startLink(ctx, callbacks, [arg, 123])
+}
+
+function init(ctx, arg, number) {
+    return [
+        ok,
+        [
+            {strategy: one_for_one},
+            [
+                {
+                    id: 'arg-processor',
+                    start: [argumentServer.startLink, [arg]]
+                },
+                {
+                    id: 'number-processor',
+                    start: [numberServer.startLink, [number]]
+                }
+            ]
+        ]
+    ]
+}
+```
+
 ### Roadmap
-Finish `proc_lib` and `gen_server`. Develop `supervisor`, `gen_fsm`,
-`gen_event`, etc.
+
+Long term goals include but are not limited to:
+
+* Full replication of the OTP core process patterns
+  * Finish 
+    * `proc_lib` 
+    * `gen_server`
+    * `supervisor`
+  * Develop
+    * `gen_fsm`
+    * `gen_event`
+    * `gen_rpc`
+* Functional net kernel
+* zmq transport
+  * network discovery
+  * inproc communication for multi-threaded communication via node's cluster module and/or related modules
+* erlang distribution protocol transport
+* pure wss transport (socket.io transport exists as a reference implementation)
+* babel plugin for extended syntax support
+  * ! operator
+  * case statements
+  * function clauses
