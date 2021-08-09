@@ -28,11 +28,11 @@ export class Node {
     }
 
     get name() {
-        if (typeof this._id === 'symbol') {
-            return Symbol.keyFor(this._id);
-        } else {
-            return this._id;
-        }
+        return this._id;
+    }
+
+    node() {
+        return this.name;
     }
 
     exit(pid, reason) {

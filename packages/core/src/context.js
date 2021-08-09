@@ -44,6 +44,7 @@ export class Context {
         this[forward]('ref');
         this[forward]('spawn');
         this[forward]('whereis');
+        this[forward]('node');
         this[forwardWithSelf]('spawnLink');
         this[forwardWithPid]('monitor');
         this[forwardWithPid]('register');
