@@ -8,10 +8,14 @@ module.exports = function(api) {
                 '@babel/preset-env',
                 {
                     targets: {
-                        node: 'current'
-                    }
+                        node: 'current',
+                        browsers: '> 1%, not dead'
+                    },
+                    useBuiltIns: 'entry',
+                    corejs: "3.16"
                 }
-            ]
+            ],
+            '@babel/preset-react'
         ],
         plugins: [
             'babel-plugin-source-map-support'
