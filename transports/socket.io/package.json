@@ -1,6 +1,6 @@
 {
   "name": "@otpjs/transports-socket.io",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "A transport for communicating with OTP nodes over socket.io",
   "keywords": [
     "otp",
