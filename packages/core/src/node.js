@@ -22,7 +22,7 @@ export class Node {
         this._refCount = 0;
         this._registrations = new Map();
 
-        this._log = log.extend(this.name);
+        this._log = log.extend(this.name.toString());
 
         this._system = this.spawn((ctx) => this.system(ctx));
     }

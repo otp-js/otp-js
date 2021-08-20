@@ -22,13 +22,13 @@ const isExitMessage = match(
 );
 
 export class Context {
-    constructor(owner) {
-        this[pid] = owner.pid();
-        this[node] = owner;
+    constructor(parent) {
+        this[pid] = parent.pid();
+        this[node] = parent;
 
         const logComponents = [
             'otpjs',
-            owner.name,
+            parent.name.toString(),
             this[pid].toLowerCase()
         ]
         this.log = debug(logComponents.join(':'));
