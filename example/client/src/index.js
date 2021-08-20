@@ -9,4 +9,16 @@ socket.on('who_are_you', () => {
     socket.emit('set_from', whom);
 });
 
-ReactDOM.render(<App />, document.getElementById('app'));
+function App(props) {
+    return (
+        <div>Hello, world</div>
+    )
+}
+
+if (document.readyState === "interactive") {
+    ReactDOM.render(<App />, document.getElementById('app'));
+} else {
+    document.addEventListener('DOMContentLoaded', function() {
+        ReactDOM.render(<App />, document.getElementById('app'));
+    })
+}
