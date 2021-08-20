@@ -42,7 +42,7 @@ async function doStartChild(ctx, spec, retries) {
     const { id } = spec;
     const [start, args] = spec.start;
 
-    log(ctx, 'doStartChild(%o) : start : %o', spec, start);
+    log(ctx, 'doStartChild(%o) : start : %o', spec.id, start);
 
     const response = await start(ctx, ...args)
     const compare = core.caseOf(response)
