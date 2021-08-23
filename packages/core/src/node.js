@@ -251,6 +251,8 @@ export class Node {
             if (pid) {
                 this.deliver(pid, [relay, name, message]);
             }
+        } else if (compare(undefined)) {
+            throw new OTPError(badarg);
         } else {
             log('deliver(%o) : NAME : LOCAL', to);
             to = this._registrations.get(to);
