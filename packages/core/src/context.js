@@ -182,10 +182,6 @@ export class Context {
         return this[pid];
     }
 
-    send(to, message) {
-        return node.deliver(to, message);
-    }
-
     async receive(...predicates) {
         let timeout = Infinity;
 
