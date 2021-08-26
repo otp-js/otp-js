@@ -78,15 +78,15 @@ function doSpawn(ctx, linking, name, init_it, options) {
     }
 }
 
-function initializer(name, init_it, options) {
+function initializer(name, initIt, options) {
     return async function initialize(ctx, starter) {
         const response = registerName(ctx, name)
         log(ctx, 'initialize() : registerName(%o) -> %o', name, response);
-        log(ctx, 'initialize() : init_it : %o', init_it);
+        log(ctx, 'initialize() : initIt : %o', initIt);
         const compare = Core.caseOf(response);
         if (compare(ok)) {
-            log(ctx, "initialize() : init_it(%o)", starter);
-            return init_it(ctx, starter);
+            log(ctx, "initialize() : initIt(%o)", starter);
+            return initIt(ctx, starter);
         } else if (compare([false, Core.Pid.isPid])) {
             const [, pid] = response;
             return proc_lib.initAck(
