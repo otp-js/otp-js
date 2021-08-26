@@ -1,28 +1,37 @@
 import { Pid, Ref, serialize, deserialize, Symbols } from '@otpjs/core';
 
-const { relay, _ } = Symbols;
+const { relay, shutdown, _, trap_exit } = Symbols;
+
+const disconnect = Symbol.for('disconnect');
 
 function log(ctx, ...args) {
     return ctx.log.extend('transports:socket.io')(...args);
 }
 
 export function register(node, socket, name = Symbol.for('socket.io')) {
-    const ctx = node.makeContext();
-    const routerId = node.registerRouter(name, ctx.self());
+    let routerId;
+    let ctx;
+    let running = false;
 
-    log(ctx, 'register(%o)', routerId);
+    socket.on('otp-message', handleMessage);
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
 
-    socket.on('otp-message', (to, message) => {
-        log(ctx, 'otp-message(%o)', to);
-        to = deserialize(to, revive);
-        message = deserialize(message, revive);
-        node.deliver(to, message);
-    });
+    if (socket.connected) {
+        handleConnect();
+    }
 
-    recycle();
+    return destroy;
 
     function recycle() {
-        ctx.receive([relay, _, _]).then(forward).then(recycle);
+        if (running) {
+            ctx.receive([relay, _, _])
+                .then(forward)
+                .then(recycle)
+                .catch(
+                    err => log(ctx, 'recycle() : error : %o', err)
+                );
+        }
     }
 
     function forward([, to, message]) {
@@ -36,6 +45,59 @@ export function register(node, socket, name = Symbol.for('socket.io')) {
             to,
             message
         );
+    }
+
+    function handleConnect() {
+        try {
+            ctx = node.makeContext();
+            ctx.processFlag(trap_exit, true);
+
+            routerId = node.registerRouter(name, ctx.self());
+            log(ctx, 'register(%o) : handleConnect()', routerId);
+
+            running = true;
+            recycle();
+        } catch (err) {
+            log(ctx, 'handleConnect() : error : %o', err);
+        }
+    }
+
+    async function handleDisconnect() {
+        try {
+            running = false;
+            routerId = null;
+            node.unregisterRouter(name, ctx.self());
+
+            // drain the messagebox
+            try {
+                ctx.__drain(disconnect);
+            } catch (err) {
+                log(ctx, 'drain() : error : %o', err);
+            }
+        } catch (err) {
+            log(ctx, 'handleDisconnect() : error : %o', err);
+        }
+    }
+
+    function handleMessage(to, message) {
+        try {
+            log(ctx, 'handleMessage(%o)', to);
+            to = deserialize(to, revive);
+            message = deserialize(message, revive);
+            node.deliver(to, message);
+        } catch (err) {
+            log(ctx, 'handleMessage(%o) : error : %o', to, err);
+        }
+    }
+
+    function destroy(reason = shutdown) {
+        try {
+            socket.off('otp-message', handleMessage);
+            node.unregisterRouter(name, ctx.self());
+            ctx.die(reason);
+        } catch (err) {
+            log(ctx, 'destroy(%o) : error : %o', reason, err);
+        }
     }
 
     function revive(key, value) {

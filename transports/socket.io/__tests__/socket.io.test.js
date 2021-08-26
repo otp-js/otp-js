@@ -27,7 +27,7 @@ beforeEach(async function() {
     serverManager = io(server);
 
     const loadServerSocket = new Promise((resolve, reject) => {
-        serverManager.on(
+        serverManager.once(
             'connection',
             resolve
         );
@@ -56,8 +56,13 @@ afterEach(function() {
 
 describe('@otpjs/transports-socket.io', function() {
     it('can register from the both sides', async function() {
-        useSocketIO(clientNode, clientSocket);
-        useSocketIO(serverNode, serverSocket);
+        useSocketIO(clientNode, clientSocket, 'server');
+        useSocketIO(serverNode, serverSocket, 'client');
+
+        await wait(10);
+
+        expect(serverNode.nodes()).toContain('client');
+        expect(clientNode.nodes()).toContain('server');
 
         let pid;
         await new Promise(async (resolve, reject) => {
@@ -74,11 +79,11 @@ describe('@otpjs/transports-socket.io', function() {
 
             await wait(10);
 
-            pid = clientNode.spawn((ctx) => {
+            pid = clientNode.spawn(async (ctx) => {
                 const targetPid = otp.Pid.of(1, target.process);
                 log(ctx, 'send(%o, test)', targetPid);
                 ctx.send(targetPid, 'test');
-                return ctx.receive();
+                await wait(100);
             })
         });
 
@@ -87,6 +92,8 @@ describe('@otpjs/transports-socket.io', function() {
     it('can route to named remote processes', async function() {
         useSocketIO(clientNode, clientSocket, 'server');
         useSocketIO(serverNode, serverSocket, 'client');
+
+        await wait(100);
 
         let pid;
         await new Promise(async (resolve, reject) => {
@@ -102,16 +109,34 @@ describe('@otpjs/transports-socket.io', function() {
                 }
             })
 
-            await wait(10);
+            await wait(100);
 
-            pid = clientNode.spawn((ctx) => {
+            pid = clientNode.spawn(async (ctx) => {
                 const target = ['test', 'server'];
                 log(ctx, 'send(%o, test)', target);
                 ctx.send(target, 'test');
-                return ctx.receive();
+                await wait(100);
             })
         });
 
         clientNode.deliver(pid, 'die');
     });
+
+    it('can be unregistered', async function() {
+        const destroyClient = useSocketIO(clientNode, clientSocket, 'server');
+        const destroyServer = useSocketIO(serverNode, serverSocket, 'client');
+
+        await wait(10);
+
+        expect(serverNode.nodes()).toContain('client');
+        expect(clientNode.nodes()).toContain('server');
+
+        destroyClient();
+        destroyServer();
+
+        await wait(10);
+
+        expect(serverNode.nodes()).not.toContain('client');
+        expect(clientNode.nodes()).not.toContain('server');
+    })
 })

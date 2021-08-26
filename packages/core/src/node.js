@@ -35,6 +35,10 @@ export class Node {
         return this.name;
     }
 
+    nodes() {
+        return Array.from(this._routerNamesById.values());
+    }
+
     exit(pid, reason) {
         const message = [EXIT, reason, Error().stack];
         return this.deliver(pid, message);
@@ -161,6 +165,27 @@ export class Node {
             this.register(pid, `router-by-name-${name.toString()}`);
         }
         return id;
+    }
+
+    unregisterRouter(name, pid) {
+        try {
+            const id = this._routerIdsByName.get(name);
+            if (this._routers.get(name) === pid) {
+                this._routers.delete(name);
+                this._routerIdsByName.delete(name);
+                this._routerNamesById.delete(id);
+            }
+        } catch (err) {
+            log('unregisterRouter(%o) : error : %o', name, err);
+        }
+
+        try {
+            this.unregister(pid);
+        } catch (err) {
+            log('unregisterRouter(%o) : error : %o', name, err);
+        }
+
+        return ok;
     }
 
     getRouterName(id) {

@@ -45,6 +45,7 @@ export class Context {
         this[forward]('spawn');
         this[forward]('whereis');
         this[forward]('node');
+        this[forward]('nodes');
         this[forwardWithSelf]('spawnLink');
         this[forwardWithPid]('monitor');
         this[forwardWithPid]('register');
@@ -111,12 +112,14 @@ export class Context {
     destroy(reason) {
         this.notify(reason);
 
-        this[mb].clear();
+        const inbox = this[mb];
 
         this[mb] = null;
         this[pid] = null;
         this[node] = null;
         this[links] = null;
+
+        inbox.clear(reason);
     }
 
     get [trap_exit]() {
@@ -242,5 +245,11 @@ export class Context {
             pid = this[pid];
         }
         return this[node].exit(pid, reason);
+    }
+
+    __drain(reason) {
+        if (this[mb]) {
+            this[mb].clear(reason);
+        }
     }
 }
