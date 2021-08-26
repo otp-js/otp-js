@@ -154,27 +154,39 @@ export class Context {
 
     [forward](operation, name = operation) {
         this[name] = (...args) => {
-            return this[node][operation](
-                ...args
-            );
+            try {
+                return this[node][operation](
+                    ...args
+                );
+            } catch (err) {
+                this._log('forward(%o, %o) : error : %o', operation, name, err);
+            }
         }
     }
 
     [forwardWithSelf](operation, name = operation) {
         this[name] = (...args) => {
-            return this[node][operation](
-                this,
-                ...args
-            );
+            try {
+                return this[node][operation](
+                    this,
+                    ...args
+                );
+            } catch (err) {
+                this._log('forwardWithSelf(%o, %o) : error : %o', operation, name, err);
+            }
         }
     }
 
     [forwardWithPid](operation, name = operation) {
         this[name] = (...args) => {
-            return this[node][operation](
-                this.self(),
-                ...args
-            );
+            try {
+                return this[node][operation](
+                    this.self(),
+                    ...args
+                );
+            } catch (err) {
+                this._log('forwardWithPid(%o, %o) : error : %o', operation, name, err);
+            }
         }
     }
 
