@@ -256,7 +256,7 @@ const callbacks = {
 };
 
 export async function startLink(ctx, name, supCallbacks, args = []) {
-    if (typeof name === 'object') {
+    if (!Array.isArray(name)) {
         args = supCallbacks || args;
         supCallbacks = name;
         name = undefined;
