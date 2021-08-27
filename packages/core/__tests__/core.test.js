@@ -1,6 +1,10 @@
 import * as core from '../src';
 import "./extend"
 
+function log(ctx, ...args) {
+    return ctx.log.extend('core:__tests__')(...args);
+}
+
 async function wait(ms) {
     return new Promise(
         resolve => setTimeout(
@@ -64,22 +68,29 @@ describe('@otpjs/core.OTPNode', () => {
         expect(await node.whereis('test_b')).toBe(undefined);
     });
     it('only allows one process to register a name', async function() {
-        const result = new Promise(async (resolve, reject) => {
-            node.spawn(async (ctx) => {
+        const pidA = node.spawn(async (ctx) => {
+            try {
                 ctx.register('test');
                 await ctx.receive();
-            });
+            } catch (err) {
+                log(ctx, "register(test) : error : %o", err);
+            }
+        });
+        const result = new Promise(async (resolve, reject) => {
             node.spawn(async (ctx) => {
                 try {
+                    log(ctx, 'register(test)');
                     const result = ctx.register('test');
                     resolve(result);
                 } catch (err) {
+                    log(ctx, 'register(test) : error : %o', err);
                     reject(err);
                 }
             });
         });
 
-        expect(result).rejects.toThrow(core.serialize(core.Symbols.badarg));
+        await expect(result).rejects.toThrow(core.serialize(core.Symbols.badarg));
+        node.deliver(pidA, 'stop');
     });
     it('can route messages to a name', async function() {
         const message = Math.floor(Math.random() * Number.MAX_VALUE);

@@ -260,13 +260,20 @@ export class Node {
                     if (ctx) {
                         this._log('deliver(%o) : PID : LOCAL : ctx : %o', to, ctx);
                         ctx._deliver(message);
+                        return ok;
+                    } else {
+                        return ok;
                     }
+                } else {
+                    return ok;
                 }
             } else {
                 this._log('deliver(%o) : PID : REMOTE', to, to.node);
                 const pid = this._routersById.get(to.node);
                 if (pid) {
-                    this.deliver(pid, [relay, to, message]);
+                    return this.deliver(pid, [relay, to, message]);
+                } else {
+                    return ok;
                 }
             }
         } else if (compare([_, _])) {
@@ -274,16 +281,17 @@ export class Node {
             log('deliver(%o) : NAME : REMOTE', to);
             const pid = this._routers.get(node)
             if (pid) {
-                this.deliver(pid, [relay, name, message]);
+                return this.deliver(pid, [relay, name, message]);
+            } else {
+                return ok;
             }
         } else if (compare(undefined)) {
             throw new OTPError(badarg);
         } else {
             log('deliver(%o) : NAME : LOCAL', to);
             to = this._registrations.get(to);
-            this.deliver(to, message);
+            return this.deliver(to, message);
         }
-        this._log('deliver(%o)', to);
     }
 
     processInfo(pid) {
