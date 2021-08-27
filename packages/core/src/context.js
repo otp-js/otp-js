@@ -163,6 +163,7 @@ export class Context {
                 );
             } catch (err) {
                 this._log('forward(%o, %o) : error : %o', operation, name, err);
+                throw err;
             }
         }
     }
@@ -176,6 +177,7 @@ export class Context {
                 );
             } catch (err) {
                 this._log('forwardWithSelf(%o, %o) : error : %o', operation, name, err);
+                throw err;
             }
         }
     }
@@ -189,6 +191,7 @@ export class Context {
                 );
             } catch (err) {
                 this._log('forwardWithPid(%o, %o) : error : %o', operation, name, err);
+                throw err;
             }
         }
     }
