@@ -259,6 +259,16 @@ async function handleCommonReply(ctx, callbacks, result, state) {
             state,
             Error().stack
         );
+    } else {
+        log(ctx, 'handleCommonReply() : badResult : %o', result);
+        return await terminate(
+            ctx,
+            callbacks,
+            exit,
+            ['bad_result_value', result],
+            state,
+            Error().stack
+        )
     }
 }
 
