@@ -54,19 +54,7 @@ export class Node {
 
         const watchee = this._processes.get(watcheePid.process);
         if (watchee) {
-            const ctx = watchee.deref();
-            if (ctx) {
-                this._monitors.set(ref, ctx);
-            } else {
-                this.deliver(
-                    watcherPid,
-                    [
-                        DOWN,
-                        watcheePid,
-                        'noproc'
-                    ]
-                )
-            }
+            this._monitors.set(ref, watchee);
         } else {
             this.deliver(
                 watcherPid,
@@ -82,9 +70,21 @@ export class Node {
     }
 
     demonitor(ref) {
-        this._monitors.delete(ref);
+        if (Ref.isRef(ref)) {
+            this._monitors.delete(ref);
+        } else if (Pid.isPid(ref)) {
+            const pid = ref;
+            const toRemove = [];
+            this._monitors.forEach(
+                (target, ref) => {
+                    if (Pid.compare(target, pid) === 0) {
+                        toRemove.push(ref);
+                    }
+                }
+            )
+            toRemove.forEach(ref => this.demonitor(ref));
+        }
     }
-
 
     async system(ctx) {
         let running = true;
@@ -94,29 +94,27 @@ export class Node {
     }
 
     register(pid, name) {
-        const ref = this._processes.get(pid.process);
-        if (ref) {
-            const proc = ref.deref();
-            if (proc) {
-                if (this._registrations.has(name)) {
-                    this._log('register(%o, %o) : registration.has(name)', pid, name);
-                    throw new OTPError(badarg);
-                } else {
-                    this._registrations.set(name, pid);
-
-                    this._log('register(%o, %o)', pid, name);
-                    proc.death.finally(
-                        () => this.unregister(pid)
-                    );
-
-                    return ok;
-                }
-            } else {
-                this._log('register(%o, %o) : proc.deref() === undefined', pid, name);
+        const proc = this._processes.get(pid.process);
+        if (proc) {
+            if (this._registrations.has(name)) {
+                this._log('register(%o, %o) : registration.has(name)', pid, name);
                 throw new OTPError(badarg);
+            } else {
+                this._registrations.set(name, pid);
+
+                this._log('register(%o, %o)', pid, name);
+                proc.death.finally(
+                    () => {
+                        this.unregister(pid);
+                        this.demonitor(pid);
+                        this._processes.delete(pid.process);
+                    }
+                );
+
+                return ok;
             }
         } else {
-            this._log('register(%o, %o) : processes.get(%o) === undefined', pid, name);
+            this._log('register(%o, %o) : proc === undefined', pid, name);
             throw new OTPError(badarg);
         }
     }
@@ -212,7 +210,7 @@ export class Node {
         const ctx = new Context(this);
         this._processes.set(
             ctx.self().process,
-            new WeakRef(ctx)
+            ctx
         );
         this._log('makeContext() : pid : %o', ctx.self());
         return ctx;
@@ -252,17 +250,11 @@ export class Node {
             to = new Pid(to);
             if (to.node == Pid.LOCAL) {
                 this._log('deliver(%o) : PID : LOCAL', to);
-                const ref = this._processes.get(to.process);
-                this._log('deliver(%o) : PID : LOCAL : ref : %o', to, ref)
-                if (ref) {
-                    const ctx = ref.deref();
-                    if (ctx) {
-                        this._log('deliver(%o) : PID : LOCAL : ctx : %o', to, ctx);
-                        ctx._deliver(message);
-                        return ok;
-                    } else {
-                        return ok;
-                    }
+                const ctx = this._processes.get(to.process);
+                if (ctx) {
+                    this._log('deliver(%o) : PID : LOCAL : ctx : %o', to, ctx);
+                    ctx._deliver(message);
+                    return ok;
                 } else {
                     return ok;
                 }
@@ -294,9 +286,9 @@ export class Node {
     }
 
     processInfo(pid) {
-        const ref = this._processes.get(new Pid(pid).process);
-        if (ref) {
-            return ref.deref()
+        const ctx = this._processes.get(new Pid(pid).process);
+        if (ctx) {
+            return ctx;
         } else {
             return undefined;
         }
