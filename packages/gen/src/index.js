@@ -104,7 +104,7 @@ function initializer(name, initIt, options) {
 export function registerName(ctx, name) {
     const compare = Core.caseOf(name);
     if (compare(localName)) {
-        if (ctx.register(name[1])) {
+        if (ctx.register(getName(name))) {
             return ok;
         } else {
             return [false, where(name)];
@@ -151,7 +151,7 @@ export async function call(ctx, pid, message, timeout = DEFAULT_TIMEOUT) {
         return doCall(ctx, pid, message, timeout);
     } else {
         const fun = (pid) => doCall(ctx, pid, message, timeout);
-        return doForProcess(pid, fun);
+        return doForProcess(ctx, pid, fun);
     }
 }
 
@@ -217,7 +217,7 @@ export function cast(ctx, pid, message) {
         return doCast(ctx, pid, message);
     } else {
         const fun = pid => doCast(ctx, pid, message);
-        return doForProcess(pid, fun);
+        return doForProcess(ctx, pid, fun);
     }
 }
 
@@ -225,7 +225,7 @@ function doCast(ctx, pid, message) {
     ctx.send(pid, [Symbols.cast, message]);
 }
 
-function doForProcess(process, fun) {
+function doForProcess(ctx, process, fun) {
     // TODO: look up process (which is not a Pid)
     // As of the time of this comment, core/node handles routing remote messages
     return fun(process);

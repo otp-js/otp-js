@@ -11,6 +11,11 @@ export class Node {
     static nodes = 0;
     constructor(id = Symbol.for(`otp@${Node.nodes++}`)) {
         this._id = id;
+        this._finalizer = new FinalizationRegistry((pid) => {
+            log('finalize(%o)', pid);
+            this._processes.delete(pid.process);
+            this.unregister(pid);
+        });
         this._monitors = new Map();
         this._processes = new Map();
         this._processesCount = 0;
@@ -100,12 +105,8 @@ export class Node {
                     this._registrations.set(name, pid);
 
                     this._log('register(%o, %o)', pid, name);
-
-                    const node = this;
                     proc.death.finally(
-                        () => {
-                            node.unregister(pid)
-                        }
+                        () => this.unregister(pid)
                     );
 
                     return ok;
@@ -235,13 +236,11 @@ export class Node {
     }
 
     async doSpawn(ctx, fun) {
+        this._finalizer.register(ctx, ctx.self());
         try {
-            ctx._log('doSpawn() : fun : %o', fun);
-            let result = await fun(ctx);
-            ctx._log('doSpawn() : ctx.die(normal) (result: %o)', result);
+            await fun(ctx);
             ctx.die(normal);
         } catch (err) {
-            ctx._log('doSpawn() : error : %o', err);
             ctx.die(err.message);
         }
     }
