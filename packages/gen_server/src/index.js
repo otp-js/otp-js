@@ -277,7 +277,7 @@ async function tryHandleCall(ctx, callbacks, message, from, state) {
 
 async function tryDispatch(ctx, callback, message, state) {
     try {
-
+        return [ok, await callback(ctx, message, state)];
     } catch (err) {
         if (err instanceof Error) {
             log(ctx, 'tryDispatch(%o, %o) : error : %o', callback, message, err);
