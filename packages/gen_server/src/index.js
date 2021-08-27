@@ -25,7 +25,7 @@ const { noreply } = Symbols;
 const { link, nolink, monitor } = gen.Symbols;
 
 async function start(ctx, name, callbacks, args = []) {
-    if (typeof name === 'object') {
+    if (!Array.isArray(name) && name !== undefined) {
         args = callbacks || args;
         callbacks = name;
         name = undefined;
@@ -34,7 +34,7 @@ async function start(ctx, name, callbacks, args = []) {
 }
 
 async function startLink(ctx, name, callbacks, args = []) {
-    if (!Array.isArray(name)) {
+    if (!Array.isArray(name) && name !== undefined) {
         args = callbacks || args;
         callbacks = name;
         name = undefined;

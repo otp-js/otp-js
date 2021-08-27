@@ -24,8 +24,8 @@ function where(ctx, name) {
 
     if (compare(localName)) {
         return ctx.whereis(getName(name))
-    } else if (compare(isPid)) {
-        return name;
+    } else {
+        return undefined;
     }
 }
 
