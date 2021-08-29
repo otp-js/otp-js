@@ -99,7 +99,7 @@ export class Context {
         this[monitors].set(ref, watcher);
     }
 
-    _demonitor(watcher) {
+    _demonitor(ref) {
         this[monitors].delete(ref);
     }
 
