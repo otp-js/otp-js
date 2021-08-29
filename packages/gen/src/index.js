@@ -165,7 +165,7 @@ async function doCall(ctx, pid, message, timeout) {
     const ref = ctx.ref();
 
     try {
-        ctx.monitor(pid);
+        ctx.monitor();
         ctx.send(pid, [
             Symbols.call,
             [self, ref],
@@ -225,10 +225,22 @@ function doCast(ctx, pid, message) {
     ctx.send(pid, [Symbols.cast, message]);
 }
 
+const isString = (v) => typeof v === 'string';
+const isKeyedSymbol = (v) =>
+    typeof v === 'symbol'
+    && Symbol.keyFor(v) !== undefined;
 function doForProcess(ctx, process, fun) {
     // TODO: look up process (which is not a Pid)
     // As of the time of this comment, core/node handles routing remote messages
-    return fun(process);
+    const compare = core.caseOf(process);
+
+    if (compare(Pid.isPid)) {
+        return fun(process);
+    } else if (compare(isString) || compare(isKeyedSymbol)) {
+        return fun(ctx.whereis(process));
+    } else {
+        throw new OTPError('not_implemented');
+    }
 }
 
 export function reply(ctx, [pid, ref], reply) {
