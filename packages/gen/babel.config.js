@@ -9,7 +9,9 @@ module.exports = function(api) {
                 {
                     targets: {
                         node: 'current'
-                    }
+                    },
+                    useBuiltIns: "usage",
+                    "corejs": "3.16"
                 }
             ]
         ],

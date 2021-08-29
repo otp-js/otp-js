@@ -26,6 +26,7 @@
     "source-map-support": "^0.5.19"
   },
   "dependencies": {
-    "@otpjs/gen": "file:packages/gen"
+    "@otpjs/gen": "file:packages/gen",
+    "core-js": "^3.16.4"
   }
 }

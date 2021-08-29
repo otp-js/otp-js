@@ -95,6 +95,14 @@ export class Context {
         );
     }
 
+    _monitor(ref, watcher) {
+        this[monitors].set(ref, watcher);
+    }
+
+    _demonitor(watcher) {
+        this[monitors].delete(ref);
+    }
+
     notifyMonitors(reason) {
         const pid = this.self();
         this[monitors].forEach(
@@ -111,6 +119,7 @@ export class Context {
 
     destroy(reason) {
         this.notify(reason);
+        this.notifyMonitors(reason);
 
         const inbox = this[mb];
 

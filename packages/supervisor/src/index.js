@@ -225,9 +225,9 @@ function doRestart(ctx, pid, state) {
         return doOneForOneRestart(ctx, state, id, pid);
     } else if (compare(isOneForOne)) {
         return doOneForOneRestart(ctx, state, id, pid);
-    } else if (compare(isOneForOne)) {
+    } else if (compare(isOneForAll)) {
         throw new OTPError('strategy_not_implemented');
-    } else if (compare(isOneForOne)) {
+    } else if (compare(isRestForOne)) {
         throw new OTPError('strategy_not_implemented');
     } else {
         throw new OTPError(['bad_strategy', state.strategy]);
@@ -264,23 +264,23 @@ export async function startLink(ctx, name, supCallbacks, args = []) {
     return gen_server.startLink(ctx, name, callbacks, [supCallbacks, args]);
 }
 
-export function startChild(ctx, pid, args) {
+export async function startChild(ctx, pid, args) {
     return gen_server.call(ctx, pid, ['start_child', args]);
 }
 
-export function restartChild() {
+export async function restartChild() {
     return gen_server.call(ctx, pid, ['restart_child', pid]);
 }
 
-export function deleteChild(ctx, pid, target) {
+export async function deleteChild(ctx, pid, target) {
     return gen_server.call(ctx, pid, ['delete_child', target]);
 }
 
-export function terminateChild(ctx, pid, target) {
+export async function terminateChild(ctx, pid, target) {
     return gen_server.call(ctx, pid, ['terminate_child', target]);
 }
 
-export function whichChildren(ctx, pid, timeout = Infinity) {
+export async function whichChildren(ctx, pid, timeout = Infinity) {
     return gen_server.call(ctx, pid, which_children, timeout);
 }
 

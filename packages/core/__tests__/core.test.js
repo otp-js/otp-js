@@ -14,6 +14,8 @@ async function wait(ms) {
     );
 }
 
+const { ok, normal, DOWN } = core.Symbols;
+
 describe('@otpjs/core.OTPNode', () => {
     let node = null;
     let proc = null;
@@ -146,4 +148,23 @@ describe('@otpjs/core.OTPNode', () => {
             expect(() => node.deliver(proc, 'test')).not.toThrow();
         });
     });
+    describe('monitor', function() {
+        let procA;
+        let procB;
+
+        it.only('sends a message to watcher when watchee dies', async function() {
+            procA = node.spawn(async ctx => {
+                await ctx.receive();
+            });
+            await wait(10);
+            let result = new Promise(resolve => {
+                procB = node.spawn(async ctx => {
+                    ctx.monitor(procA);
+                    ctx.send(procA, 'stop');
+                    resolve(await ctx.receive());
+                })
+            });
+            await expect(result).resolves.toMatchPattern([DOWN, procA, normal])
+        });
+    })
 });

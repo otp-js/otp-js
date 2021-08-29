@@ -7,15 +7,11 @@ module.exports = function(api) {
             [
                 '@babel/preset-env',
                 {
-                    targets: {
-                        node: 'current',
-                        browsers: '> 1%, not dead'
-                    },
-                    useBuiltIns: 'entry',
-                    corejs: "3.16"
+                    targets: "> 0.25%, not dead",
+                    useBuiltIns: 'usage',
+                    corejs: "3.16.4"
                 }
-            ],
-            '@babel/preset-react'
+            ]
         ],
         plugins: [
             'babel-plugin-source-map-support'

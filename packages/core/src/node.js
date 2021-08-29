@@ -54,6 +54,7 @@ export class Node {
 
         const watchee = this._processes.get(watcheePid.process);
         if (watchee) {
+            watchee._monitor(ref, watcherPid);
             this._monitors.set(ref, watchee);
         } else {
             this.deliver(
@@ -71,7 +72,11 @@ export class Node {
 
     demonitor(ref) {
         if (Ref.isRef(ref)) {
-            this._monitors.delete(ref);
+            const watchee = this._monitors.get(ref);
+            if (watchee) {
+                watchee.demonitor(ref);
+                this._monitors.delete(ref);
+            }
         } else if (Pid.isPid(ref)) {
             const pid = ref;
             const toRemove = [];
