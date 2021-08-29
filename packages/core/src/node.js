@@ -74,7 +74,7 @@ export class Node {
         if (Ref.isRef(ref)) {
             const watchee = this._monitors.get(ref);
             if (watchee) {
-                watchee.demonitor(ref);
+                watchee._demonitor(ref);
                 this._monitors.delete(ref);
             }
         } else if (Pid.isPid(ref)) {
