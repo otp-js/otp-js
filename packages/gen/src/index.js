@@ -146,11 +146,12 @@ export function unregisterName(ctx, name) {
 }
 
 export async function call(ctx, pid, message, timeout = DEFAULT_TIMEOUT) {
-    const compare = caseOf(pid);
-    if (compare(Pid.isPid)) {
+    if (Pid.isPid(pid)) {
+        log(ctx, 'call(%o) : isPid', pid);
         return doCall(ctx, pid, message, timeout);
     } else {
         const fun = (pid) => doCall(ctx, pid, message, timeout);
+        log(ctx, 'call(%o) : isNotPid', pid);
         return doForProcess(ctx, pid, fun);
     }
 }
@@ -159,13 +160,13 @@ const callReplyPattern = ref => Core.compile([
     ref,
     _
 ]);
-const downPattern = pid => [DOWN, pid, _];
+const downPattern = pid => Core.compile([DOWN, pid, _]);
 async function doCall(ctx, pid, message, timeout) {
     const self = ctx.self();
     const ref = ctx.ref();
 
     try {
-        ctx.monitor();
+        ctx.monitor(pid);
         ctx.send(pid, [
             Symbols.call,
             [self, ref],
@@ -191,6 +192,7 @@ async function doCall(ctx, pid, message, timeout) {
 
         log(ctx, 'doCall(%o, %o) : ret : %o', pid, message, ret)
         log(ctx, 'doCall(%o, %o) : predicate : %o', pid, message, predicate)
+        log(ctx)
         if (predicate === isReply) {
             const [ref, response] = ret;
             ctx.demonitor(mref);
@@ -200,6 +202,9 @@ async function doCall(ctx, pid, message, timeout) {
             const [DOWN, pid, reason] = ret;
             log(ctx, 'doCall(%o, %o) : throw OTPError(%o)', pid, message, reason);
             throw new OTPError(reason);
+        } else {
+            log(ctx, 'doCall(%o, %o) : unrecognized_predicate : %o', pid, message, predicate);
+            throw new OTPError(['unrecognized_predicate', predicate]);
         }
     } catch (err) {
         log(ctx, 'doCall(%o, %o, %o) : error : %o', pid, message, timeout, err);
@@ -235,10 +240,22 @@ function doForProcess(ctx, process, fun) {
     const compare = core.caseOf(process);
 
     if (compare(Pid.isPid)) {
+        log(ctx, 'doForProcess(%o) : found : %o', process, process);
         return fun(process);
-    } else if (compare(isString) || compare(isKeyedSymbol)) {
-        return fun(ctx.whereis(process));
+    } else if (
+        compare(isString)
+        || compare(isKeyedSymbol)
+    ) {
+        const result = ctx.whereis(process);
+        log(ctx, 'doForProcess(%o) : found : %o', process, result);
+        if (result === undefined) {
+            return ctx.exit('noproc');
+        } else {
+            log(ctx, 'fun(%o)', result);
+            return fun(result);
+        }
     } else {
+        log(ctx, 'doForProcess(%o) : not_found', process);
         throw new OTPError('not_implemented');
     }
 }

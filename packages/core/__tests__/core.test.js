@@ -152,7 +152,7 @@ describe('@otpjs/core.OTPNode', () => {
         let procA;
         let procB;
 
-        it.only('sends a message to watcher when watchee dies', async function() {
+        it('sends a message to watcher when watchee dies', async function() {
             procA = node.spawn(async ctx => {
                 await ctx.receive();
             });

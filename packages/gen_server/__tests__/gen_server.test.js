@@ -3,8 +3,10 @@ import '@otpjs/test_utils';
 import debug from 'debug';
 import * as GenServer from '../src';
 
-const log = debug('otpjs:gen_server:__tests__');
-
+function log(ctx, ...args) {
+    const d = ctx.log.extend('gen_server:__tests__');
+    return d(...args);
+}
 const { ok, _, error, EXIT, trap_exit } = Symbols;
 const { reply, noreply, stop } = GenServer.Symbols;
 
@@ -19,6 +21,7 @@ function init(ctx) {
 
 function handleCall(ctx, message, from, state) {
     const compare = caseOf(message)
+    log(ctx, 'handleCall(%o)', message);
     if (compare(['set', _])) {
         const [_command, value] = message;
         return [reply, ok, value];
@@ -98,7 +101,7 @@ function describeGenServer() {
             ['set', value]
         );
 
-        log('resultA : %o', resultA);
+        log(ctx, 'resultA : %o', resultA);
         expect(resultA).toBe(ok);
 
         const resultB = await GenServer.call(
@@ -129,6 +132,7 @@ function describeGenServer() {
 
         await ctx.send(pid, ['set', value]);
 
+        log(ctx, 'GenServer.call(%o, get)', pid);
         const result = await GenServer.call(ctx, pid, 'get');
         expect(result).toBe(value);
     });
@@ -211,8 +215,13 @@ function describeGenServer() {
         [
             'call',
             (ctx, pid, message) => expect(
-                GenServer.call(ctx, pid, message, 50)
-            ).rejects.toThrow('timeout')
+                GenServer.call(
+                    ctx,
+                    pid,
+                    message,
+                    50
+                )
+            ).rejects.toThrow('invalid_call')
         ],
         [
             'cast',
@@ -236,9 +245,9 @@ function describeGenServer() {
     //it.only(`dies when the ${methods[0][0]} callback handler throws an error`, async function() {
     methods.forEach(
         ([type, method]) => it(`dies when the ${type} callback handler throws an error`, async function() {
-            const [_ok, pid] = await GenServer.startLink(ctx, callbacks);
+            const [, pid] = await GenServer.startLink(ctx, callbacks);
             const message = 'die';
-            methods[0][1](ctx, pid, message);
+            method(ctx, pid, message);
 
             await wait(10);
 

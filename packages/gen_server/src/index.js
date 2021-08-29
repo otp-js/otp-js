@@ -121,7 +121,12 @@ async function enterLoop(ctx, callbacks, state) {
 
         if (compare([EXIT, _, _, _])) {
             const [EXIT, pid, reason, stack] = response;
-            ctx.die(reason)
+            return ctx.die(reason);
+        } else if (compare([EXIT, _, _])) {
+            const [EXIT, pid, reason] = response;
+            return ctx.die(reason);
+        } else {
+            throw err;
         }
     }
 }

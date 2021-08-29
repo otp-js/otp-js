@@ -52,6 +52,8 @@ export class Node {
     monitor(watcherPid, watcheePid) {
         const ref = this.ref();
 
+        this._log('monitor(%o, %o)', watcherPid, watcheePid);
+
         const watchee = this._processes.get(watcheePid.process);
         if (watchee) {
             watchee._monitor(ref, watcherPid);
