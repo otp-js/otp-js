@@ -1,8 +1,8 @@
-import * as Core from '@otpjs/core';
+import * as core from '@otpjs/core';
 import { caseOf, OTPError, Pid, Ref } from '@otpjs/core';
 import { exit } from '@otpjs/core/lib/symbols';
 import * as gen from '@otpjs/gen';
-import * as ProcLib from '@otpjs/proc_lib';
+import * as proc_lib from '@otpjs/proc_lib';
 import * as Symbols from './symbols';
 
 export { Symbols };
@@ -20,7 +20,7 @@ function log(ctx, ...args) {
     return logger(...args);
 }
 
-const { ok, error, EXIT, _ } = Core.Symbols;
+const { ok, error, EXIT, _ } = core.Symbols;
 const { noreply } = Symbols;
 const { link, nolink, monitor } = gen.Symbols;
 
@@ -66,7 +66,7 @@ function initializer(callbacks, args) {
             if (compare([ok, _])) {
                 const [ok, initialState] = response;
                 state = initialState;
-                ProcLib.initAck(
+                proc_lib.initAck(
                     ctx,
                     caller,
                     [ok, ctx.self()]
@@ -81,7 +81,7 @@ function initializer(callbacks, args) {
             }
         } catch (err) {
             log(ctx, 'initialize() : error : %o', err);
-            ProcLib.initAck(
+            proc_lib.initAck(
                 ctx,
                 caller,
                 [error, err.name, err.message, err.stack]
@@ -117,7 +117,7 @@ async function enterLoop(ctx, callbacks, state) {
     } catch (err) {
         log(ctx, 'enterLoop() : error : %o', err);
         const response = await tryTerminate(ctx, callbacks, err, state);
-        const compare = Core.caseOf(response);
+        const compare = core.caseOf(response);
 
         if (compare([EXIT, _, _, _])) {
             const [EXIT, pid, reason, stack] = response;
