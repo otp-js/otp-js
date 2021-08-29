@@ -50,7 +50,7 @@ async function doStartChild(ctx, spec, retries) {
     log(ctx, 'doStartChild(%o) : response : %o', spec.id, response);
     if (compare([ok, Pid.isPid])) {
         const [, pid] = response;
-        return { id, pid };
+        return { id, pid, args };
     } else if (retries < MAX_RETRIES) {
         log(ctx, 'doStartChild(%o) : retry : %o', retries + 1);
         return doStartChild(ctx, spec, retries + 1);
@@ -222,7 +222,7 @@ function doRestart(ctx, pid, state) {
     const compare = core.caseOf(state.strategy);
 
     if (compare(isSimpleOneForOne)) {
-        return doOneForOneRestart(ctx, state, id, pid);
+        return doSimpleOneForOneRestart(ctx, state, id, pid);
     } else if (compare(isOneForOne)) {
         return doOneForOneRestart(ctx, state, id, pid);
     } else if (compare(isOneForAll)) {
@@ -232,6 +232,17 @@ function doRestart(ctx, pid, state) {
     } else {
         throw new OTPError(['bad_strategy', state.strategy]);
     }
+}
+
+async function doSimpleOneForOneRestart(ctx, state, id, pid) {
+    const child = state.children[id];
+    const { args } = child;
+
+    const base = state.childSpecs[0];
+    const spec = { ...base, start: [base.start[0], args] };
+    const newSpec = await doStartChild(ctx, spec)
+
+    return updatePid(state, id, newSpec.pid);
 }
 
 async function doOneForOneRestart(ctx, state, id, pid) {
