@@ -237,7 +237,7 @@ const isKeyedSymbol = (v) =>
 function doForProcess(ctx, process, fun) {
     // TODO: look up process (which is not a Pid)
     // As of the time of this comment, core/node handles routing remote messages
-    const compare = core.caseOf(process);
+    const compare = Core.caseOf(process);
 
     if (compare(Pid.isPid)) {
         log(ctx, 'doForProcess(%o) : found : %o', process, process);
