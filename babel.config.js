@@ -1,7 +1,7 @@
 module.exports = function(api) {
     api.cache(true);
     return {
-        sourceMaps: 'both',
+        sourceMaps: false,
         presets: [
             [
                 '@babel/preset-env',
