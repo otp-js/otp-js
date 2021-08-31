@@ -258,7 +258,7 @@ export class Node {
             if (to.node == Pid.LOCAL) {
                 this._log('deliver(%o) : PID : LOCAL', to);
                 const ctx = this._processes.get(to.process);
-                if (ctx) {
+                if (ctx && !ctx.dead) {
                     this._log('deliver(%o) : PID : LOCAL : ctx : %o', to, ctx);
                     ctx._deliver(message);
                     return ok;

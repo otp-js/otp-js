@@ -58,6 +58,7 @@ export class Context {
                 resolve(reason);
             }
         );
+        this.dead = false;
 
         this.death.then(
             (reason) => {
