@@ -208,12 +208,7 @@ async function doCall(ctx, pid, message, timeout) {
         }
     } catch (err) {
         log(ctx, 'doCall(%o, %o, %o) : error : %o', pid, message, timeout, err);
-        throw new OTPError([
-            EXIT,
-            self,
-            err.message,
-            err.stack
-        ]);
+        throw err;
     }
 }
 
