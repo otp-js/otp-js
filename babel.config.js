@@ -6,14 +6,11 @@ module.exports = function(api) {
             [
                 '@babel/preset-env',
                 {
-                    targets: "> 0.25%, not dead",
-                    useBuiltIns: 'usage',
-                    corejs: "3.16.4"
+                    targets: {
+                        node: 'current'
+                    }
                 }
             ]
-        ],
-        plugins: [
-            'babel-plugin-source-map-support'
         ]
     };
 }
