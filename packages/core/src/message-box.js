@@ -125,21 +125,17 @@ export class MessageBox extends Array {
 
     _defer(resolve, reject, predicate, timeout) {
         let timer = null;
-        const record = [
-            resolve,
-            reject,
-            predicate,
-        ];
+        let record = null;
 
         if (timeout !== Infinity) {
             let originalResolve = resolve;
-            record[0] = resolve = (...args) => {
+            resolve = (...args) => {
                 clearTimeout(timer);
                 originalResolve(...args);
             };
 
             let originalReject = reject;
-            record[1] = reject = (...args) => {
+            reject = (...args) => {
                 clearTimeout(timer);
                 originalReject(...args);
             }
@@ -152,6 +148,18 @@ export class MessageBox extends Array {
                     this[resolvers].splice(index, 1);
                 }
             }, timeout);
+
+            record = [
+                resolve,
+                reject,
+                predicate,
+            ];
+        } else {
+            record = [
+                resolve,
+                reject,
+                predicate,
+            ];
         }
 
         this._log('_defer() : record : %o', record);

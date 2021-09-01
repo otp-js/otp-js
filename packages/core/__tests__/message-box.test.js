@@ -3,6 +3,10 @@ import * as core from '../src';
 
 const { ok, _ } = core.Symbols;
 
+function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 describe('@otpjs/core.MessageBox', function() {
     let mb = null;
     beforeEach(function() {
@@ -122,11 +126,28 @@ describe('@otpjs/core.MessageBox', function() {
                         expect(mb.pending).toBe(0);
                     })
                 })
+                describe('when there are no available messages', function() {
+                    it('times out if no message is received', async function() {
+                        let request = mb.pop((m) => m === 'test', 100);
+                        let expectation = expect(request).rejects.toThrow('timeout');
+                        expect(mb.pending).toBe(1);
+                        await expectation;
+                        expect(mb.pending).toBe(0);
+                    });
+                    it('does not time out if a matching message is received', async function() {
+                        let request = mb.pop((m) => m === 'test', 100);
+                        let expectation = expect(request)
+                            .resolves.toMatchPattern([ok, 'test', _]);
+                        expect(mb.pending).toBe(1);
+
+                        mb.push('test');
+                        await expectation;
+                        expect(mb.pending).toBe(0);
+
+                        await wait(150);
+                    });
+                })
             })
-        })
-        describe('with a predicate', function() {
-        })
-        describe('with multiple predicates', function() {
         })
     })
     describe('clear', function() {
