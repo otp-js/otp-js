@@ -12,3 +12,4 @@ export const badarg = Symbol.for('badarg');
 export const kill = Symbol.for('kill');
 export const shutdown = Symbol.for('shutdown');
 export const relay = Symbol.for('relay');
+export const nodedown = Symbol.for('nodedown');

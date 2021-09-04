@@ -12,7 +12,7 @@ function log(ctx, ...args) {
     return ctx.log.extend('gen')(...args);
 }
 
-const { ok, error, _, EXIT } = Core.Symbols;
+const { ok, error, _, nodedown, EXIT } = Core.Symbols;
 
 const DEFAULT_TIMEOUT = 5000;
 
@@ -248,9 +248,16 @@ function doForProcess(ctx, process, fun) {
             log(ctx, 'fun(%o)', result);
             return fun(result);
         }
+    } else if (compare([_, _])) {
+        const [name, node] = process;
+        if (ctx.nodes().includes(node)) {
+            return fun(process);
+        } else {
+            ctx.exit([nodedown, node]);
+        }
     } else {
         log(ctx, 'doForProcess(%o) : not_found', process);
-        throw new OTPError('not_implemented');
+        log(ctx, 'doForProcess(%o) : error : %o', new OTPError('not_implemented'));
     }
 }
 
