@@ -1,5 +1,5 @@
-export const call = Symbol.for('otp:gen:call');
-export const cast = Symbol.for('otp:gen:cast');
-export const monitor = Symbol.for('otp:gen:monitor');
-export const link = Symbol.for('otp:gen:link');
-export const nolink = Symbol.for('otp:gen:nolink');
+export const call = Symbol.for('call');
+export const cast = Symbol.for('cast');
+export const monitor = Symbol.for('monitor');
+export const link = Symbol.for('link');
+export const nolink = Symbol.for('nolink');

@@ -1,4 +1,6 @@
 import { Pid, Ref } from "./types";
+import { caseOf } from './matching';
+import { _ } from './symbols';
 
 export function deserialize(string, reviver = undefined) {
     if (reviver) {
@@ -26,33 +28,32 @@ function kvCompose(...funs) {
 }
 
 function reviveOTP(key, value) {
-    if (typeof value === 'object') {
-        if (value[0] === '$otp.symbol') {
-            return Symbol.for(value[1]);
-        } else if (value['$otp.pid']) {
-            return new Pid(value['$otp.pid']);
-        } else if (value['$otp.ref']) {
-            return new Ref(value['$otp.ref'])
-        } else {
-            return value;
-        }
+    const compare = caseOf(value);
+    if (compare(['$otp.symbol', _])) {
+        return Symbol.for(value[1]);
+    } else if (compare(['$otp.pid', _])) {
+        return new Pid(value[1]);
+    } else if (compare(['$otp.ref', _])) {
+        return new Ref(value[1])
     } else {
         return value;
     }
 }
 
+const isSymbol = (v) => typeof v === 'symbol';
 function replaceOTP(key, value) {
-    if (typeof value === 'symbol') {
+    const compare = caseOf(value);
+    if (compare(isSymbol)) {
         const key = Symbol.keyFor(value);
         if (key) {
-            return ['$otp:symbol', key];
+            return ['$otp.symbol', key];
         } else {
             return undefined;
         }
-    } else if (value instanceof Pid) {
-        return { '$otp.pid': value.toString() };
-    } else if (value instanceof Ref) {
-        return { '$otp.ref': value.toString() };
+    } else if (compare(Pid.isPid)) {
+        return ['$otp.pid', value.toString()];
+    } else if (compare(Ref.isRef)) {
+        return ['$otp.ref', value.toString()];
     } else {
         return value;
     }

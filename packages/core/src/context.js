@@ -107,10 +107,12 @@ export class Context {
     notifyMonitors(reason) {
         const pid = this.self();
         this[monitors].forEach(
-            monitor => this.send(
+            (monitor, ref) => this.send(
                 monitor,
                 [
                     DOWN,
+                    ref,
+                    'process',
                     pid,
                     reason
                 ]

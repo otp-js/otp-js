@@ -153,18 +153,19 @@ describe('@otpjs/core.OTPNode', () => {
         let procB;
 
         it('sends a message to watcher when watchee dies', async function() {
+            let ref;
             procA = node.spawn(async ctx => {
                 await ctx.receive();
             });
             await wait(10);
             let result = new Promise(resolve => {
                 procB = node.spawn(async ctx => {
-                    ctx.monitor(procA);
+                    ref = ctx.monitor(procA);
                     ctx.send(procA, 'stop');
                     resolve(await ctx.receive());
                 })
             });
-            await expect(result).resolves.toMatchPattern([DOWN, procA, normal])
+            await expect(result).resolves.toMatchPattern([DOWN, ref, 'process', procA, normal])
         });
     })
 });

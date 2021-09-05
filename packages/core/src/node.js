@@ -1,7 +1,7 @@
 import debug from 'debug';
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
-import { ok, _, normal, badarg, DOWN, EXIT, relay } from './symbols';
+import { ok, _, normal, badarg, monitor, DOWN, EXIT, relay } from './symbols';
 import { OTPError } from './error';
 import { caseOf } from './matching';
 
@@ -49,27 +49,57 @@ export class Node {
         return this.deliver(pid, message);
     }
 
-    monitor(watcherPid, watcheePid) {
-        const ref = this.ref();
+    monitor(watcherPid, watcheePid, ref) {
+        const compare = caseOf(watcheePid);
+        this._log('ref : %o', ref);
+        ref = ref ? ref : this.ref();
+        this._log('ref2 : %o', ref);
 
         this._log('monitor(%o, %o)', watcherPid, watcheePid);
 
-        const watchee = this._processes.get(watcheePid.process);
-        if (watchee) {
-            watchee._monitor(ref, watcherPid);
-            this._monitors.set(ref, watchee);
+        if (compare(Pid.isPid)) {
+            const watchee = this._processes.get(watcheePid.process);
+            if (watchee) {
+                watchee._monitor(ref, watcherPid);
+                this._monitors.set(ref, watchee);
+            } else {
+                this.deliver(
+                    watcherPid,
+                    [
+                        DOWN,
+                        ref,
+                        'process',
+                        watcheePid,
+                        'noproc'
+                    ]
+                );
+            }
+            return ref;
+        } else if (compare([_, _])) {
+            const [name, node] = watcheePid;
+            log('monitor(%o) : NAME : REMOTE', watcheePid);
+            const pid = this._routers.get(node)
+            if (pid) {
+                this.deliver(pid, [monitor, name, ref, watcherPid]);
+            } else {
+                this.deliver(
+                    watcherPid,
+                    [
+                        DOWN,
+                        ref,
+                        'process',
+                        watcheePid,
+                        'noconnection'
+                    ]
+                );
+            }
+            return ref;
+        } else if (compare(undefined)) {
+            throw new OTPError(badarg);
         } else {
-            this.deliver(
-                watcherPid,
-                [
-                    DOWN,
-                    watcheePid,
-                    'noproc'
-                ]
-            )
+            watcheePid = this._registrations.get(watcheePid);
+            return this.monitor(watcherPid, watcheePid, ref);
         }
-
-        return ref;
     }
 
     demonitor(ref) {

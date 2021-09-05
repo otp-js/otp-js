@@ -1,9 +1,12 @@
+import '@otpjs/test_utils';
 import { createServer } from 'http';
 import io from 'socket.io';
 import clientIO from 'socket.io-client';
 
 import { register as useSocketIO } from '../src';
 import * as otp from '@otpjs/core';
+
+const { DOWN, normal } = otp.Symbols;
 
 function log(ctx, ...args) {
     return ctx.log.extend('transports:socket.io:__tests__')(...args);
@@ -63,31 +66,6 @@ describe('@otpjs/transports-socket.io', function() {
 
         expect(serverNode.nodes()).toContain('client');
         expect(clientNode.nodes()).toContain('server');
-
-        let pid;
-        await new Promise(async (resolve, reject) => {
-            const target = serverNode.spawn(async (ctx) => {
-                try {
-                    log(ctx, 'spawned');
-                    const message = await ctx.receive(500);
-                    expect(message).toBe('test');
-                    resolve();
-                } catch (err) {
-                    reject(err);
-                }
-            })
-
-            await wait(10);
-
-            pid = clientNode.spawn(async (ctx) => {
-                const targetPid = otp.Pid.of(1, target.process);
-                log(ctx, 'send(%o, test)', targetPid);
-                ctx.send(targetPid, 'test');
-                await wait(100);
-            })
-        });
-
-        clientNode.deliver(pid, 'die');
     });
     it('can route to named remote processes', async function() {
         useSocketIO(clientNode, clientSocket, 'server');
@@ -121,6 +99,34 @@ describe('@otpjs/transports-socket.io', function() {
 
         clientNode.deliver(pid, 'die');
     });
+    it('supports monitoring over the transport', async function() {
+        useSocketIO(clientNode, clientSocket, 'server');
+        useSocketIO(serverNode, serverSocket, 'client');
+
+        await wait(10);
+
+        let pidA = serverNode.spawn(async (ctx) => {
+            ctx.register('test');
+            await ctx.receive();
+        });
+
+        await wait(10);
+
+        let mref, pidB;
+        await expect(new Promise((resolve, reject) => {
+            pidB = clientNode.spawn(async (ctx) => {
+                mref = ctx.monitor(['test', 'server']);
+                ctx.send(['test', 'server'], 'stop');
+                resolve(await ctx.receive());
+            });
+        })).resolves.toMatchPattern([
+            DOWN,
+            mref,
+            'process',
+            otp.Pid.isPid,
+            normal
+        ])
+    })
 
     it('can be unregistered', async function() {
         const destroyClient = useSocketIO(clientNode, clientSocket, 'server');

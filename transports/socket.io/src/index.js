@@ -1,6 +1,6 @@
-import { Pid, Ref, serialize, deserialize, Symbols } from '@otpjs/core';
+import { Pid, Ref, serialize, compile, caseOf, deserialize, Symbols } from '@otpjs/core';
 
-const { relay, shutdown, _, trap_exit } = Symbols;
+const { relay, monitor, shutdown, DOWN, _, trap_exit } = Symbols;
 
 const disconnect = Symbol.for('disconnect');
 
@@ -8,12 +8,18 @@ function log(ctx, ...args) {
     return ctx.log.extend('transports:socket.io')(...args);
 }
 
+const receivers = {
+    relay: compile([relay, _, _]),
+    monitor: compile([monitor, _, _, _]),
+};
+
 export function register(node, socket, name = Symbol.for('socket.io')) {
     let routerId;
     let ctx;
     let running = false;
 
     socket.on('otp-message', handleMessage);
+    socket.on('otp-monitor', handleMonitor);
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
 
@@ -21,11 +27,12 @@ export function register(node, socket, name = Symbol.for('socket.io')) {
         handleConnect();
     }
 
+
     return destroy;
 
     function recycle() {
         if (running) {
-            ctx.receive([relay, _, _])
+            ctx.receive(...Object.values(receivers))
                 .then(forward)
                 .then(recycle)
                 .catch(
@@ -34,17 +41,37 @@ export function register(node, socket, name = Symbol.for('socket.io')) {
         }
     }
 
-    function forward([, to, message]) {
-        log(ctx, 'forward(%o)', to);
-        to = serialize(to, replace);
-        message = serialize(message, replace);
+    function forward(op) {
+        log(ctx, 'forward(%o)', op);
+        const compare = caseOf(op);
 
-        log(ctx, 'forward(%o) : socket.emit(otp-message, %o, %o)', to, to, message);
-        socket.emit(
-            'otp-message',
-            to,
-            message
-        );
+        if (compare(receivers.relay)) {
+            let [, to, message] = op;
+            log(ctx, 'forward(%o)', to);
+            to = serialize(to, replace);
+            message = serialize(message, replace);
+
+            log(ctx, 'forward(%o) : socket.emit(otp-message, %o, %o)', to, to, message);
+            socket.emit(
+                'otp-message',
+                to,
+                message
+            );
+        } else if (compare(receivers.monitor)) {
+            let [, pid, ref, watcher] = op;
+            log(ctx, 'monitor(%o, %o, %o)', pid, ref, watcher);
+            pid = serialize(pid, replace);
+            ref = serialize(ref, replace);
+            watcher = serialize(watcher, replace);
+
+            log(ctx, 'monitor(%o, %o, %o) : socket.emit(otp-monitor)', pid, ref, watcher);
+            socket.emit(
+                'otp-monitor',
+                pid,
+                ref,
+                watcher
+            )
+        }
     }
 
     function handleConnect() {
@@ -90,9 +117,32 @@ export function register(node, socket, name = Symbol.for('socket.io')) {
         }
     }
 
+    function handleMonitor(pid, ref, watcher) {
+        try {
+            log(ctx, 'handleMonitor(%o, %o, %o)', pid, ref, watcher);
+            pid = deserialize(pid, revive);
+            ref = deserialize(ref, revive);
+            watcher = deserialize(watcher, revive);
+            node.monitor(watcher, pid, ref);
+        } catch (err) {
+            log(ctx, 'handleMonitor(%o) : error : %o', to, err);
+            node.deliver(watcher, [
+                DOWN,
+                ref,
+                'process',
+                pid,
+                err.message
+            ]);
+        }
+    }
+
     function destroy(reason = shutdown) {
         try {
+            socket.disconnect();
             socket.off('otp-message', handleMessage);
+            socket.off('otp-monitor', handleMonitor);
+            socket.off('connect', handleConnect);
+            socket.off('disconnect', handleDisconnect);
             node.unregisterRouter(name, ctx.self());
             ctx.die(reason);
         } catch (err) {
@@ -116,12 +166,17 @@ export function register(node, socket, name = Symbol.for('socket.io')) {
             }
         } else if (value instanceof Ref) {
             if (value.node === Ref.REMOTE) {
-                return Ref.for(routerId, value.ref);
+                const updated = Ref.for(routerId, value.ref);
+                log(ctx, 'restore_remote_ref(%o) : %o', value, updated);
+                return updated;
             } else if (value.node === Ref.LOCAL) {
+                log(ctx, 'restore_local_ref(%o)', value);
                 return value;
             } else {
                 const id = node.getRouterId(value.node);
-                return Ref.for(id, value.ref);
+                value = Ref.for(id, value.process);
+                log(ctx, 'restore_unknown_ref(%o)', value);
+                return value;
             }
         } else {
             return value;
@@ -143,12 +198,15 @@ export function register(node, socket, name = Symbol.for('socket.io')) {
             }
         } else if (value instanceof Ref) {
             if (value.node === Ref.LOCAL) {
+                log(ctx, 'replace_local_ref_with_remote(%o)', value);
                 return Ref.for(Ref.REMOTE, value.ref);
             } else if (value.node === routerId) {
+                log(ctx, 'replace_remote_ref_with_local(%o)', value);
                 return Ref.for(Ref.LOCAL, value.ref);
             } else {
+                log(ctx, 'replace_unknown_ref_with_name(%o)', value);
                 const name = node.getRouterName();
-                return Ref.for(name, value.process);
+                return Ref.for(name, value.ref);
             }
         } else {
             return value;
