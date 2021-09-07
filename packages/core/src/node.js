@@ -1,7 +1,7 @@
 import debug from 'debug';
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
-import { ok, _, normal, badarg, monitor, DOWN, EXIT, relay } from './symbols';
+import { ok, _, discover, normal, badarg, monitor, DOWN, EXIT, relay } from './symbols';
 import { OTPError } from './error';
 import { caseOf } from './matching';
 
@@ -26,6 +26,7 @@ export class Node {
         this._routerCount = 1;
         this._refCount = 0;
         this._registrations = new Map();
+        this._bridges = new Set();
 
         this._log = log.extend(this.name.toString());
 
@@ -188,19 +189,34 @@ export class Node {
         }
     }
 
-    registerRouter(name, pid) {
-        const id = `${this._routerCount++}`;
-        if (pid) {
-            this._routers.set(name, pid);
-            this._routersById.set(id, pid);
+    registerRouter(name, pid, options = {}) {
+        if (this._routerIdsByName.has(name)) {
+            return this._routerIdsByName.get(name);
+        } else {
+            const id = `${this._routerCount++}`;
+            if (pid) {
+                this._routers.set(name, pid);
+                this._routersById.set(id, pid);
+            }
+            this._routerIdsByName.set(name, id);
+            this._routerNamesById.set(id, name);
+            if (pid && pid.node === Pid.LOCAL) {
+                this.register(pid, `router-by-id-${id}`);
+                this.register(pid, `router-by-name-${name.toString()}`);
+            }
+
+            log('registerRouter() : options : %o', options);
+
+            if (options.bridge) {
+                this._routerIdsByName.forEach((id, name) => {
+                    const router = this._routers.get(name);
+                    this.deliver(pid, [discover, id, name, router]);
+                });
+                this._bridges.add(pid);
+            }
+
+            return id;
         }
-        this._routerIdsByName.set(name, id);
-        this._routerNamesById.set(id, name);
-        if (pid) {
-            this.register(pid, `router-by-id-${id}`);
-            this.register(pid, `router-by-name-${name.toString()}`);
-        }
-        return id;
     }
 
     unregisterRouter(name, pid) {
@@ -309,6 +325,7 @@ export class Node {
             log('deliver(%o) : NAME : REMOTE', to);
             const pid = this._routers.get(node)
             if (pid) {
+                log('deliver(%o) : NAME : REMOTE : relay : %o', pid);
                 return this.deliver(pid, [relay, name, message]);
             } else {
                 return ok;

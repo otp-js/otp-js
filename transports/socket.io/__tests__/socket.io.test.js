@@ -103,14 +103,14 @@ describe('@otpjs/transports-socket.io', function() {
         useSocketIO(clientNode, clientSocket, 'server');
         useSocketIO(serverNode, serverSocket, 'client');
 
-        await wait(10);
+        await wait(100);
 
         let pidA = serverNode.spawn(async (ctx) => {
             ctx.register('test');
             await ctx.receive();
         });
 
-        await wait(10);
+        await wait(100);
 
         let mref, pidB;
         await expect(new Promise((resolve, reject) => {
@@ -144,5 +144,49 @@ describe('@otpjs/transports-socket.io', function() {
 
         expect(serverNode.nodes()).not.toContain('client');
         expect(clientNode.nodes()).not.toContain('server');
+    })
+
+    it('can be bridged over another node', async function() {
+        const loadServerSocket = new Promise((resolve, reject) => {
+            serverManager.once(
+                'connection',
+                resolve
+            );
+        });
+
+        const clientNodeB = new otp.Node();
+        const port = server.address().port;
+        const clientSocketB = clientIO(`http://localhost:${port}`)
+        const serverSocketB = await loadServerSocket;
+
+        const destroyClientA = useSocketIO(clientNode, clientSocket, 'serverA', { bridge: true });
+        const destroyServerA = useSocketIO(serverNode, serverSocket, 'clientA', { bridge: true })
+
+        const destroyClientB = useSocketIO(clientNodeB, clientSocketB, 'serverA', { bridge: true });
+        const destroyServerB = useSocketIO(serverNode, serverSocketB, 'clientB', { bridge: true })
+
+        await wait(100);
+
+        let result = new Promise((resolve, reject) => {
+            const pidA = clientNode.spawn(async (ctx) => {
+                ctx.register('test');
+                resolve(await ctx.receive());
+            })
+        });
+
+        await wait(100);
+
+        const pidB = clientNodeB.spawn((ctx) => {
+            ctx.send(['test', 'clientA'], 'test');
+        });
+
+        await expect(result).resolves.toBe('test');
+
+        clientSocketB.disconnect();
+
+        destroyClientA();
+        destroyServerA();
+        destroyClientB();
+        destroyServerB();
     })
 })

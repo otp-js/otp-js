@@ -14,6 +14,7 @@
     "@babel/preset-react": "^7.14.5",
     "@otpjs/core": "file:packages/core",
     "@otpjs/gen_server": "file:packages/gen_server",
+    "@otpjs/supervisor": "file:packages/supervisor",
     "@otpjs/proc_lib": "file:packages/proc_lib",
     "@otpjs/transports-socket.io": "file:transports/socket.io",
     "babel-jest": "^27.0.6",
