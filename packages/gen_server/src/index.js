@@ -171,7 +171,8 @@ const replyWithNoTimeout = [Symbols.reply, _, _];
 const replyWithTimeout = [Symbols.reply, _, _, Number.isInteger];
 const noreplyWithNoTimeout = [noreply, _];
 const noreplyWithTimeout = [noreply, _, Number.isInteger];
-const stopDemand = [Symbols.stop, _, _, _];
+const stopNoReplyDemand = [Symbols.stop, _, _];
+const stopReplyDemand = [Symbols.stop, _, _, _];
 
 async function handleCallReply(ctx, callbacks, from, state, result) {
     const compare = caseOf(result);
@@ -191,12 +192,21 @@ async function handleCallReply(ctx, callbacks, from, state, result) {
     } else if (compare([ok, noreplyWithTimeout])) {
         const [ok, [, nextState, timeout]] = result;
         return [ok, nextState, timeout];
-    } else if (compare([ok, stopDemand])) {
+    } else if (compare([ok, stopReplyDemand])) {
         const [ok, [_stop, reason, response, nextState]] = result;
         try {
             await terminate(ctx, callbacks, exit, reason, nextState, Error().stack);
         } catch (err) {
             log(ctx, 'handleCallReply(%o, %o) : error : %o', callbacks, response, err);
+            reply(ctx, from, response);
+            throw err;
+        }
+    } else if (compare([ok, stopNoReplyDemand])) {
+        const [ok, [_stop, reason, nextState]] = result;
+        try {
+            await terminate(ctx, callbacks, exit, reason, nextState, Error().stack);
+        } catch (err) {
+            log(ctx, 'handleCallReply(%o) : error : %o', callbacks, err);
             reply(ctx, from, response);
             throw err;
         }

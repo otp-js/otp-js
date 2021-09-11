@@ -13,7 +13,7 @@ function log(ctx, ...args) {
 const { ok, _, spread, trap_exit, EXIT, error, normal } = core.Symbols;
 const { reply, noreply, stop } = gen_server.Symbols;
 const { Pid, Ref } = core;
-const { which_children, count_children } = Symbols;
+const { which_children, count_children, temporary, transient, permanent } = Symbols;
 
 const MAX_RETRIES = 10;
 
@@ -39,7 +39,7 @@ async function init(ctx, callbacks, args) {
 }
 
 async function doStartChild(ctx, spec, retries) {
-    const { id } = spec;
+    const { id, restart } = spec;
     const [start, args] = spec.start;
 
     log(ctx, 'doStartChild(%o) : start : %o', spec.id, start);
@@ -50,7 +50,7 @@ async function doStartChild(ctx, spec, retries) {
     log(ctx, 'doStartChild(%o) : response : %o', spec.id, response);
     if (compare([ok, Pid.isPid])) {
         const [, pid] = response;
-        return { id, pid, args };
+        return { id, pid, args, restart };
     } else if (retries < MAX_RETRIES) {
         log(ctx, 'doStartChild(%o) : retry : %o', retries + 1);
         return doStartChild(ctx, spec, retries + 1);
@@ -93,12 +93,8 @@ async function handleInfo(ctx, info, state) {
 
     if (compare(exitPattern)) {
         const [EXIT, pid, reason, _stack] = info;
-        if (reason != normal) {
-            const nextState = await doRestart(ctx, pid, state);
-            return [noreply, nextState];
-        } else {
-            return [noreply, state];
-        }
+        const nextState = await doRestart(ctx, pid, reason, state);
+        return [noreply, nextState];
     } else if (compare('start')) {
         const { strategy, childSpecs } = state;
         const compare = core.caseOf(strategy);
@@ -144,7 +140,8 @@ async function _startChild(ctx, specOrArgs, state) {
             ctx,
             {
                 ...base,
-                start: [start, [...args, ...specOrArgs]]
+                start: [start, [...args, ...specOrArgs]],
+                restart: base.restart,
             }
         );
         log(ctx, '_startChild(simple_one_for_one, %o) : result : %o', specOrArgs, result);
@@ -213,25 +210,32 @@ const isSimpleOneForOne = core.compile(Symbols.simple_one_for_one);
 const isOneForOne = core.compile(Symbols.one_for_one);
 const isOneForAll = core.compile(Symbols.one_for_all);
 const isRestForOne = core.compile(Symbols.rest_for_one);
-function doRestart(ctx, pid, state) {
+function doRestart(ctx, pid, reason, state) {
     log(ctx, 'findChildById(%o, %o)', pid, state.children);
     const id = state.children.findIndex(
         core.compile({ pid, [spread]: _ })
     );
+    const child = state.children[id];
 
-    const compare = core.caseOf(state.strategy);
+    const compare = core.caseOf(child.restart);
 
-    if (compare(isSimpleOneForOne)) {
-        return doSimpleOneForOneRestart(ctx, state, id, pid);
-    } else if (compare(isOneForOne)) {
-        return doOneForOneRestart(ctx, state, id, pid);
-    } else if (compare(isOneForAll)) {
-        throw new OTPError('strategy_not_implemented');
-    } else if (compare(isRestForOne)) {
-        throw new OTPError('strategy_not_implemented');
-    } else {
-        throw new OTPError(['bad_strategy', state.strategy]);
+    if (compare(temporary)) {
+        return state;
+    } else if (compare(permanent) || reason !== normal) {
+        const compare = core.caseOf(state.strategy);
+        if (compare(isSimpleOneForOne)) {
+            return doSimpleOneForOneRestart(ctx, state, id, pid);
+        } else if (compare(isOneForOne)) {
+            return doOneForOneRestart(ctx, state, id, pid);
+        } else if (compare(isOneForAll)) {
+            throw new OTPError('strategy_not_implemented');
+        } else if (compare(isRestForOne)) {
+            throw new OTPError('strategy_not_implemented');
+        } else {
+            throw new OTPError(['bad_strategy', state.strategy]);
+        }
     }
+
 }
 
 async function doSimpleOneForOneRestart(ctx, state, id, pid) {
