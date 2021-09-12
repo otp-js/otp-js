@@ -50,11 +50,57 @@ export class Node {
         return this.deliver(pid, message);
     }
 
+    link(ctx, pidB) {
+        const pidA = ctx.self();
+        const compare = caseOf(pidB);
+
+        this._log('monitor(%o, %o)', pidA, pidB);
+
+        if (compare(Pid.isPid)) {
+            const watchee = this._processes.get(pidB.process);
+            if (watchee) {
+                ctx._link(watchee);
+                watchee._link(ctx);
+            } else {
+                this.deliver(
+                    pidA,
+                    [
+                        EXIT,
+                        pidB,
+                        'noproc',
+                        Error().stack
+                    ]
+                );
+            }
+            return ref;
+        } else if (compare([_, _])) {
+            const [name, node] = pidB;
+            const pid = this._routers.get(node)
+            if (pid) {
+                this.deliver(pid, [monitor, name, ref, pidA]);
+            } else {
+                this.deliver(
+                    pidA,
+                    [
+                        EXIT,
+                        pidB,
+                        'noconnection',
+                        Error().stack
+                    ]
+                );
+            }
+            return ref;
+        } else if (compare(undefined)) {
+            throw new OTPError(badarg);
+        } else {
+            pidB = this._registrations.get(pidB);
+            return this.link(pidA, pidB);
+        }
+    }
+
     monitor(watcherPid, watcheePid, ref) {
         const compare = caseOf(watcheePid);
-        this._log('ref : %o', ref);
         ref = ref ? ref : this.ref();
-        this._log('ref2 : %o', ref);
 
         this._log('monitor(%o, %o)', watcherPid, watcheePid);
 
@@ -78,7 +124,6 @@ export class Node {
             return ref;
         } else if (compare([_, _])) {
             const [name, node] = watcheePid;
-            log('monitor(%o) : NAME : REMOTE', watcheePid);
             const pid = this._routers.get(node)
             if (pid) {
                 this.deliver(pid, [monitor, name, ref, watcherPid]);

@@ -47,6 +47,7 @@ export class Context {
         this[forward]('node');
         this[forward]('nodes');
         this[forwardWithSelf]('spawnLink');
+        this[forwardWithSelf]('link');
         this[forwardWithPid]('monitor');
         this[forwardWithPid]('register');
         this[forwardWithPid]('unregister');
@@ -68,7 +69,7 @@ export class Context {
         );
     }
 
-    link(other) {
+    _link(other) {
         this[links].add(other.self());
         other[links].add(this.self());
     }
