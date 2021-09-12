@@ -59,8 +59,49 @@ export class Node {
         if (compare(Pid.isPid)) {
             const watchee = this._processes.get(pidB.process);
             if (watchee) {
-                ctx._link(watchee);
-                watchee._link(ctx);
+                ctx._unlink(watchee);
+            } else {
+                this.deliver(
+                    pidA,
+                    [
+                        EXIT,
+                        pidB,
+                        'noproc',
+                        Error().stack
+                    ]
+                );
+            }
+            return ref;
+        } else if (compare([_, _])) {
+            const [name, node] = pidB;
+            const pid = this._routers.get(node)
+            if (pid) {
+                this.deliver(pid, [monitor, name, ref, pidA]);
+            } else {
+                this.deliver(
+                    pidA,
+                    [
+                        EXIT,
+                        pidB,
+                        'noconnection',
+                        Error().stack
+                    ]
+                );
+            }
+            return ref;
+        } else if (compare(undefined)) {
+            throw new OTPError(badarg);
+        } else {
+            pidB = this._registrations.get(pidB);
+            return this.link(pidA, pidB);
+        }
+    }
+
+    unlink(ctx, pidB) {
+        if (compare(Pid.isPid)) {
+            const watchee = this._processes.get(pidB.process);
+            if (watchee) {
+                ctx._unlink(watchee);
             } else {
                 this.deliver(
                     pidA,

@@ -48,6 +48,7 @@ export class Context {
         this[forward]('nodes');
         this[forwardWithSelf]('spawnLink');
         this[forwardWithSelf]('link');
+        this[forwardWithSelf]('unlink');
         this[forwardWithPid]('monitor');
         this[forwardWithPid]('register');
         this[forwardWithPid]('unregister');
@@ -72,6 +73,11 @@ export class Context {
     _link(other) {
         this[links].add(other.self());
         other[links].add(this.self());
+    }
+
+    _unlink(other) {
+        this[links].delete(other.self());
+        other[links].delete(other.self());
     }
 
     processFlag(flag, value) {
