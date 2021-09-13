@@ -14,9 +14,9 @@ async function wait(ms) {
     );
 }
 
-const { ok, normal, DOWN } = core.Symbols;
+const { ok, normal, DOWN, spread, _ } = core.Symbols;
 
-describe('@otpjs/core.OTPNode', () => {
+describe('@otpjs/core.Node', () => {
     let node = null;
     let proc = null;
 
@@ -39,7 +39,9 @@ describe('@otpjs/core.OTPNode', () => {
 
         proc = node.spawn(() => ({}));
 
-        expect(node.processInfo(proc)).toBeInstanceOf(core.Context);
+        expect(node.processInfo(proc)).toMatchPattern({
+            [spread]: _
+        });
     });
     it('fails silently when a message is undeliverable', async function() {
         proc = node.spawn(async (ctx) => {
@@ -167,5 +169,30 @@ describe('@otpjs/core.OTPNode', () => {
             });
             await expect(result).resolves.toMatchPattern([DOWN, ref, 'process', procA, normal])
         });
-    })
+    });
+});
+
+describe('@otpjs/core.Context', () => {
+    let node;
+    let ctxA;
+    let ctxB;
+
+    beforeEach(function() {
+        node = new core.Node();
+        ctxA = node.makeContext();
+        ctxB = node.makeContext();
+    });
+
+    describe('when linked', function() {
+        it('can unlink if it created the link', function() {
+            ctxA.link(ctxB.self());
+            expect(function() {
+                ctxA.unlink(ctxB.self());
+            }).not.toThrow();
+            expect(ctxA.processInfo(ctxA.self())).toMatchPattern({
+                links: [],
+                [spread]: _
+            })
+        });
+    });
 });

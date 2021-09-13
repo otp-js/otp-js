@@ -1,7 +1,7 @@
 import debug from 'debug';
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
-import { ok, _, discover, normal, badarg, monitor, DOWN, EXIT, relay } from './symbols';
+import { ok, _, discover, normal, badarg, monitor, DOWN, EXIT, relay, link, unlink } from './symbols';
 import { OTPError } from './error';
 import { caseOf } from './matching';
 
@@ -56,10 +56,11 @@ export class Node {
 
         this._log('monitor(%o, %o)', pidA, pidB);
 
-        if (compare(Pid.isPid)) {
+        if (compare(Pid.isPid) && pidB.node === Pid.LOCAL) {
             const watchee = this._processes.get(pidB.process);
             if (watchee) {
-                ctx._unlink(watchee);
+                ctx._link(watchee);
+                watchee._link(pidA);
             } else {
                 this.deliver(
                     pidA,
@@ -71,12 +72,11 @@ export class Node {
                     ]
                 );
             }
-            return ref;
-        } else if (compare([_, _])) {
-            const [name, node] = pidB;
+            return ok;
+        } else if (compare(Pid.isPid)) {
             const pid = this._routers.get(node)
             if (pid) {
-                this.deliver(pid, [monitor, name, ref, pidA]);
+                this.deliver(pid, [link, pidB, pidA]);
             } else {
                 this.deliver(
                     pidA,
@@ -88,20 +88,68 @@ export class Node {
                     ]
                 );
             }
-            return ref;
-        } else if (compare(undefined)) {
-            throw new OTPError(badarg);
+            return ok;
         } else {
-            pidB = this._registrations.get(pidB);
-            return this.link(pidA, pidB);
+            throw new OTPError([badarg, pidB]);
+        }
+    }
+
+    link(ctx, pidB) {
+        const pidA = ctx.self();
+        const compare = caseOf(pidB);
+
+        this._log('monitor(%o, %o)', pidA, pidB);
+
+        if (compare(Pid.isPid) && pidB.node === Pid.LOCAL) {
+            const watchee = this._processes.get(pidB.process);
+            if (watchee) {
+                ctx._link(watchee);
+                watchee._link(pidA);
+            } else {
+                this.deliver(
+                    pidA,
+                    [
+                        EXIT,
+                        pidB,
+                        'noproc',
+                        Error().stack
+                    ]
+                );
+            }
+            return ok;
+        } else if (compare(Pid.isPid)) {
+            const pid = this._routers.get(node)
+            if (pid) {
+                ctx._link(pidB);
+                this.deliver(pid, [link, pidB, pidA]);
+            } else {
+                this.deliver(
+                    pidA,
+                    [
+                        EXIT,
+                        pidB,
+                        'noconnection',
+                        Error().stack
+                    ]
+                );
+            }
+            return ok;
+        } else {
+            throw new OTPError([badarg, pidB]);
         }
     }
 
     unlink(ctx, pidB) {
-        if (compare(Pid.isPid)) {
+        const pidA = ctx.self();
+        const compare = caseOf(pidB);
+
+        this._log('monitor(%o, %o)', pidA, pidB);
+
+        if (compare(Pid.isPid) && pidB.node === Pid.LOCAL) {
             const watchee = this._processes.get(pidB.process);
             if (watchee) {
                 ctx._unlink(watchee);
+                watchee._unlink(pidA);
             } else {
                 this.deliver(
                     pidA,
@@ -113,12 +161,12 @@ export class Node {
                     ]
                 );
             }
-            return ref;
-        } else if (compare([_, _])) {
-            const [name, node] = pidB;
+            return ok;
+        } else if (compare(Pid.isPid)) {
             const pid = this._routers.get(node)
             if (pid) {
-                this.deliver(pid, [monitor, name, ref, pidA]);
+                ctx._unlink(pidB);
+                this.deliver(pid, [unlink, pidB, pidA]);
             } else {
                 this.deliver(
                     pidA,
@@ -130,12 +178,9 @@ export class Node {
                     ]
                 );
             }
-            return ref;
-        } else if (compare(undefined)) {
-            throw new OTPError(badarg);
+            return ok;
         } else {
-            pidB = this._registrations.get(pidB);
-            return this.link(pidA, pidB);
+            throw new OTPError([badarg, pidB]);
         }
     }
 
@@ -366,7 +411,7 @@ export class Node {
         const ctx = this.makeContext();
         const pid = ctx.self();
 
-        ctx.link(linked);
+        this.link(linked, pid);
         this.doSpawn(ctx, fun);
 
         return pid;
@@ -428,7 +473,7 @@ export class Node {
     processInfo(pid) {
         const ctx = this._processes.get(new Pid(pid).process);
         if (ctx) {
-            return ctx;
+            return ctx._processInfo();
         } else {
             return undefined;
         }

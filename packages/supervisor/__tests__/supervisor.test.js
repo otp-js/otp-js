@@ -7,8 +7,24 @@ import * as supervisor from '../src';
 import * as Adder from './adder';
 import * as Subtracter from './subtracter';
 
-const { ok, _, trap_exit, EXIT, normal, kill, spread } = Symbols;
-const { one_for_one, simple_one_for_one, one_for_all, rest_for_one } = supervisor.Symbols;
+const {
+    ok,
+    _,
+    trap_exit,
+    EXIT,
+    normal,
+    kill,
+    spread
+} = Symbols;
+const {
+    one_for_one,
+    simple_one_for_one,
+    one_for_all,
+    rest_for_one,
+    transient,
+    permanent,
+    temporary,
+} = supervisor.Symbols;
 
 function log(ctx, ...args) {
     return ctx.log.extend('supervisor:__tests__')(...args);
@@ -94,11 +110,13 @@ describe('@otp-js/supervisor', () => {
                         [
                             {
                                 id: 'adder',
-                                start: [adder, [1, 2, 3]]
+                                start: [adder, [1, 2, 3]],
+                                restart: transient
                             },
                             {
                                 id: 'subtracter',
-                                start: [subtracter, [1, 2, 3]]
+                                start: [subtracter, [1, 2, 3]],
+                                restart: transient
                             }
                         ]
                     ];
@@ -188,7 +206,8 @@ describe('@otp-js/supervisor', () => {
                                     { strategy: simple_one_for_one },
                                     [
                                         {
-                                            start: [start, [1, 2, 3]]
+                                            start: [start, [1, 2, 3]],
+                                            restart: transient
                                         },
                                     ]
                                 ]

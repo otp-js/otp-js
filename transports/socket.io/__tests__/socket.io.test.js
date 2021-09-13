@@ -62,7 +62,7 @@ describe('@otpjs/transports-socket.io', function() {
         useSocketIO(clientNode, clientSocket, 'server');
         useSocketIO(serverNode, serverSocket, 'client');
 
-        await wait(10);
+        await wait(100);
 
         expect(serverNode.nodes()).toContain('client');
         expect(clientNode.nodes()).toContain('server');

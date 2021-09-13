@@ -15,6 +15,7 @@ const links = Symbol();
 const monitors = Symbol();
 const flags = Symbol();
 const lastMessage = Symbol();
+const status = Symbol();
 
 const isExitMessage = match(
     [EXIT, _, _],
@@ -46,13 +47,13 @@ export class Context {
         this[forward]('whereis');
         this[forward]('node');
         this[forward]('nodes');
+        this[forward]('processInfo');
         this[forwardWithSelf]('spawnLink');
         this[forwardWithSelf]('link');
         this[forwardWithSelf]('unlink');
         this[forwardWithPid]('monitor');
         this[forwardWithPid]('register');
         this[forwardWithPid]('unregister');
-
 
         this.death = new Promise(
             resolve => this.die = (reason) => {
@@ -71,13 +72,11 @@ export class Context {
     }
 
     _link(other) {
-        this[links].add(other.self());
-        other[links].add(this.self());
+        this[links].add(other);
     }
 
     _unlink(other) {
-        this[links].delete(other.self());
-        other[links].delete(other.self());
+        this[links].delete(other);
     }
 
     processFlag(flag, value) {
@@ -272,6 +271,36 @@ export class Context {
     __drain(reason) {
         if (this[mb]) {
             this[mb].clear(reason);
+        }
+    }
+
+    get [status]() {
+        if (this.dead) {
+            return 'exiting';
+        } else if (this[mb].pending > 0) {
+            return 'waiting';
+        } else {
+            return 'running';
+        }
+    }
+
+    _processInfo() {
+        if (this.dead) {
+            return {
+                status: this[status],
+                links: [],
+                messageQueueLength: 0,
+                messages: [],
+                monitors: []
+            }
+        } else {
+            return {
+                status: this[status],
+                links: Array.from(this[links]),
+                messageQueueLength: this[mb].length,
+                messages: Array.from(this[mb]),
+                monitors: Array.from(this[monitors].values()),
+            };
         }
     }
 }

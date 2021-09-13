@@ -15,3 +15,5 @@ export const relay = Symbol.for('relay');
 export const nodedown = Symbol.for('nodedown');
 export const monitor = Symbol.for('monitor');
 export const discover = Symbol.for('discover');
+export const link = Symbol.for('link');
+export const unlink = Symbol.for('unlink');
