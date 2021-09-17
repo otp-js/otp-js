@@ -7,7 +7,7 @@ function log(ctx, ...args) {
     const d = ctx.log.extend('gen_server:__tests__');
     return d(...args);
 }
-const { ok, _, error, EXIT, trap_exit } = Symbols;
+const { ok, _, spread, error, EXIT, trap_exit, normal } = Symbols;
 const { reply, noreply, stop } = GenServer.Symbols;
 
 async function wait(ms) {
@@ -148,9 +148,10 @@ function describeGenServer() {
 
         expect(response).toMatchPattern([
             error,
-            _,
-            'dying',
-            _
+            {
+                message: 'dying',
+                [spread]: _
+            }
         ]);
 
         function init(ctx) {
@@ -167,15 +168,30 @@ function describeGenServer() {
             }
         );
 
-        expect(response).toMatchPattern([
-            error,
-            _,
-            'init_failed',
-            _
-        ]);
+        expect(response).toMatchPattern([error, 'init_failed']);
 
         function init(ctx) {
             const reason = 'init_failed';
+            return [stop, reason];
+        }
+    });
+
+    it('does not throw an error when stopped normally', async function() {
+        const response = await GenServer.start(
+            ctx,
+            {
+                ...callbacks,
+                init
+            }
+        );
+
+        expect(response).toMatchPattern([
+            error,
+            normal,
+        ]);
+
+        function init(ctx) {
+            const reason = normal;
             return [stop, reason];
         }
     });
@@ -191,9 +207,10 @@ function describeGenServer() {
 
         expect(response).toMatchPattern([
             error,
-            _,
-            'init_failed',
-            _
+            {
+                message: 'init_failed',
+                [spread]: _
+            }
         ])
 
 

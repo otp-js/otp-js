@@ -20,7 +20,7 @@ function log(ctx, ...args) {
     return logger(...args);
 }
 
-const { ok, error, EXIT, _ } = core.Symbols;
+const { ok, error, EXIT, _, normal } = core.Symbols;
 const { noreply } = Symbols;
 const { link, nolink, monitor } = gen.Symbols;
 
@@ -74,7 +74,8 @@ function initializer(callbacks, args) {
             } else if (compare([Symbols.stop, _])) {
                 const [_stop, reason] = response;
                 log(ctx, 'initialize() : stop : %o', reason);
-                throw new OTPError(reason);
+                throw reason;
+                h
             } else {
                 log(ctx, 'initialize() stop : invalid_init_response');
                 throw new OTPError('invalid_init_response')
@@ -84,7 +85,7 @@ function initializer(callbacks, args) {
             proc_lib.initAck(
                 ctx,
                 caller,
-                [error, err.name, err.message, err.stack]
+                [error, err]
             );
             throw err;
         }
@@ -330,7 +331,11 @@ async function terminate(ctx, callbacks, type, reason, state, stack = null) {
         throw new OTPError(reason);
     } else {
         log(ctx, 'terminate(%o) : throw OTPError(%o)', reason)
-        throw new OTPError(reason);
+        if (reason === normal) {
+            throw ok;
+        } else {
+            throw new OTPError(reason);
+        }
     }
 }
 
