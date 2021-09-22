@@ -74,6 +74,11 @@ function initializer(callbacks, args) {
             } else if (compare([Symbols.stop, _])) {
                 const [_stop, reason] = response;
                 log(ctx, 'initialize() : stop : %o', reason);
+                proc_lib.initAck(
+                    ctx,
+                    caller,
+                    [error, reason]
+                )
                 ctx.die(reason);
             } else {
                 log(ctx, 'initialize() stop : invalid_init_response');
@@ -116,8 +121,7 @@ async function enterLoop(ctx, callbacks, state) {
         }
     } catch (err) {
         log(ctx, 'enterLoop() : error : %o', err);
-        const response = await tryTerminate(ctx, callbacks, err, state);
-        const compare = core.caseOf(response);
+        const compare = core.caseOf(err);
 
         if (compare([EXIT, _, _, _])) {
             const [EXIT, pid, reason, stack] = response;
