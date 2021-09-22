@@ -15,6 +15,10 @@ const { reply, noreply, stop } = gen_server.Symbols;
 const { Pid, Ref } = core;
 const { which_children, count_children, temporary, transient, permanent } = Symbols;
 
+const start_children = Symbol.for('start_children');
+const start_child = Symbol.for('start_child');
+const restart_child = Symbol.for('restart_child');
+
 const MAX_RETRIES = 10;
 
 async function init(ctx, callbacks, args) {
@@ -29,7 +33,7 @@ async function init(ctx, callbacks, args) {
 
     if (compare([ok, _])) {
         const [, [options, childSpecs]] = response;
-        ctx.send(ctx.self(), 'start');
+        ctx.send(ctx.self(), start_children);
         return [ok, { callbacks, ...options, childSpecs }]
     } else if (compare([stop, _])) {
         return response;
@@ -51,19 +55,32 @@ async function doStartChild(ctx, spec, retries) {
     if (compare([ok, Pid.isPid])) {
         const [, pid] = response;
         return { id, pid, args, restart };
-    } else if (retries < MAX_RETRIES) {
-        log(ctx, 'doStartChild(%o) : retry : %o', retries + 1);
-        return doStartChild(ctx, spec, retries + 1);
+    } else if (compare([error, _])) {
+        const [, reason] = response;
+
+        log(ctx, 'doStartChild(%o) : error : %o', spec.id, reason);
+
+        if (restart === temporary) {
+            return null;
+        } else if (
+            restart === permanent
+            || reason !== normal
+        ) {
+            log(ctx, 'doStartChild(%o) : retry : %o', spec.id, retries + 1);
+            return doStartChild(ctx, spec, retries + 1);
+        } else {
+            return null;
+        }
     } else {
         throw new OTPError(['cannot_start', spec.id, response]);
     }
 }
 
 function handleCall(ctx, call, from, state) {
-    const compare = core.caseOf(call);
+    const itMatches = core.caseOf(call);
 
     log(ctx, 'handleCall(%o)', call);
-    if (compare(which_children)) {
+    if (itMatches(which_children)) {
         return [
             reply,
             [
@@ -74,9 +91,9 @@ function handleCall(ctx, call, from, state) {
             ],
             state
         ];
-    } else if (compare(count_children)) {
+    } else if (itMatches(count_children)) {
         return [reply, state.children.length, state];
-    } else if (compare(['start_child', _])) {
+    } else if (itMatches([start_child, _])) {
         const [, specOrArgs] = call;
         return _startChild(ctx, specOrArgs, state);
     } else {
@@ -92,10 +109,10 @@ async function handleInfo(ctx, info, state) {
     log(ctx, 'handleInfo(%o)', info);
 
     if (compare(exitPattern)) {
-        const [EXIT, pid, reason, _stack] = info;
+        const [, pid, reason, _stack] = info;
         const nextState = await doRestart(ctx, pid, reason, state);
         return [noreply, nextState];
-    } else if (compare('start')) {
+    } else if (compare(start_children)) {
         const { strategy, childSpecs } = state;
         const compare = core.caseOf(strategy);
 
@@ -115,7 +132,9 @@ async function _startChildren(ctx, specs) {
     for (let spec of specs) {
         try {
             const response = await doStartChild(ctx, spec);
-            responses.push(response);
+            if (response) {
+                responses.push(response);
+            }
         } catch (err) {
             responses.push({
                 id: spec.id,
@@ -160,6 +179,11 @@ async function _startChild(ctx, specOrArgs, state) {
                 [ok, pid, nextState],
                 nextState
             )
+        } else {
+            return _handleStartResult(
+                result,
+                state
+            );
         }
     } else {
         log(ctx, '_startChild(simple_one_for_one, %o) : doStartChild()', specOrArgs);
@@ -198,6 +222,8 @@ async function _handleStartResult(result, state) {
     if (compare([ok, _, _])) {
         const [, pid, nextState] = result;
         return [reply, [ok, pid], nextState];
+    } else if (compare([error, normal])) {
+        return [reply, [error, normal], state];
     } else if (compare([error, _])) {
         const [, reason] = result;
         return [stop, reason];
@@ -219,10 +245,15 @@ function doRestart(ctx, pid, reason, state) {
 
     const compare = core.caseOf(child.restart);
 
-    if (compare(temporary)) {
-        return state;
-    } else if (compare(permanent) || reason !== normal) {
+    if (
+        compare(permanent)
+        || (
+            compare(transient)
+            && reason !== normal
+        )
+    ) {
         const compare = core.caseOf(state.strategy);
+        log(ctx, 'doRestart(%o, %o, %o) : restart', child.restart, state.strategy, reason)
         if (compare(isSimpleOneForOne)) {
             return doSimpleOneForOneRestart(ctx, state, id, pid);
         } else if (compare(isOneForOne)) {
@@ -234,8 +265,30 @@ function doRestart(ctx, pid, reason, state) {
         } else {
             throw new OTPError(['bad_strategy', state.strategy]);
         }
+    } else {
+        const compare = core.caseOf(state.strategy);
+        log(ctx, 'doRestart(%o, %o, %o) : ignore', child.restart, state.strategy, reason)
+        if (compare(isSimpleOneForOne)) {
+            const { children } = state;
+            return {
+                ...state,
+                children: [
+                    ...children.slice(0, id),
+                    ...children.slice(id + 1)
+                ]
+            }
+        } else {
+            const { children } = state;
+            return {
+                ...state,
+                children: [
+                    ...children.slice(0, id),
+                    { ...child, pid: null },
+                    ...children.slice(id + 1)
+                ]
+            }
+        }
     }
-
 }
 
 async function doSimpleOneForOneRestart(ctx, state, id, pid) {
@@ -280,19 +333,19 @@ export async function startLink(ctx, name, supCallbacks, args = []) {
 }
 
 export async function startChild(ctx, pid, args) {
-    return gen_server.call(ctx, pid, ['start_child', args]);
+    return gen_server.call(ctx, pid, [start_child, args]);
 }
 
 export async function restartChild() {
-    return gen_server.call(ctx, pid, ['restart_child', pid]);
+    return gen_server.call(ctx, pid, [restart_child, pid]);
 }
 
 export async function deleteChild(ctx, pid, target) {
-    return gen_server.call(ctx, pid, ['delete_child', target]);
+    return gen_server.call(ctx, pid, [delete_child, target]);
 }
 
 export async function terminateChild(ctx, pid, target) {
-    return gen_server.call(ctx, pid, ['terminate_child', target]);
+    return gen_server.call(ctx, pid, [terminate_child, target]);
 }
 
 export async function whichChildren(ctx, pid, timeout = Infinity) {

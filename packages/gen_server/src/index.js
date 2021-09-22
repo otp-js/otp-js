@@ -74,8 +74,7 @@ function initializer(callbacks, args) {
             } else if (compare([Symbols.stop, _])) {
                 const [_stop, reason] = response;
                 log(ctx, 'initialize() : stop : %o', reason);
-                throw reason;
-                h
+                ctx.die(reason);
             } else {
                 log(ctx, 'initialize() stop : invalid_init_response');
                 throw new OTPError('invalid_init_response')
@@ -127,7 +126,7 @@ async function enterLoop(ctx, callbacks, state) {
             const [EXIT, pid, reason] = response;
             return ctx.die(reason);
         } else {
-            throw err;
+            return ctx.die(err);
         }
     }
 }
@@ -322,7 +321,7 @@ async function terminate(ctx, callbacks, type, reason, state, stack = null) {
         state
     );
 
-    log(ctx, 'terminate() : response : %o', response);
+    log(ctx, 'terminate(%o) : response : %o', reason, response);
 
     const compare = caseOf(response);
     if (compare(exitPattern)) {
@@ -330,10 +329,10 @@ async function terminate(ctx, callbacks, type, reason, state, stack = null) {
         log(ctx, 'terminate(%o) : exitPattern<%o> : throw OTPError(%o)', reason, innerReason);
         throw new OTPError(reason);
     } else {
-        log(ctx, 'terminate(%o) : throw OTPError(%o)', reason)
         if (reason === normal) {
-            throw ok;
+            throw normal;
         } else {
+            log(ctx, 'terminate(%o) : throw OTPError(%o)', reason, reason)
             throw new OTPError(reason);
         }
     }

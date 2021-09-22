@@ -2,10 +2,10 @@
 
 import { Node, Pid, Symbols } from '@otpjs/core';
 import '@otpjs/test_utils';
-import debug from 'debug';
 import * as supervisor from '../src';
 import * as Adder from './adder';
 import * as Subtracter from './subtracter';
+import * as gen_server from '@otpjs/gen_server';
 
 const {
     ok,
@@ -14,7 +14,8 @@ const {
     EXIT,
     normal,
     kill,
-    spread
+    spread,
+    error
 } = Symbols;
 const {
     one_for_one,
@@ -25,6 +26,9 @@ const {
     permanent,
     temporary,
 } = supervisor.Symbols;
+const {
+    stop
+} = gen_server.Symbols;
 
 function log(ctx, ...args) {
     return ctx.log.extend('supervisor:__tests__')(...args);
@@ -91,7 +95,6 @@ describe('@otp-js/supervisor', () => {
             });
         });
     });
-
     describe('when started', function() {
         describe('with a valid initializer', function() {
             describe('for a one_for_one strategy', function() {
@@ -267,6 +270,58 @@ describe('@otp-js/supervisor', () => {
 
                     await expect(supervisor.countChildren(ctx, pid))
                         .resolves.toMatchPattern(10)
+                });
+                describe('with transient restarts', function() {
+                    let serverCallbacks;
+                    beforeEach(function() {
+                        serverCallbacks = {
+                            init: jest.fn(() => {
+                                return [ok, null];
+                            }),
+                            handleCast: jest.fn((_ctx, _cast, state) => {
+                                return [stop, normal, state];
+                            })
+                        }
+                        start = jest.fn((ctx, ...args) => gen_server.startLink(ctx, serverCallbacks, args));
+                        callbacks = {
+                            init: jest.fn(() => {
+                                return [
+                                    ok,
+                                    [
+                                        { strategy: simple_one_for_one },
+                                        [
+                                            {
+                                                start: [start, [1, 2, 3]],
+                                                restart: transient
+                                            },
+                                        ]
+                                    ]
+                                ]
+                            }),
+                        };
+                    })
+                    it.only('does not restart if the process stops normally', async function() {
+                        const [, pid] = await supervisor.startLink(ctx, callbacks);
+                        const response = supervisor.startChild(ctx, pid, [1]);
+                        await expect(response).resolves.toMatchPattern([ok, Pid.isPid]);
+                        await expect(supervisor.whichChildren(ctx, pid)).resolves.toMatchPattern([
+                            ok,
+                            [
+                                _
+                            ]
+                        ]);
+
+                        const [, childPid] = await response;
+                        gen_server.cast(ctx, childPid, 'stop');
+
+                        await wait(100);
+                        expect(serverCallbacks.handleCast).toHaveBeenCalled();
+
+                        await expect(supervisor.whichChildren(ctx, pid)).resolves.toMatchPattern([
+                            ok,
+                            []
+                        ]);
+                    });
                 });
             });
         })
