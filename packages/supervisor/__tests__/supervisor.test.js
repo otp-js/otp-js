@@ -300,7 +300,7 @@ describe('@otp-js/supervisor', () => {
                             }),
                         };
                     })
-                    it.only('does not restart if the process stops normally', async function() {
+                    it('does not restart if the process stops normally', async function() {
                         const [, pid] = await supervisor.startLink(ctx, callbacks);
                         const response = supervisor.startChild(ctx, pid, [1]);
                         await expect(response).resolves.toMatchPattern([ok, Pid.isPid]);
