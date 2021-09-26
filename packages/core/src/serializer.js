@@ -31,6 +31,14 @@ function reviveOTP(key, value) {
     const compare = caseOf(value);
     if (compare(['$otp.symbol', _])) {
         return Symbol.for(value[1]);
+    } else if (compare(['$otp.function', _, _])) {
+        return new (Function.bind.apply(
+            Function,
+            [Function].concat(
+                value[1],
+                [value[2]]
+            )
+        ));
     } else if (compare(['$otp.pid', _])) {
         return new Pid(value[1]);
     } else if (compare(['$otp.ref', _])) {
@@ -41,6 +49,7 @@ function reviveOTP(key, value) {
 }
 
 const isSymbol = (v) => typeof v === 'symbol';
+const isFunction = (v) => typeof v === 'function';
 function replaceOTP(key, value) {
     const compare = caseOf(value);
     if (compare(isSymbol)) {
@@ -50,6 +59,19 @@ function replaceOTP(key, value) {
         } else {
             return undefined;
         }
+    } else if (compare(isFunction)) {
+        const parts = value.toString().match(
+            /^\s*function[^(]*\(([^)]*)\)\s*{(.*)}\s*$/
+        );
+
+        if (parts == null)
+            throw 'Function form not supported';
+
+        return [
+            '$otp.function',
+            parts[1].trim().split(/\s*,\s*/),
+            parts[2]
+        ];
     } else if (compare(Pid.isPid)) {
         return ['$otp.pid', value.toString()];
     } else if (compare(Ref.isRef)) {
