@@ -1,6 +1,6 @@
 {
   "name": "@otpjs/gen_server",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "A gen_server implementation for @otp-js/core",
   "keywords": [
     "open",
