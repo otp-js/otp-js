@@ -166,9 +166,9 @@ async function doCall(ctx, pid, message, timeout) {
     const ref = ctx.ref();
 
     try {
-        const isReply = callReplyPattern(ref);
-        const isDown = downPattern(pid);
         const mref = ctx.monitor(pid);
+        const isReply = callReplyPattern(mref);
+        const isDown = downPattern(pid);
 
         ctx.send(pid, [
             Symbols.call,
