@@ -61,7 +61,7 @@ function replaceOTP(key, value) {
         }
     } else if (compare(isFunction)) {
         const parts = value.toString().match(
-            /^\s*function[^(]*\(([^)]*)\)\s*{(.|\s)*}\s*$/
+            /^\s*function[^\(]*\(([^\)]*)\)\s*{([^]*)}\s*$/
         );
 
         if (parts == null)
