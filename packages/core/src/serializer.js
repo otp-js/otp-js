@@ -60,7 +60,18 @@ function replaceOTP(key, value) {
             return undefined;
         }
     } else if (compare(isFunction)) {
-        return serializeFunction(value);
+        const parts = value.toString().match(
+            /^\s*function[^(]*\(([^)]*)\)\s*{(.|\s)*}\s*$/
+        );
+
+        if (parts == null)
+            throw 'Function form not supported';
+
+        return [
+            '$otp.function',
+            parts[1].trim().split(/\s*,\s*/),
+            parts[2]
+        ];
     } else if (compare(Pid.isPid)) {
         return ['$otp.pid', value.toString()];
     } else if (compare(Ref.isRef)) {
@@ -68,145 +79,4 @@ function replaceOTP(key, value) {
     } else {
         return value;
     }
-}
-
-function serializeFunction(fun) {
-    let whitespace = /\s/;
-    let pair = /\(\)|\[\]|\{\}/;
-
-    let args = new Array();
-    let string = this.toString();
-
-    let fat = (new RegExp(
-        '^\s*(' +
-        ((this.name) ? this.name + '|' : '') +
-        'function' +
-        ')[^)]*\\('
-    )).test(fun);
-
-    let state = 'start';
-    let depth = new Array();
-    let tmp;
-
-    for (let index = 0; index < fun.length; ++index) {
-        let ch = fun[index];
-
-        switch (state) {
-            case 'start':
-                if (whitespace.test(ch) || (fat && ch != '('))
-                    continue;
-
-                if (ch == '(') {
-                    state = 'arg';
-                    tmp = index + 1;
-                }
-                else {
-                    state = 'singleArg';
-                    tmp = index;
-                }
-                break;
-
-            case 'arg':
-            case 'singleArg':
-                let escaped = depth.length > 0 && depth[depth.length - 1] == '\\';
-                if (escaped) {
-                    depth.pop();
-                    continue;
-                }
-                if (whitespace.test(ch))
-                    continue;
-
-                switch (ch) {
-                    case '\\':
-                        depth.push(ch);
-                        break;
-
-                    case ']':
-                    case '}':
-                    case ')':
-                        if (depth.length > 0) {
-                            if (pair.test(depth[depth.length - 1] + ch))
-                                depth.pop();
-                            continue;
-                        }
-                        if (state == 'singleArg')
-                            throw '';
-                        args.push(fun.substring(tmp, index).trim());
-                        state = (fat) ? 'body' : 'arrow';
-                        break;
-
-                    case ',':
-                        if (depth.length > 0)
-                            continue;
-                        if (state == 'singleArg')
-                            throw '';
-                        args.push(fun.substring(tmp, index).trim());
-                        tmp = index + 1;
-                        break;
-
-                    case '>':
-                        if (depth.length > 0)
-                            continue;
-                        if (fun[index - 1] != '=')
-                            continue;
-                        if (state == 'arg')
-                            throw '';
-                        args.push(fun.substring(tmp, index - 1).trim());
-                        state = 'body';
-                        break;
-
-                    case '{':
-                    case '[':
-                    case '(':
-                        if (
-                            depth.length < 1 ||
-                            !(depth[depth.length - 1] == '"' || depth[depth.length - 1] == '\'')
-                        )
-                            depth.push(ch);
-                        break;
-
-                    case '"':
-                        if (depth.length < 1)
-                            depth.push(ch);
-                        else if (depth[depth.length - 1] == '"')
-                            depth.pop();
-                        break;
-                    case '\'':
-                        if (depth.length < 1)
-                            depth.push(ch);
-                        else if (depth[depth.length - 1] == '\'')
-                            depth.pop();
-                        break;
-                }
-                break;
-
-            case 'arrow':
-                if (whitespace.test(ch))
-                    continue;
-                if (ch != '=')
-                    throw '';
-                if (fun[++index] != '>')
-                    throw '';
-                state = 'body';
-                break;
-
-            case 'body':
-                if (whitespace.test(ch))
-                    continue;
-                fun = fun.substring(index);
-
-                if (ch == '{')
-                    fun = fun.replace(/^{\s*(.*)\s*}\s*$/, '$1');
-                else
-                    fun = 'return ' + fun.trim();
-
-                index = fun.length;
-                break;
-
-            default:
-                throw '';
-        }
-    }
-
-    return ['$otp.function', args, fun];
 }
