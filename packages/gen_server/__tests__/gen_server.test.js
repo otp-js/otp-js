@@ -264,9 +264,9 @@ function describeGenServer() {
         ([type, method]) => it(`dies when the ${type} callback handler throws an error`, async function() {
             const [, pid] = await GenServer.startLink(ctx, callbacks);
             const message = 'die';
-            method(ctx, pid, message);
+            await method(ctx, pid, message);
 
-            await wait(10);
+            await wait(100);
 
             await expect(ctx.receive()).resolves.toMatchPattern([
                 EXIT,
