@@ -160,14 +160,14 @@ const callReplyPattern = ref => Core.compile([
     ref,
     _
 ]);
-const downPattern = pid => Core.compile([DOWN, pid, _]);
+const downPattern = (mref, pid) => Core.compile([DOWN, mref, _, pid, _]);
 async function doCall(ctx, pid, message, timeout) {
     const self = ctx.self();
     const ref = ctx.ref();
 
     try {
         const mref = ctx.monitor(pid);
-        const isReply = callReplyPattern(mref);
+        const isReply = callReplyPattern(ref);
         const isDown = downPattern(pid);
 
         ctx.send(pid, [
