@@ -231,14 +231,17 @@ function describeGenServer() {
     let methods = [
         [
             'call',
-            (ctx, pid, message) => expect(
-                GenServer.call(
-                    ctx,
-                    pid,
-                    message,
-                    50
-                )
-            ).rejects.toThrow('invalid_call')
+            (ctx, pid, message) => {
+                log(ctx, 'call(%o, %o)', pid, message);
+                return expect(
+                    GenServer.call(
+                        ctx,
+                        pid,
+                        message,
+                        Infinity
+                    )
+                ).rejects.toThrow('invalid_call')
+            }
         ],
         [
             'cast',
@@ -252,17 +255,25 @@ function describeGenServer() {
         ],
         [
             'info',
-            (ctx, pid, message) => ctx.send(
-                pid,
-                message
-            )
+            (ctx, pid, message) => expect(
+                ctx.send(
+                    pid,
+                    message
+                )
+            ).toBe(ok)
         ],
     ]
 
-    //it.only(`dies when the ${methods[0][0]} callback handler throws an error`, async function() {
+    // Use these if testing a single method instead of the foreach wrapper
+    // const methodName = methods[0][0];
+    // const method = methods[0][1];
+    // it.only(`dies when the ${methodName} callback handler throws an error`, async function() {
     methods.forEach(
         ([type, method]) => it(`dies when the ${type} callback handler throws an error`, async function() {
             const [, pid] = await GenServer.startLink(ctx, callbacks);
+
+            await wait(100);
+
             const message = 'die';
             await method(ctx, pid, message);
 
@@ -276,4 +287,5 @@ function describeGenServer() {
             ]);
         })
     );
+    // Above line goes away when testing single method
 }

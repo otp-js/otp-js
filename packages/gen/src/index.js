@@ -168,7 +168,7 @@ async function doCall(ctx, pid, message, timeout) {
     try {
         const mref = ctx.monitor(pid);
         const isReply = callReplyPattern(ref);
-        const isDown = downPattern(pid);
+        const isDown = downPattern(mref, pid);
 
         ctx.send(pid, [
             Symbols.call,
@@ -191,14 +191,13 @@ async function doCall(ctx, pid, message, timeout) {
 
         log(ctx, 'doCall(%o, %o) : ret : %o', pid, message, ret)
         log(ctx, 'doCall(%o, %o) : predicate : %o', pid, message, predicate)
-        log(ctx)
         if (predicate === isReply) {
             const [ref, response] = ret;
             ctx.demonitor(mref);
             log(ctx, 'doCall(%o, %o) : response : %o', pid, message, response);
             return response;
         } else if (predicate === isDown) {
-            const [DOWN, pid, reason] = ret;
+            const [DOWN, ref, type, pid, reason] = ret;
             log(ctx, 'doCall(%o, %o) : throw OTPError(%o)', pid, message, reason);
             throw new OTPError(reason);
         } else {

@@ -61,13 +61,10 @@ export class Context {
                 resolve(reason);
             }
         );
-        this.dead = false;
+        this._dead = false;
 
         this.death.then(
-            (reason) => {
-                this.dead = true;
-                this.destroy(reason);
-            }
+            (reason) => this.destroy(reason)
         );
     }
 
@@ -87,7 +84,7 @@ export class Context {
         }
     }
 
-    notify(reason) {
+    _notifyLinks(reason) {
         const pid = this.self();
         this[links].forEach(
             link => this.send(
@@ -110,7 +107,7 @@ export class Context {
         this[monitors].delete(ref);
     }
 
-    notifyMonitors(reason) {
+    _notifyMonitors(reason) {
         const pid = this.self();
         this[monitors].forEach(
             (monitor, ref) => this.send(
@@ -127,8 +124,9 @@ export class Context {
     }
 
     destroy(reason) {
-        this.notify(reason);
-        this.notifyMonitors(reason);
+        this._dead = true;
+        this._notifyMonitors(reason);
+        this._notifyLinks(reason);
 
         const inbox = this[mb];
 
@@ -150,7 +148,7 @@ export class Context {
 
     _deliver(message) {
         this._log('_deliver() : message : %o', message);
-        if (!this.dead) {
+        if (!this._dead) {
             if (
                 isExitMessage(message)
                 && !this[trap_exit]
@@ -274,8 +272,12 @@ export class Context {
         }
     }
 
+    get dead() {
+        return this._dead;
+    }
+
     get [status]() {
-        if (this.dead) {
+        if (this._dead) {
             return 'exiting';
         } else if (this[mb].pending > 0) {
             return 'waiting';
@@ -285,7 +287,7 @@ export class Context {
     }
 
     _processInfo() {
-        if (this.dead) {
+        if (this._dead) {
             return {
                 status: this[status],
                 links: [],
