@@ -45,6 +45,7 @@
   },
   "gitHead": "682392b97a0f094ada36496dfb5351ff7aeca9f3",
   "dependencies": {
+    "@babel/preset-env": "^7.15.6",
     "@otpjs/gen": "file:../gen"
   }
 }

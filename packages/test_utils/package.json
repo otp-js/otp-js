@@ -30,6 +30,7 @@
     "url": "https://github.com/otp-js/otp-js/issues"
   },
   "dependencies": {
+    "@babel/preset-env": "^7.15.6",
     "@otpjs/core": "file:../core"
   },
   "devDependencies": {

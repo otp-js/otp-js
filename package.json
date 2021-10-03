@@ -2,10 +2,10 @@
   "name": "root",
   "private": true,
   "scripts": {
-    "build": "lerna run build --parallel",
-    "watch": "lerna run watch --parallel",
+    "build": "yarn workspaces foreach -vpitA run build",
+    "watch": "yarn workspaces foreach -vpitA run watch",
     "test": "jest --coverage --verbose",
-    "prepublish": "npm run build"
+    "prepublish": "yarn build"
   },
   "devDependencies": {
     "@babel/cli": "^7.14.8",
@@ -13,9 +13,10 @@
     "@babel/preset-env": "^7.14.7",
     "@babel/preset-react": "^7.14.5",
     "@otpjs/core": "file:packages/core",
+    "@otpjs/gen": "file:packages/gen",
     "@otpjs/gen_server": "file:packages/gen_server",
-    "@otpjs/supervisor": "file:packages/supervisor",
     "@otpjs/proc_lib": "file:packages/proc_lib",
+    "@otpjs/supervisor": "file:packages/supervisor",
     "@otpjs/transports-socket.io": "file:transports/socket.io",
     "babel-jest": "^27.0.6",
     "babel-plugin-source-map-support": "^2.1.3",
@@ -26,8 +27,12 @@
     "socket.io-client": "^4.1.2",
     "source-map-support": "^0.5.19"
   },
+  "workspaces": [
+    "packages/*",
+    "transports/*"
+  ],
   "dependencies": {
-    "@otpjs/gen": "file:packages/gen",
     "core-js": "^3.16.4"
-  }
+  },
+  "packageManager": "yarn@3.0.2"
 }
