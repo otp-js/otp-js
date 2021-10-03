@@ -24,7 +24,7 @@
   "scripts": {
     "build": "babel src --out-dir lib",
     "watch": "babel src --out-dir lib --watch",
-    "prepublish": "npm run build",
+    "prepublish": "yarn build",
     "test": "jest --coverage --verbose"
   },
   "bugs": {
