@@ -46,6 +46,7 @@
   },
   "gitHead": "0ccae0fd8cc74091efeccc3817a8f713b0eb1ddd",
   "dependencies": {
-    "@otpjs/gen": "^0.8.0"
+    "@otpjs/gen": "^0.8.0",
+    "@otpjs/proc_lib": "../proc_lib"
   }
 }
