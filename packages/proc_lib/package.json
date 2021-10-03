@@ -40,13 +40,14 @@
     "url": "https://github.com/otp-js/otp-js/issues"
   },
   "dependencies": {
-    "@babel/preset-env": "^7.15.6",
-    "@otpjs/core": "file:../core"
+    "@otpjs/core": "^0.8.0"
   },
   "devDependencies": {
-    "@otpjs/test_utils": "file:../test_utils",
+    "@babel/preset-env": "^7.15.6",
+    "@otpjs/test_utils": "^0.8.0",
     "babel-jest": "^27.0.6",
     "babel-plugin-source-map-support": "^2.1.3",
     "jest": "^27.0.6"
-  }
+  },
+  "gitHead": "0ccae0fd8cc74091efeccc3817a8f713b0eb1ddd"
 }

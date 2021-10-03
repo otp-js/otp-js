@@ -35,9 +35,8 @@
     "url": "https://github.com/otp-js/otp-js/issues"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.15.6",
     "babel-plugin-source-map-support": "^2.1.3"
   },
-  "dependencies": {
-    "@babel/preset-env": "^7.15.6"
-  }
+  "gitHead": "0ccae0fd8cc74091efeccc3817a8f713b0eb1ddd"
 }
