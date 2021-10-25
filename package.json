@@ -2,10 +2,10 @@
   "name": "root",
   "private": true,
   "scripts": {
-    "build": "yarn workspaces foreach -vpitA run build",
-    "watch": "yarn workspaces foreach -vpitA run watch",
+    "build": "lerna run --parallel build",
+    "watch": "lerna run --parallel watch",
     "test": "jest --coverage --verbose",
-    "prepublish": "yarn build"
+    "prepublish": "npm run build"
   },
   "devDependencies": {
     "@babel/cli": "^7.14.8",
@@ -33,6 +33,5 @@
   ],
   "dependencies": {
     "core-js": "^3.16.4"
-  },
-  "packageManager": "yarn@3.0.2"
+  }
 }
