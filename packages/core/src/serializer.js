@@ -70,7 +70,7 @@ function replaceOTP(key, value) {
         return [
             '$otp.function',
             parts[1].trim().split(/\s*,\s*/),
-            parts[2].replace(/\s+/, ' ');
+            parts[2].replace(/\s+/, ' ')
         ];
     } else if (compare(Pid.isPid)) {
         return ['$otp.pid', value.toString()];
