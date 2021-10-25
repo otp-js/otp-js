@@ -7,6 +7,7 @@ module.exports = function(api) {
                 '@babel/preset-env',
                 {
                     targets: {
+                        browsers: 'last 2 versions',
                         node: 'current',
                         esmodules: false
                     }
