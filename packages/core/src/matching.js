@@ -171,9 +171,8 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
                 index++
             ) {
                 const compare = subComparisons[index]
-                const match = compare(message[index]);
-                log('%o(%o) : %o(%o) = %o', compareArrayItems, message, compare, message[index], match);
-                matches &&= match;
+                log('%o(%o) : %o(%o)', compareArrayItems, message, compare, message[index]);
+                matches = matches && compare(message[index]);
             }
 
             log('%o(%o) : end : %O', compareArrayItems, message, matches);
@@ -192,9 +191,8 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
                     index < message.length && matches;
                     index++
                 ) {
-                    const match = compareSpread(message[index]);
-                    log('%o(%o) = %o', compareSpread, message[index], match);
-                    matches &&= match;
+                    log('%o(%o)', compareSpread, message[index]);
+                    matches = matches && compareSpread(message[index]);
                 }
                 return matches;
             }
