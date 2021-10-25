@@ -24,7 +24,7 @@
   "scripts": {
     "build": "babel src --out-dir lib",
     "watch": "babel src --out-dir lib --watch",
-    "prepublish": "yarn build",
+    "prepublish": "npm run build",
     "test": "jest --coverage --verbose"
   },
   "bugs": {
@@ -41,5 +41,5 @@
     "babel-plugin-source-map-support": "^2.1.3",
     "jest": "^27.0.6"
   },
-  "gitHead": "0ccae0fd8cc74091efeccc3817a8f713b0eb1ddd"
+  "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e"
 }
