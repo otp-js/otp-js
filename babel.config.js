@@ -4,15 +4,20 @@ module.exports = function(api) {
         sourceMaps: false,
         presets: [
             [
-                '@babel/preset-env',
+                '@babel/env',
                 {
+                    useBuiltIns: 'entry',
+                    corejs: { version: '3.19', proposals: true },
                     targets: {
-                        browsers: 'last 2 versions',
+                        browsers: ['>0.25%, not dead, not ie < 12'],
                         node: 'current',
                         esmodules: false
                     }
                 }
             ]
+        ],
+        plugins: [
+            '@babel/transform-runtime'
         ]
     };
 }

@@ -10,6 +10,7 @@
   "devDependencies": {
     "@babel/cli": "^7.14.8",
     "@babel/core": "^7.15.0",
+    "@babel/plugin-transform-runtime": "^7.15.8",
     "@babel/preset-env": "^7.14.7",
     "@babel/preset-react": "^7.14.5",
     "@otpjs/core": "file:packages/core",
@@ -32,6 +33,6 @@
     "transports/*"
   ],
   "dependencies": {
-    "core-js": "^3.16.4"
+    "core-js": "^3.19.0"
   }
 }
