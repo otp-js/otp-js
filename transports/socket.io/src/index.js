@@ -242,7 +242,7 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
             } else {
                 log(ctx, 'replace_unknown_pid_with_name(%o)', value);
                 const name = node.getRouterName(value.node);
-                return ['$ref', name, value.process];
+                return ['$pid', name, value.process];
             }
         } else if (value instanceof Ref) {
             if (value.node === Ref.LOCAL) {
