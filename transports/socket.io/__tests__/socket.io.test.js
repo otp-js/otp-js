@@ -167,20 +167,23 @@ describe('@otpjs/transports-socket.io', function() {
 
         await wait(100);
 
-        let result = new Promise((resolve, reject) => {
+        let resultA = new Promise((resolve, reject) => {
             const pidA = clientNode.spawn(async (ctx) => {
                 ctx.register('test');
-                resolve(await ctx.receive());
+                const [message, from] = await ctx.receive();
+                ctx.send(from, 'received');
+                resolve(message);
             })
         });
 
         await wait(100);
 
-        const pidB = clientNodeB.spawn((ctx) => {
-            ctx.send(['test', 'clientA'], 'test');
+        const pidB = clientNodeB.spawn(async (ctx) => {
+            ctx.send(['test', 'clientA'], ['test', ctx.self()]);
+            await expect(ctx.receive()).resolves.toBe('received');
         });
 
-        await expect(result).resolves.toBe('test');
+        await expect(resultA).resolves.toMatchPattern('test');
 
         clientSocketB.disconnect();
 

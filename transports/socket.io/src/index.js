@@ -25,6 +25,7 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
     let ctx;
     let running = false;
 
+    const idsToNames = new Map();
     const root = node.makeContext();
     log(root, 'options : %o', options);
 
@@ -125,6 +126,7 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
 
         log(ctx, 'handleDiscover(%o, %o, %o)', id, name, pid);
 
+        idsToNames.set(id, name);
         node.registerRouter(name, pid, { bridge });
     }
 
@@ -199,7 +201,7 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
                 log(ctx, 'restore_local_pid(%o)', value);
                 return value;
             } else {
-                const id = node.getRouterId(value.node);
+                const id = node.getRouterId(idsToNames.get(value.node));
                 value = Pid.of(id, value.process);
                 log(ctx, 'restore_unknown_pid(%o)', value);
                 return value;
@@ -213,7 +215,7 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
                 log(ctx, 'restore_local_ref(%o)', value);
                 return value;
             } else {
-                const id = node.getRouterId(value.node);
+                const id = node.getRouterId(idsToNames.get(value.node));
                 value = Ref.for(id, value.process);
                 log(ctx, 'restore_unknown_ref(%o)', value);
                 return value;
@@ -241,7 +243,7 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
                 return Pid.of(Pid.LOCAL, value.process);
             } else {
                 log(ctx, 'replace_unknown_pid_with_name(%o)', value);
-                const name = node.getRouterName(value.node);
+                const name = idsToNames.get(value.node);
                 return ['$pid', name, value.process];
             }
         } else if (value instanceof Ref) {
@@ -253,7 +255,7 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
                 return Ref.for(Ref.LOCAL, value.ref);
             } else {
                 log(ctx, 'replace_unknown_ref_with_name(%o)', value);
-                const name = node.getRouterName(value.node);
+                const name = idsToNames.get(value.node);
                 return ['$ref', name, value.ref];
             }
         } else {
