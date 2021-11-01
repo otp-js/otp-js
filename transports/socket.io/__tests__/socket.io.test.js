@@ -60,16 +60,16 @@ afterEach(function() {
 describe('@otpjs/transports-socket.io', function() {
     it('can register from the both sides', async function() {
         useSocketIO(clientNode, clientSocket, 'server');
-        useSocketIO(serverNode, serverSocket, 'client');
+        useSocketIO(serverNode, serverSocket);
 
         await wait(100);
 
-        expect(serverNode.nodes()).toContain('client');
-        expect(clientNode.nodes()).toContain('server');
+        expect(serverNode.nodes()).toContain(clientNode.name);
+        expect(clientNode.nodes()).toContain(serverNode.name);
     });
     it('can route to named remote processes', async function() {
-        useSocketIO(clientNode, clientSocket, 'server');
-        useSocketIO(serverNode, serverSocket, 'client');
+        useSocketIO(clientNode, clientSocket);
+        useSocketIO(serverNode, serverSocket);
 
         await wait(100);
 
@@ -90,7 +90,7 @@ describe('@otpjs/transports-socket.io', function() {
             await wait(100);
 
             pid = clientNode.spawn(async (ctx) => {
-                const target = ['test', 'server'];
+                const target = ['test', serverNode.name];
                 log(ctx, 'send(%o, test)', target);
                 ctx.send(target, 'test');
                 await wait(100);
@@ -100,14 +100,15 @@ describe('@otpjs/transports-socket.io', function() {
         clientNode.deliver(pid, 'die');
     });
     it('supports monitoring over the transport', async function() {
-        useSocketIO(clientNode, clientSocket, 'server');
-        useSocketIO(serverNode, serverSocket, 'client');
+        useSocketIO(clientNode, clientSocket);
+        useSocketIO(serverNode, serverSocket);
 
         await wait(100);
 
         let pidA = serverNode.spawn(async (ctx) => {
             ctx.register('test');
             await ctx.receive();
+            log(ctx, 'received : stoppping');
         });
 
         await wait(100);
@@ -115,8 +116,8 @@ describe('@otpjs/transports-socket.io', function() {
         let mref, pidB;
         await expect(new Promise((resolve, reject) => {
             pidB = clientNode.spawn(async (ctx) => {
-                mref = ctx.monitor(['test', 'server']);
-                ctx.send(['test', 'server'], 'stop');
+                mref = ctx.monitor(['test', serverNode.name]);
+                ctx.send(['test', serverNode.name], 'stop');
                 resolve(await ctx.receive());
             });
         })).resolves.toMatchPattern([
@@ -129,21 +130,21 @@ describe('@otpjs/transports-socket.io', function() {
     })
 
     it('can be unregistered', async function() {
-        const destroyClient = useSocketIO(clientNode, clientSocket, 'server');
-        const destroyServer = useSocketIO(serverNode, serverSocket, 'client');
+        const destroyClient = useSocketIO(clientNode, clientSocket);
+        const destroyServer = useSocketIO(serverNode, serverSocket);
 
-        await wait(10);
+        await wait(100);
 
-        expect(serverNode.nodes()).toContain('client');
-        expect(clientNode.nodes()).toContain('server');
+        expect(serverNode.nodes()).toContain(clientNode.name);
+        expect(clientNode.nodes()).toContain(serverNode.name);
 
         destroyClient();
         destroyServer();
 
-        await wait(10);
+        await wait(100);
 
-        expect(serverNode.nodes()).not.toContain('client');
-        expect(clientNode.nodes()).not.toContain('server');
+        expect(serverNode.nodes()).not.toContain(clientNode.name);
+        expect(clientNode.nodes()).not.toContain(serverNode.name);
     })
 
     it('can be bridged over another node', async function() {
@@ -159,14 +160,15 @@ describe('@otpjs/transports-socket.io', function() {
         const clientSocketB = clientIO(`http://localhost:${port}`)
         const serverSocketB = await loadServerSocket;
 
-        const destroyClientA = useSocketIO(clientNode, clientSocket, 'serverA', { bridge: true });
-        const destroyServerA = useSocketIO(serverNode, serverSocket, 'clientA', { bridge: true })
+        const destroyClientA = useSocketIO(clientNode, clientSocket, { bridge: true });
+        const destroyServerA = useSocketIO(serverNode, serverSocket, { bridge: true })
 
-        const destroyClientB = useSocketIO(clientNodeB, clientSocketB, 'serverA', { bridge: true });
-        const destroyServerB = useSocketIO(serverNode, serverSocketB, 'clientB', { bridge: true })
+        const destroyClientB = useSocketIO(clientNodeB, clientSocketB, { bridge: true });
+        const destroyServerB = useSocketIO(serverNode, serverSocketB, { bridge: true })
 
         await wait(100);
 
+        const payload = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         let resultA = new Promise((resolve, reject) => {
             const pidA = clientNode.spawn(async (ctx) => {
                 ctx.register('test');
@@ -179,11 +181,11 @@ describe('@otpjs/transports-socket.io', function() {
         await wait(100);
 
         const pidB = clientNodeB.spawn(async (ctx) => {
-            ctx.send(['test', 'clientA'], ['test', ctx.self()]);
+            ctx.send(['test', clientNode.name], [payload, ctx.self()]);
             await expect(ctx.receive()).resolves.toBe('received');
         });
 
-        await expect(resultA).resolves.toMatchPattern('test');
+        await expect(resultA).resolves.toBe(payload);
 
         clientSocketB.disconnect();
 

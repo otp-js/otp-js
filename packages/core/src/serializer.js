@@ -4,7 +4,7 @@ import { _ } from './symbols';
 
 export function deserialize(string, reviver = undefined) {
     if (reviver) {
-        reviver = kvCompose(reviver, reviveOTP);
+        reviver = kvCompose(reviveOTP, reviver);
     } else {
         reviver = reviveOTP;
     }

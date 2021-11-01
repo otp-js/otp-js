@@ -11,7 +11,7 @@ function log(ctx, ...args) {
 const receivers = {
     relay: compile([relay, _, _]),
     monitor: compile([monitor, _, _, _]),
-    discover: compile([discover, _, _, _]),
+    discover: compile([discover, _, _]),
 };
 
 function defaultOptions() {
@@ -20,12 +20,10 @@ function defaultOptions() {
     };
 }
 
-export function register(node, socket, name = Symbol.for('socket.io'), options = defaultOptions()) {
-    let routerId;
+export function register(node, socket, options = defaultOptions()) {
     let ctx;
     let running = false;
 
-    const idsToNames = new Map();
     const root = node.makeContext();
     log(root, 'options : %o', options);
 
@@ -36,7 +34,6 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
     socket.on('otp-discover', handleDiscover);
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
-
 
     if (socket.connected) {
         handleConnect();
@@ -86,19 +83,17 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
                 watcher
             )
         } else if (compare(receivers.discover)) {
-            let [, routerId, name, pid] = op;
+            let [, name, pid] = op;
 
-            routerId = serialize(routerId, replace);
             name = serialize(name, replace);
             pid = serialize(pid, replace);
 
-            log(ctx, 'socket.emit(otp-discover, %o, %o, %o)', routerId, name, pid);
+            log(ctx, 'socket.emit(otp-discover, %o, %o)', name, pid);
             socket.emit(
                 'otp-discover',
-                routerId,
                 name,
                 pid
-            )
+            );
         }
     }
 
@@ -107,8 +102,10 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
             ctx = node.makeContext();
             ctx.processFlag(trap_exit, true);
 
-            routerId = node.registerRouter(name, ctx.self(), { bridge });
-            log(ctx, 'register(%o) : handleConnect()', routerId);
+            socket.emit(
+                'otp-discover',
+                serialize(node.name, replace),
+            );
 
             running = true;
             recycle();
@@ -117,24 +114,26 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
         }
     }
 
-    function handleDiscover(id, name, pid) {
-        log(ctx, 'handleDiscover(%o, %o, %o)', id, name, pid);
+    function handleDiscover(name, pid = undefined) {
+        log(ctx, 'handleDiscover(%o, %o)', name, pid);
 
-        id = deserialize(id, revive);
         name = deserialize(name, revive);
-        pid = deserialize(pid, revive);
+        if (pid) {
+            pid = deserialize(pid, revive);
+        } else {
+            pid = ctx.self();
+        }
 
-        log(ctx, 'handleDiscover(%o, %o, %o)', id, name, pid);
+        log(ctx, 'handleDiscover(%o, %o)', name, pid);
 
-        idsToNames.set(id, name);
         node.registerRouter(name, pid, { bridge });
     }
 
     async function handleDisconnect() {
         try {
+            log(ctx, 'handleDisconnect()');
             running = false;
-            routerId = null;
-            node.unregisterRouter(name, ctx.self());
+            node.unregisterRouter(ctx.self());
 
             // drain the messagebox
             try {
@@ -149,12 +148,12 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
 
     function handleMessage(to, message) {
         try {
-            log(ctx, 'handleMessage(%o)', to);
+            log(ctx, 'handleMessage(%o, %o)', to, message);
             to = deserialize(to, revive);
             message = deserialize(message, revive);
             node.deliver(to, message);
         } catch (err) {
-            log(ctx, 'handleMessage(%o) : error : %o', to, err);
+            log(ctx, 'handleMessage(%o, %o) : error : %o', to, message, err);
         }
     }
 
@@ -164,9 +163,10 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
             pid = deserialize(pid, revive);
             ref = deserialize(ref, revive);
             watcher = deserialize(watcher, revive);
+            log(ctx, 'handleMonitor(%o, %o, %o)', pid, ref, watcher);
             node.monitor(watcher, pid, ref);
         } catch (err) {
-            log(ctx, 'handleMonitor(%o) : error : %o', to, err);
+            log(ctx, 'handleMonitor(%o, %o) : error : %o', pid, ref, err);
             node.deliver(watcher, [
                 DOWN,
                 ref,
@@ -180,54 +180,32 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
     function destroy(reason = shutdown) {
         try {
             socket.disconnect();
+        } catch (err) {
+            log(ctx, 'destroy(%o) : error : %o', reason, err);
+        } finally {
+            ctx.die(reason);
             socket.off('otp-message', handleMessage);
             socket.off('otp-monitor', handleMonitor);
             socket.off('connect', handleConnect);
             socket.off('disconnect', handleDisconnect);
-            node.unregisterRouter(name, ctx.self());
-            ctx.die(reason);
-        } catch (err) {
-            log(ctx, 'destroy(%o) : error : %o', reason, err);
         }
     }
 
     function revive(key, value) {
+        log(ctx, 'revive(%o)', value);
         const compare = caseOf(value);
-        if (value instanceof Pid) {
-            if (value.node === Pid.REMOTE) {
-                log(ctx, 'restore_remote_pid(%o)', value);
-                return Pid.of(routerId, value.process);
-            } else if (value.node === Pid.LOCAL) {
-                log(ctx, 'restore_local_pid(%o)', value);
-                return value;
-            } else {
-                const id = node.getRouterId(idsToNames.get(value.node));
-                value = Pid.of(id, value.process);
-                log(ctx, 'restore_unknown_pid(%o)', value);
-                return value;
-            }
-        } else if (value instanceof Ref) {
-            if (value.node === Ref.REMOTE) {
-                const updated = Ref.for(routerId, value.ref);
-                log(ctx, 'restore_remote_ref(%o) : %o', value, updated);
-                return updated;
-            } else if (value.node === Ref.LOCAL) {
-                log(ctx, 'restore_local_ref(%o)', value);
-                return value;
-            } else {
-                const id = node.getRouterId(idsToNames.get(value.node));
-                value = Ref.for(id, value.process);
-                log(ctx, 'restore_unknown_ref(%o)', value);
-                return value;
-            }
-        } else if (compare(['$ref', _, _])) {
+        if (compare(['$ref', _, _])) {
             const [, remote, ref] = value;
             const routerId = node.getRouterId(remote);
-            return Ref.for(routerId, ref)
+            const updated = Ref.for(routerId, ref);
+            log(ctx, 'restore_remote_ref_with_name(%o) : %o', value, updated);
+            return updated;
         } else if (compare(['$pid', _, _])) {
             const [, remote, process] = value;
             const routerId = node.getRouterId(remote);
-            return Pid.of(routerId, process);
+            const updated = Pid.of(routerId, process);
+            log(ctx, 'restore_remote_pid_with_name(%o) : %o', value, updated);
+            return updated;
         } else {
             return value;
         }
@@ -235,29 +213,13 @@ export function register(node, socket, name = Symbol.for('socket.io'), options =
 
     function replace(key, value) {
         if (value instanceof Pid) {
-            if (value.node === Pid.LOCAL) {
-                log(ctx, 'replace_local_pid_with_remote(%o)', value);
-                return Pid.of(Pid.REMOTE, value.process);
-            } else if (value.node === routerId) {
-                log(ctx, 'replace_remote_pid_with_local(%o)', value);
-                return Pid.of(Pid.LOCAL, value.process);
-            } else {
-                log(ctx, 'replace_unknown_pid_with_name(%o)', value);
-                const name = idsToNames.get(value.node);
-                return ['$pid', name, value.process];
-            }
+            log(ctx, 'replace_unknown_pid_with_name(%o)', value);
+            const name = node.getRouterName(value.node);
+            return ['$pid', name, value.process];
         } else if (value instanceof Ref) {
-            if (value.node === Ref.LOCAL) {
-                log(ctx, 'replace_local_ref_with_remote(%o)', value);
-                return Ref.for(Ref.REMOTE, value.ref);
-            } else if (value.node === routerId) {
-                log(ctx, 'replace_remote_ref_with_local(%o)', value);
-                return Ref.for(Ref.LOCAL, value.ref);
-            } else {
-                log(ctx, 'replace_unknown_ref_with_name(%o)', value);
-                const name = idsToNames.get(value.node);
-                return ['$ref', name, value.ref];
-            }
+            log(ctx, 'replace_unknown_ref_with_name(%o)', value);
+            const name = node.getRouterName(value.node);
+            return ['$ref', name, value.ref];
         } else {
             return value;
         }
