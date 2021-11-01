@@ -7,9 +7,21 @@ import { caseOf } from './matching';
 
 const log = debug('otpjs:core:node');
 
+function getNodeId() {
+    return `otp-${Node.nodes++}`;
+}
+
+function getNodeHost() {
+    if (typeof window === 'undefined') {
+        return '127.0.0.1';
+    } else {
+        return window.location.hostname;
+    }
+}
+
 export class Node {
     static nodes = 0;
-    constructor(id = Symbol.for(`otp-${Node.nodes++}@127.0.0.1`)) {
+    constructor(id = Symbol.for(`${getNodeId()}@${getNodeHost()}`)) {
         this._id = id;
         this._log = log.extend(this.name.toString());
         this._finalizer = new FinalizationRegistry((pid) => {
