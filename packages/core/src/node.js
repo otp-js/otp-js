@@ -420,12 +420,22 @@ export class Node {
 
             this._log('registerRouter(%o, %o, %o) : oldPid : %o', source, name, pid, oldPid);
             if (
-                options.bridge
+                name !== this.name
                 && Pid.compare(pid, oldPid) != 0
-                && name !== this.name
                 && compareSources(this, source, oldSource) >= 0
             ) {
-                this.updatePeers(source, name, pid);
+                const nextRouter = {
+                    source,
+                    pid,
+                    id,
+                    name,
+                };
+                this._routers.set(name, nextRouter);
+                this._routersById.set(id, nextRouter)
+                this._routersByPid.set(pid, nextRouter);
+                if (options.bridge) {
+                    this.updatePeers(source, name, pid);
+                }
             }
 
             return id;
