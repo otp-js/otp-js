@@ -7,7 +7,7 @@ export class Ref extends String {
 
     static isRef = (string) => string instanceof Ref;
     static for = (node, ref) => new Ref(`Ref<${node}.${ref}>`);
-    static compare = (a, b) => a.toString().localeCompare(b.toString());
+    static compare = (a, b) => (a ?? '').toString().localeCompare((b ?? '').toString());
 
     get node() {
         return this.match(Ref.regex).groups.node;
@@ -33,7 +33,7 @@ export class Pid extends String {
 
     static isPid = (string) => string instanceof Pid;
     static of = (node, process) => new Pid(`Pid<${node}.${process}>`);
-    static compare = (a, b) => a.toString().localeCompare(b.toString());
+    static compare = (a, b) => (a ?? '').toString().localeCompare((b ?? '').toString());
 
     get node() {
         const match = this.match(Pid.regex);
