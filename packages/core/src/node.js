@@ -377,6 +377,7 @@ export class Node {
             if (
                 options.bridge
                 && Pid.compare(pid, oldPid) != 0
+                && name !== this.name
             ) {
                 this.updatePeers(name, pid);
             }
