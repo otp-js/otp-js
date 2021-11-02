@@ -1,9 +1,24 @@
 import debug from 'debug';
 import { Pid, Ref } from './types.js';
 import { Context } from './context.js';
-import { ok, _, discover, normal, badarg, monitor, DOWN, EXIT, relay, link, unlink } from './symbols';
+import * as Symbols from './symbols';
 import { OTPError } from './error';
 import { caseOf } from './matching';
+
+const {
+    DOWN,
+    EXIT,
+    _,
+    badarg,
+    discover,
+    link,
+    monitor,
+    normal,
+    ok,
+    relay,
+    unlink
+} = Symbols;
+
 
 const log = debug('otpjs:core:node');
 
@@ -16,6 +31,16 @@ function getNodeHost() {
         return '127.0.0.1';
     } else {
         return window.location.hostname;
+    }
+}
+
+function compareSources(node, next, prev) {
+    if (node.name === next) {
+        return 1;
+    } else if (node.name === prev) {
+        return -1;
+    } else {
+        return 0;
     }
 }
 
@@ -353,33 +378,54 @@ export class Node {
         }
     }
 
-    updatePeers(name, pid) {
+    updatePeers(source, name, pid) {
         for (let [bridge, names] of this._bridges) {
-            this.deliver(bridge, [discover, name, pid])
-            names.forEach(
-                name => this.deliver(pid, [discover, name, bridge])
-            );
+            const router = this._routersByPid.get(bridge);
+            this.deliver(bridge, [discover, source, name, pid])
+            for (let name of names) {
+                this.deliver(pid, [discover, router.source, name, bridge]);
+            }
         }
 
         let existing = this._bridges.has(pid)
             ? this._bridges.get(pid)
             : [];
-        this._bridges.set(pid, [...existing, name]);
+        let index = existing.indexOf(name);
+
+        if (index >= 0) {
+            this._bridges.set(
+                pid,
+                [
+                    ...existing.slice(0, index),
+                    name,
+                    ...existing.slice(index + 1)
+                ]
+            );
+        } else {
+            this._bridges.set(
+                pid,
+                [
+                    ...existing,
+                    name,
+                ]
+            )
+        }
     }
 
-    registerRouter(name, pid, options = {}) {
-        this._log('registerRouter(%o, %o) : this._routers : %o', name, pid, this._routers);
+    registerRouter(source, name, pid, options = {}) {
+        this._log('registerRouter(%o, %o, %o) : this._routers : %o', source, name, pid, this._routers);
         if (this._routers.has(name)) {
             const router = this._routers.get(name);
-            const { pid: oldPid, id } = router;
+            const { source: oldSource, pid: oldPid, id } = router;
 
-            this._log('registerRouter(%o, %o) : oldPid : %o', name, pid, oldPid);
+            this._log('registerRouter(%o, %o, %o) : oldPid : %o', source, name, pid, oldPid);
             if (
                 options.bridge
                 && Pid.compare(pid, oldPid) != 0
                 && name !== this.name
+                && compareSources(this, source, oldSource) >= 0
             ) {
-                this.updatePeers(name, pid);
+                this.updatePeers(source, name, pid);
             }
 
             return id;
@@ -389,13 +435,14 @@ export class Node {
                 pid,
                 id,
                 name,
+                source,
             };
             this._routers.set(name, router);
             this._routersById.set(id, router)
             this._routersByPid.set(pid, router);
 
             if (options.bridge) {
-                this.updatePeers(name, pid);
+                this.updatePeers(source, name, pid);
             }
 
             return id;

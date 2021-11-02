@@ -11,7 +11,7 @@ function log(ctx, ...args) {
 const receivers = {
     relay: compile([relay, _, _]),
     monitor: compile([monitor, _, _, _]),
-    discover: compile([discover, _, _]),
+    discover: compile([discover, _, _, _]),
 };
 
 function defaultOptions() {
@@ -83,14 +83,16 @@ export function register(node, socket, options = defaultOptions()) {
                 watcher
             )
         } else if (compare(receivers.discover)) {
-            let [, name, pid] = op;
+            let [, source, name, pid] = op;
 
+            source = serialize(source ?? node.name, replace);
             name = serialize(name, replace);
             pid = serialize(pid, replace);
 
-            log(ctx, 'socket.emit(otp-discover, %o, %o)', name, pid);
+            log(ctx, 'socket.emit(otp-discover, %o, %o)', ctx.node(), name, pid);
             socket.emit(
                 'otp-discover',
+                source,
                 name,
                 pid
             );
@@ -104,7 +106,9 @@ export function register(node, socket, options = defaultOptions()) {
 
             socket.emit(
                 'otp-discover',
+                null,
                 serialize(node.name, replace),
+                null,
             );
 
             running = true;
@@ -114,9 +118,10 @@ export function register(node, socket, options = defaultOptions()) {
         }
     }
 
-    function handleDiscover(name, pid = undefined) {
-        log(ctx, 'handleDiscover(%o, %o)', name, pid);
+    function handleDiscover(source, name, pid = undefined) {
+        log(ctx, 'handleDiscover(%o, %o, %o)', source, name, pid);
 
+        source = source ? deserialize(source, revive) : node.name;
         name = deserialize(name, revive);
         if (pid) {
             pid = deserialize(pid, revive);
@@ -124,9 +129,9 @@ export function register(node, socket, options = defaultOptions()) {
             pid = ctx.self();
         }
 
-        log(ctx, 'handleDiscover(%o, %o)', name, pid);
+        log(ctx, 'handleDiscover(%o, %o, %o)', source, name, pid);
 
-        node.registerRouter(name, pid, { bridge });
+        node.registerRouter(source, name, pid, { bridge });
     }
 
     async function handleDisconnect() {
