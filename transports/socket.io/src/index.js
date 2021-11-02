@@ -3,6 +3,7 @@ import { Pid, Ref, serialize, compile, caseOf, deserialize, Symbols } from '@otp
 const { relay, monitor, shutdown, DOWN, _, trap_exit, discover } = Symbols;
 
 const disconnect = Symbol.for('disconnect');
+const TRANSPORT_COST = 1;
 
 function log(ctx, ...args) {
     return ctx.log.extend('transports:socket.io')(...args);
@@ -11,7 +12,7 @@ function log(ctx, ...args) {
 const receivers = {
     relay: compile([relay, _, _]),
     monitor: compile([monitor, _, _, _]),
-    discover: compile([discover, _, _, _]),
+    discover: compile([discover, _, _, _, _]),
 };
 
 function defaultOptions() {
@@ -83,16 +84,18 @@ export function register(node, socket, options = defaultOptions()) {
                 watcher
             )
         } else if (compare(receivers.discover)) {
-            let [, source, name, pid] = op;
+            let [, source, score, name, pid] = op;
 
             source = serialize(source ?? node.name, replace);
+            score = serialize(score, replace);
             name = serialize(name, replace);
             pid = serialize(pid, replace);
 
-            log(ctx, 'socket.emit(otp-discover, %o, %o)', ctx.node(), name, pid);
+            log(ctx, 'socket.emit(otp-discover, %o, %o)', source, score, name, pid);
             socket.emit(
                 'otp-discover',
                 source,
+                score,
                 name,
                 pid
             );
@@ -106,9 +109,10 @@ export function register(node, socket, options = defaultOptions()) {
 
             socket.emit(
                 'otp-discover',
-                null,
+                serialize(null, replace),
+                serialize(0, replace),
                 serialize(node.name, replace),
-                null,
+                serialize(null, replace),
             );
 
             running = true;
@@ -118,20 +122,20 @@ export function register(node, socket, options = defaultOptions()) {
         }
     }
 
-    function handleDiscover(source, name, pid = undefined) {
-        log(ctx, 'handleDiscover(%o, %o, %o)', source, name, pid);
+    function handleDiscover(source, score, name, pid = undefined) {
+        log(ctx, 'handleDiscover(%o, %o, %o, %o)', source, score, name, pid);
 
-        source = source ? deserialize(source, revive) : node.name;
+        source = deserialize(source, revive) ?? node.name;
         name = deserialize(name, revive);
-        if (pid) {
-            pid = deserialize(pid, revive);
-        } else {
-            pid = ctx.self();
-        }
+        pid = deserialize(pid, revive) ?? ctx.self();
+        score = deserialize(score);
 
-        log(ctx, 'handleDiscover(%o, %o, %o)', source, name, pid);
+        // Apply "transportation cost" to score to account for indirect connections
+        score += TRANSPORT_COST;
 
-        node.registerRouter(source, name, pid, { bridge });
+        log(ctx, 'handleDiscover(%o, %o, %o, %o)', source, score, name, pid);
+
+        node.registerRouter(source, score, name, pid, { bridge });
     }
 
     async function handleDisconnect() {

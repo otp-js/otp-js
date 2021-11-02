@@ -34,16 +34,6 @@ function getNodeHost() {
     }
 }
 
-function compareSources(node, next, prev) {
-    if (node.name === next) {
-        return 1;
-    } else if (node.name === prev) {
-        return -1;
-    } else {
-        return 0;
-    }
-}
-
 export class Node {
     static nodes = 0;
     constructor(id = Symbol.for(`${getNodeId()}@${getNodeHost()}`)) {
@@ -64,6 +54,8 @@ export class Node {
             id: 0,
             pid: this._system,
             name: this.name,
+            source: null,
+            score: 0,
         }
         this._routers = new Map([
             [this.name, this._router]
@@ -378,12 +370,12 @@ export class Node {
         }
     }
 
-    updatePeers(source, name, pid) {
+    updatePeers(source, score, name, pid) {
         for (let [bridge, names] of this._bridges) {
             const router = this._routersByPid.get(bridge);
-            this.deliver(bridge, [discover, source, name, pid])
+            this.deliver(bridge, [discover, source, score, name, pid])
             for (let name of names) {
-                this.deliver(pid, [discover, router.source, name, bridge]);
+                this.deliver(pid, [discover, router.source, router.score, name, bridge]);
             }
         }
 
@@ -412,29 +404,32 @@ export class Node {
         }
     }
 
-    registerRouter(source, name, pid, options = {}) {
-        this._log('registerRouter(%o, %o, %o) : this._routers : %o', source, name, pid, this._routers);
+    registerRouter(source, score, name, pid, options = {}) {
+        this._log('registerRouter(%o, %o, %o, %o) : this._routers : %o', source, score, name, pid, this._routers);
         if (this._routers.has(name)) {
             const router = this._routers.get(name);
             const { source: oldSource, pid: oldPid, id } = router;
 
-            this._log('registerRouter(%o, %o, %o) : oldPid : %o', source, name, pid, oldPid);
+            this._log('registerRouter(%o, %o, %o, %o) : oldPid : %o', source, score, name, pid, oldPid);
             if (
-                name !== this.name
-                && Pid.compare(pid, oldPid) != 0
-                && compareSources(this, source, oldSource) >= 0
+                Pid.compare(pid, oldPid) != 0   // Make sure it's not an echo of the current router
+                && (
+                    score < router.score        // Ensure it provides better connectivity
+                    || oldPid === null          // ...unless the last router died
+                )
             ) {
                 const nextRouter = {
                     source,
                     pid,
                     id,
                     name,
+                    score,
                 };
                 this._routers.set(name, nextRouter);
                 this._routersById.set(id, nextRouter)
                 this._routersByPid.set(pid, nextRouter);
                 if (options.bridge) {
-                    this.updatePeers(source, name, pid);
+                    this.updatePeers(source, score, name, pid);
                 }
             }
 
@@ -446,13 +441,14 @@ export class Node {
                 id,
                 name,
                 source,
+                score,
             };
             this._routers.set(name, router);
             this._routersById.set(id, router)
             this._routersByPid.set(pid, router);
 
             if (options.bridge) {
-                this.updatePeers(source, name, pid);
+                this.updatePeers(source, score, name, pid);
             }
 
             return id;
