@@ -353,11 +353,35 @@ export class Node {
         }
     }
 
+    updatePeers(name, pid) {
+        for (let [bridge, names] of this._bridges) {
+            this.deliver(bridge, [discover, name, pid])
+            names.forEach(
+                name => this.deliver(pid, [discover, name, bridge])
+            );
+        }
+
+        let existing = this._bridges.has(pid)
+            ? this._bridges.get(pid)
+            : [];
+        this._bridges.set(pid, [...existing, name]);
+    }
+
     registerRouter(name, pid, options = {}) {
         this._log('registerRouter(%o, %o) : this._routers : %o', name, pid, this._routers);
         if (this._routers.has(name)) {
             const router = this._routers.get(name);
-            return router.id;
+            const { pid: oldPid, id } = router;
+
+            this._log('registerRouter(%o, %o) : oldPid : %o', name, pid, oldPid);
+            if (
+                options.bridge
+                && Pid.compare(pid, oldPid) != 0
+            ) {
+                this.updatePeers(name, pid);
+            }
+
+            return id;
         } else {
             const id = `${this._routerCount++}`;
             const router = {
@@ -370,17 +394,7 @@ export class Node {
             this._routersByPid.set(pid, router);
 
             if (options.bridge) {
-                for (let [bridge, names] of this._bridges) {
-                    this.deliver(bridge, [discover, name, pid])
-                    names.forEach(
-                        name => this.deliver(pid, [discover, name, bridge])
-                    );
-                }
-
-                let existing = this._bridges.has(pid)
-                    ? this._bridges.get(pid)
-                    : [];
-                this._bridges.set(pid, [...existing, name]);
+                this.updatePeers(name, pid);
             }
 
             return id;
