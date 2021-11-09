@@ -85,16 +85,14 @@ function comparator(pattern, comparisons = []) {
 function pidComparator(pattern, comparisons) {
     comparisons.push(
         value => Pid.isPid(value)
-            && pattern.node === value.node
-            && pattern.process === value.process
+            && Pid.compare(pattern, value) === 0
     );
 }
 
 function refComparator(pattern, comparisons) {
     comparisons.push(
         value => Ref.isRef(value)
-            && pattern.node === value.node
-            && pattern.ref === value.ref
+            && Ref.compare(pattern, value) === 0
     );
 }
 

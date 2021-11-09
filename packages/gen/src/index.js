@@ -179,7 +179,7 @@ async function doCall(ctx, pid, message, timeout) {
             ctx,
             'doCall(%o, %o) : receive(%o, %o)',
             pid,
-            message,
+            ref,
             isReply,
             isDown
         );
@@ -189,23 +189,23 @@ async function doCall(ctx, pid, message, timeout) {
             timeout
         );
 
-        log(ctx, 'doCall(%o, %o) : ret : %o', pid, message, ret)
-        log(ctx, 'doCall(%o, %o) : predicate : %o', pid, message, predicate)
+        log(ctx, 'doCall(%o, %o) : ret : %o', pid, ref, ret)
+        log(ctx, 'doCall(%o, %o) : predicate : %o', pid, ref, predicate)
         if (predicate === isReply) {
             const [ref, response] = ret;
             ctx.demonitor(mref);
-            log(ctx, 'doCall(%o, %o) : response : %o', pid, message, response);
+            log(ctx, 'doCall(%o, %o) : response : %o', pid, ref, response);
             return response;
         } else if (predicate === isDown) {
             const [DOWN, ref, type, pid, reason] = ret;
-            log(ctx, 'doCall(%o, %o) : throw OTPError(%o)', pid, message, reason);
+            log(ctx, 'doCall(%o, %o) : throw OTPError(%o)', pid, ref, reason);
             throw new OTPError(reason);
         } else {
-            log(ctx, 'doCall(%o, %o) : unrecognized_predicate : %o', pid, message, predicate);
+            log(ctx, 'doCall(%o, %o) : unrecognized_predicate : %o', pid, ref, predicate);
             throw new OTPError(['unrecognized_predicate', predicate]);
         }
     } catch (err) {
-        log(ctx, 'doCall(%o, %o, %o) : error : %o', pid, message, timeout, err);
+        log(ctx, 'doCall(%o, %o, %o) : error : %o', pid, ref, timeout, err);
         throw err;
     }
 }

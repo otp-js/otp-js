@@ -103,51 +103,7 @@ export class Node {
         const pidA = ctx.self();
         const compare = caseOf(pidB);
 
-        this._log('monitor(%o, %o)', pidA, pidB);
-
-        if (compare(Pid.isPid) && pidB.node === Pid.LOCAL) {
-            const watchee = this._processes.get(pidB.process);
-            if (watchee) {
-                ctx._link(watchee);
-                watchee._link(pidA);
-            } else {
-                this.deliver(
-                    pidA,
-                    [
-                        EXIT,
-                        pidB,
-                        'noproc',
-                        Error().stack
-                    ]
-                );
-            }
-            return ok;
-        } else if (compare(Pid.isPid)) {
-            const router = this._routersById.get(pidB.node)
-            if (router) {
-                this.deliver(router.pid, [link, pidB, pidA]);
-            } else {
-                this.deliver(
-                    pidA,
-                    [
-                        EXIT,
-                        pidB,
-                        'noconnection',
-                        Error().stack
-                    ]
-                );
-            }
-            return ok;
-        } else {
-            throw new OTPError([badarg, pidB]);
-        }
-    }
-
-    link(ctx, pidB) {
-        const pidA = ctx.self();
-        const compare = caseOf(pidB);
-
-        this._log('monitor(%o, %o)', pidA, pidB);
+        this._log('link(%o, %o)', pidA, pidB);
 
         if (compare(Pid.isPid) && pidB.node === Pid.LOCAL) {
             this._log('monitor(%o, %o) : local', pidA, pidB);
@@ -244,6 +200,7 @@ export class Node {
         this._log('monitor(%o, %o)', watcherPid, watcheePid);
 
         if (compare(Pid.isPid) && watcheePid.node === Pid.LOCAL) {
+            this._log('monitor(%o, %o) : local', watcherPid, watcheePid);
             const watchee = this._processes.get(watcheePid.process);
             if (watchee) {
                 watchee._monitor(ref, watcherPid);
@@ -262,17 +219,18 @@ export class Node {
             }
             return ref;
         } else if (compare(Pid.isPid)) {
-            const router = this._routersById.get(pidB.node)
+            this._log('monitor(%o, %o) : remote', watcherPid, watcheePid);
+            const router = this._routersById.get(watcheePid.node)
             if (router) {
-                this.deliver(router.pid, [monitor, pidB, ref, pidA]);
+                this.deliver(router.pid, [monitor, watcheePid, ref, watcherPid]);
             } else {
                 this.deliver(
-                    pidA,
+                    watcherPid,
                     [
                         DOWN,
                         ref,
                         'process',
-                        pidB,
+                        watcheePid,
                         'noconnection'
                     ]
                 );
