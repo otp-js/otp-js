@@ -123,7 +123,7 @@ export class Node {
             }
             return ok;
         } else if (compare(Pid.isPid)) {
-            const router = this._routers.get(node)
+            const router = this._routersById.get(pidB.node)
             if (router) {
                 this.deliver(router.pid, [link, pidB, pidA]);
             } else {
@@ -167,7 +167,7 @@ export class Node {
             }
             return ok;
         } else if (compare(Pid.isPid)) {
-            const router = this._routers.get(node)
+            const router = this._routersById.get(pidB.node)
             if (router) {
                 ctx._link(pidB);
                 this.deliver(router.pid, [link, pidB, pidA]);
