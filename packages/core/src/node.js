@@ -150,6 +150,7 @@ export class Node {
         this._log('monitor(%o, %o)', pidA, pidB);
 
         if (compare(Pid.isPid) && pidB.node === Pid.LOCAL) {
+            this._log('monitor(%o, %o) : local', pidA, pidB);
             const watchee = this._processes.get(pidB.process);
             if (watchee) {
                 ctx._link(watchee);
@@ -167,6 +168,7 @@ export class Node {
             }
             return ok;
         } else if (compare(Pid.isPid)) {
+            this._log('monitor(%o, %o) : remote', pidA, pidB);
             const router = this._routersById.get(pidB.node)
             if (router) {
                 ctx._link(pidB);
@@ -192,9 +194,10 @@ export class Node {
         const pidA = ctx.self();
         const compare = caseOf(pidB);
 
-        this._log('monitor(%o, %o)', pidA, pidB);
+        this._log('unlink(%o, %o)', pidA, pidB);
 
         if (compare(Pid.isPid) && pidB.node === Pid.LOCAL) {
+            this._log('unlink(%o, %o) : local', pidA, pidB);
             const watchee = this._processes.get(pidB.process);
             if (watchee) {
                 ctx._unlink(watchee);
@@ -212,6 +215,7 @@ export class Node {
             }
             return ok;
         } else if (compare(Pid.isPid)) {
+            this._log('unlink(%o, %o) : remote', pidA, pidB);
             const router = this._routers.get(node)
             if (router) {
                 ctx._unlink(pidB);
@@ -239,7 +243,7 @@ export class Node {
 
         this._log('monitor(%o, %o)', watcherPid, watcheePid);
 
-        if (compare(Pid.isPid)) {
+        if (compare(Pid.isPid) && watcheePid.node === Pid.LOCAL) {
             const watchee = this._processes.get(watcheePid.process);
             if (watchee) {
                 watchee._monitor(ref, watcherPid);
@@ -257,6 +261,22 @@ export class Node {
                 );
             }
             return ref;
+        } else if (compare(Pid.isPid)) {
+            const router = this._routersById.get(pidB.node)
+            if (router) {
+                this.deliver(router.pid, [monitor, pidB, ref, pidA]);
+            } else {
+                this.deliver(
+                    pidA,
+                    [
+                        DOWN,
+                        ref,
+                        'process',
+                        pidB,
+                        'noconnection'
+                    ]
+                );
+            }
         } else if (compare([_, _])) {
             const [name, node] = watcheePid;
             const router = this._routers.get(node)
