@@ -1,6 +1,6 @@
 import { Pid, Ref, serialize, compile, caseOf, deserialize, Symbols } from '@otpjs/core';
 
-const { relay, monitor, shutdown, DOWN, _, trap_exit, discover } = Symbols;
+const { relay, monitor, shutdown, DOWN, _, trap_exit, discover, temporary } = Symbols;
 
 const disconnect = Symbol.for('disconnect');
 const TRANSPORT_COST = 1;
@@ -17,7 +17,8 @@ const receivers = {
 
 function defaultOptions() {
     return {
-        bridge: false
+        bridge: false,
+        type: temporary
     };
 }
 
@@ -28,7 +29,7 @@ export function register(node, socket, options = defaultOptions()) {
     const root = node.makeContext();
     log(root, 'options : %o', options);
 
-    const { bridge } = options;
+    const { bridge, type } = options;
 
     socket.on('otp-message', handleMessage);
     socket.on('otp-monitor', handleMonitor);
@@ -135,7 +136,7 @@ export function register(node, socket, options = defaultOptions()) {
 
         log(ctx, 'handleDiscover(%o, %o, %o, %o)', source, score, name, pid);
 
-        node.registerRouter(source, score, name, pid, { bridge });
+        node.registerRouter(source, score, name, pid, { bridge, type });
     }
 
     async function handleDisconnect() {
