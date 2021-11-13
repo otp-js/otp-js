@@ -16,7 +16,9 @@ const {
     normal,
     ok,
     relay,
-    unlink
+    unlink,
+    temporary,
+    permanent,
 } = Symbols;
 
 
@@ -402,6 +404,7 @@ export class Node {
                     id,
                     name,
                     score,
+                    type: options.type ?? temporary
                 };
                 this._routers.set(name, nextRouter);
                 this._routersById.set(id, nextRouter)
@@ -420,6 +423,7 @@ export class Node {
                 name,
                 source,
                 score,
+                type: options.type ?? temporary
             };
             this._routers.set(name, router);
             this._routersById.set(id, router)
@@ -437,9 +441,15 @@ export class Node {
         this._log('unregisterRouter(%o) : this._bridges', pid, this._bridges);
         if (this._routersByPid.has(pid)) {
             const router = this._routersByPid.get(pid);
-            const { id, name } = router;
-            this._routers.set(name, { ...router, pid: null });
-            this._routersById.set(id, { ...router, pid: null });
+            const { id, name, type } = router;
+
+            if (type === permanent) {
+                this._routers.set(name, { ...router, pid: null });
+                this._routersById.set(id, { ...router, pid: null });
+            } else {
+                this._routers.delete(name);
+                this._routersById.delete(id);
+            }
             this._routersByPid.delete(pid);
 
             if (this._bridges.has(pid)) {
@@ -447,11 +457,16 @@ export class Node {
                 this._log('unregisterRouter(%o) : names : %o', pid, names);
                 for (let name of names) {
                     const router = this._routers.get(name);
-                    const { id } = router;
+                    const { id, type } = router;
                     const pid = null;
 
-                    this._routers.set(name, { ...router, pid });
-                    this._routersById.set(id, { ...router, pid });
+                    if (type === permanent) {
+                        this._routers.set(name, { ...router, pid });
+                        this._routersById.set(id, { ...router, pid });
+                    } else {
+                        this._routers.delete(name);
+                        this._routersById.delete(id);
+                    }
                     this._routersByPid.delete(pid);
                 }
                 this._bridges.delete(pid);

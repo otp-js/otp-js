@@ -17,3 +17,5 @@ export const monitor = Symbol.for('monitor');
 export const discover = Symbol.for('discover');
 export const link = Symbol.for('link');
 export const unlink = Symbol.for('unlink');
+export const temporary = Symbol.for('temporary');
+export const permanent = Symbol.for('permanent');
