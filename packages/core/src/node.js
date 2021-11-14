@@ -458,8 +458,10 @@ export class Node {
 
                 this._log('unregisterRouter(%o) : names : %o', pid, names);
                 for (let name of names) {
-                    const { pid } = this._routers.get(name);
-                    this.unregisterRouter(pid);
+                    if (this._routers.has(name)) {
+                        const { pid } = this._routers.get(name);
+                        this.unregisterRouter(pid);
+                    }
                 }
             }
         }
