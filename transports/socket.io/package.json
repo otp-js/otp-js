@@ -1,6 +1,6 @@
 {
   "name": "@otpjs/transports-socket.io",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "A transport for communicating with OTP nodes over socket.io",
   "keywords": [
     "otp",
@@ -38,7 +38,7 @@
     "url": "https://github.com/otp-js/otp-js/issues"
   },
   "dependencies": {
-    "@otpjs/core": "^0.9.9"
+    "@otpjs/core": "^0.9.10"
   },
   "peerDependencies": {
     "socket.io": "^3.1.0||^4.0.0",
