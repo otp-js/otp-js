@@ -438,7 +438,7 @@ export class Node {
     }
 
     unregisterRouter(pid) {
-        this._log('unregisterRouter(%o) : this._bridges', pid, this._bridges);
+        this._log('unregisterRouter(%o)', pid);
         if (this._routersByPid.has(pid)) {
             const router = this._routersByPid.get(pid);
             const { id, name, type } = router;
@@ -454,22 +454,13 @@ export class Node {
 
             if (this._bridges.has(pid)) {
                 const names = this._bridges.get(pid);
+                this._bridges.delete(pid);
+
                 this._log('unregisterRouter(%o) : names : %o', pid, names);
                 for (let name of names) {
-                    const router = this._routers.get(name);
-                    const { id, type } = router;
-                    const pid = null;
-
-                    if (type === permanent) {
-                        this._routers.set(name, { ...router, pid });
-                        this._routersById.set(id, { ...router, pid });
-                    } else {
-                        this._routers.delete(name);
-                        this._routersById.delete(id);
-                    }
-                    this._routersByPid.delete(pid);
+                    const { pid } = this._routers.get(name);
+                    this.unregisterRouter(pid);
                 }
-                this._bridges.delete(pid);
             }
         }
 
