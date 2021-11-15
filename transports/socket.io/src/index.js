@@ -1,6 +1,6 @@
 import { Pid, Ref, serialize, compile, caseOf, deserialize, Symbols } from '@otpjs/core';
 
-const { relay, monitor, shutdown, DOWN, _, trap_exit, discover, temporary } = Symbols;
+const { relay, monitor, shutdown, DOWN, _, trap_exit, discover, temporary, lost } = Symbols;
 
 const disconnect = Symbol.for('disconnect');
 const TRANSPORT_COST = 1;
@@ -13,6 +13,7 @@ const receivers = {
     relay: compile([relay, _, _]),
     monitor: compile([monitor, _, _, _]),
     discover: compile([discover, _, _, _, _]),
+    lost: compile([lost, _, _, _, _]),
 };
 
 function defaultOptions() {
@@ -34,6 +35,7 @@ export function register(node, socket, options = defaultOptions()) {
     socket.on('otp-message', handleMessage);
     socket.on('otp-monitor', handleMonitor);
     socket.on('otp-discover', handleDiscover);
+    socket.on('otp-lost', handleLost);
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
 
@@ -137,6 +139,22 @@ export function register(node, socket, options = defaultOptions()) {
         log(ctx, 'handleDiscover(%o, %o, %o, %o)', source, score, name, pid);
 
         node.registerRouter(source, score, name, pid, { bridge, type });
+    }
+
+    function handleLost(source, score, name, pid = undefined) {
+        log(ctx, 'handleDiscover(%o, %o, %o, %o)', source, score, name, pid);
+
+        source = deserialize(source, revive);
+        name = deserialize(name, revive);
+        pid = deserialize(pid, revive);
+        score = deserialize(score);
+
+        // Apply "transportation cost" to score to account for indirect connections
+        score += TRANSPORT_COST;
+
+        log(ctx, 'handleDiscover(%o, %o, %o, %o)', source, score, name, pid);
+
+        node.unregisterRouter(pid, source, score, name);
     }
 
     async function handleDisconnect() {
