@@ -19,6 +19,7 @@ const {
     unlink,
     temporary,
     permanent,
+    lost,
 } = Symbols;
 
 
@@ -350,15 +351,17 @@ export class Node {
         }
     }
 
-    updatePeers(source, score, name, pid) {
+    updatePeers(source, score, name, pid, operation) {
         for (let [bridge, names] of this._bridges) {
             const router = this._routersByPid.get(bridge);
-            this.deliver(bridge, [discover, source, score, name, pid])
+            this.deliver(bridge, operation(source, score, name, pid));
             for (let name of names) {
-                this.deliver(pid, [discover, router.source, router.score, name, bridge]);
+                this.deliver(pid, operation(router.source, router.score, name, bridge));
             }
         }
+    }
 
+    saveBridge(name, pid) {
         let existing = this._bridges.has(pid)
             ? this._bridges.get(pid)
             : [];
@@ -410,7 +413,8 @@ export class Node {
                 this._routersById.set(id, nextRouter)
                 this._routersByPid.set(pid, nextRouter);
                 if (options.bridge) {
-                    this.updatePeers(source, score, name, pid);
+                    this.updatePeers(source, score, name, pid, _discover);
+                    this.saveBridge(name, pid);
                 }
             }
 
@@ -430,10 +434,15 @@ export class Node {
             this._routersByPid.set(pid, router);
 
             if (options.bridge) {
-                this.updatePeers(source, score, name, pid);
+                this.updatePeers(source, score, name, pid, _discover);
+                this.saveBridge(name, pid);
             }
 
             return id;
+        }
+
+        function _discover(source, score, name, pid) {
+            return [discover, source, score, name, pid];
         }
     }
 
@@ -459,14 +468,19 @@ export class Node {
                 this._log('unregisterRouter(%o) : names : %o', pid, names);
                 for (let name of names) {
                     if (this._routers.has(name)) {
-                        const { pid } = this._routers.get(name);
+                        const { source, score, pid } = this._routers.get(name);
                         this.unregisterRouter(pid);
+                        this.updatePeers(source, score, name, pid, _lost);
                     }
                 }
             }
         }
 
         return ok;
+
+        function _lost(_source, _score, _name, pid) {
+            return [lost, pid];
+        }
     }
 
     getRouterName(id) {
