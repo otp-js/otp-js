@@ -240,22 +240,26 @@ export class Node {
             }
         } else if (compare([_, _])) {
             const [name, node] = watcheePid;
-            const router = this._routers.get(node)
-            if (router) {
-                this.deliver(router.pid, [monitor, name, ref, watcherPid]);
+            if (node === this.name) {
+                return this.monitor(watcherPid, name, ref);
             } else {
-                this.deliver(
-                    watcherPid,
-                    [
-                        DOWN,
-                        ref,
-                        'process',
-                        watcheePid,
-                        'noconnection'
-                    ]
-                );
+                const router = this._routers.get(node)
+                if (router) {
+                    this.deliver(router.pid, [monitor, name, ref, watcherPid]);
+                } else {
+                    this.deliver(
+                        watcherPid,
+                        [
+                            DOWN,
+                            ref,
+                            'process',
+                            watcheePid,
+                            'noconnection'
+                        ]
+                    );
+                }
+                return ref;
             }
-            return ref;
         } else if (compare(undefined)) {
             throw new OTPError(badarg);
         } else {
@@ -550,15 +554,11 @@ export class Node {
 
     deliver(to, message) {
         const compare = caseOf(to);
-        this._log('deliver(%o) : message : %o', to, message);
         if (compare(Pid.isPid)) {
-            this._log('deliver(%o) : PID', to);
             to = new Pid(to);
             if (to.node == Pid.LOCAL) {
-                this._log('deliver(%o) : PID : LOCAL', to);
                 const ctx = this._processes.get(to.process);
                 if (ctx && !ctx.dead) {
-                    this._log('deliver(%o) : PID : LOCAL : ctx : %o', to, ctx);
                     ctx._deliver(message);
                     return ok;
                 } else {
@@ -575,14 +575,15 @@ export class Node {
             }
         } else if (compare([_, _])) {
             const [name, node] = to;
-            this._log('deliver(%o) : NAME : REMOTE : this._routers : %o', to, this._routers);
-            const router = this._routers.get(node)
-            this._log('deliver(%o) : NAME : REMOTE : router : %o', to, router);
-            if (router) {
-                this._log('deliver(%o) : NAME : REMOTE : relay : %o', router.pid);
-                return this.deliver(router.pid, [relay, name, message]);
+            if (node === this.name) {
+                return this.deliver(name, message);
             } else {
-                return ok;
+                const router = this._routers.get(node)
+                if (router) {
+                    return this.deliver(router.pid, [relay, name, message]);
+                } else {
+                    return ok;
+                }
             }
         } else if (compare(undefined)) {
             throw new OTPError(badarg);
