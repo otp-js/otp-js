@@ -365,4 +365,83 @@ async function tryTerminate(ctx, callbacks, reason, state) {
     }
 }
 
+export function callbacks(builder) {
+    const callHandlers = [];
+    const castHandlers = [];
+    const infoHandlers = [];
 
+    let init = null;
+    let terminate = null;
+
+    builder({
+        onInit(handler) {
+            init = handler;
+        },
+        onCall(pattern, handler) {
+            callHandlers.push([
+                core.compile(pattern),
+                handler
+            ]);
+        },
+        onCast(pattern, handler) {
+            castHandlers.push([
+                core.compile(pattern),
+                handler
+            ]);
+        },
+        onInfo(pattern, handler) {
+            infoHandlers.push([
+                core.compile(pattern),
+                handler
+            ]);
+        },
+        onTerminate(handler) {
+            terminate = handler;
+        },
+    });
+
+    return {
+        init,
+        handleCall,
+        handleCast,
+        handleInfo,
+        terminate,
+    };
+
+    function handleCall(call, from, state) {
+        const found = callHandlers.find(
+            ([pattern, _handler]) => pattern(call)
+        );
+
+        if (found) {
+            const [, handler] = found;
+            return handler(call, from, state);
+        } else {
+            return [noreply, state];
+        }
+    }
+    function handleCast(cast, state) {
+        const found = castHandlers.find(
+            ([pattern, _handler]) => pattern(cast)
+        );
+
+        if (found) {
+            const [, handler] = found;
+            return handler(cast, state);
+        } else {
+            return [noreply, state];
+        }
+    }
+    function handleInfo(info, state) {
+        const found = infoHandlers.find(
+            ([pattern, _handler]) => pattern(info)
+        );
+
+        if (found) {
+            const [, handler] = found;
+            return handler(info, state);
+        } else {
+            return [noreply, state];
+        }
+    }
+}
