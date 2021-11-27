@@ -12,7 +12,7 @@ function log(ctx, ...args) {
     return ctx.log.extend('transports:socket.io:__tests__')(...args);
 }
 
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let serverNode = null;
 let clientNode = null;
@@ -21,7 +21,7 @@ let serverManager = null;
 let serverSocket = null;
 let clientSocket = null;
 
-beforeEach(async function() {
+beforeEach(async function () {
     serverNode = new otp.Node();
     clientNode = new otp.Node();
 
@@ -30,19 +30,16 @@ beforeEach(async function() {
     serverManager = io(server);
 
     const loadServerSocket = new Promise((resolve, reject) => {
-        serverManager.once(
-            'connection',
-            resolve
-        );
+        serverManager.once('connection', resolve);
     });
 
     const port = server.address().port;
-    clientSocket = clientIO(`http://localhost:${port}`)
+    clientSocket = clientIO(`http://localhost:${port}`);
 
     serverSocket = await loadServerSocket;
 });
 
-afterEach(function() {
+afterEach(function () {
     serverSocket.disconnect();
     serverSocket = null;
 
@@ -55,10 +52,10 @@ afterEach(function() {
 
     serverNode = null;
     clientNode = null;
-})
+});
 
-describe('@otpjs/transports-socket.io', function() {
-    it('can register from the both sides', async function() {
+describe('@otpjs/transports-socket.io', function () {
+    it('can register from the both sides', async function () {
         useSocketIO(clientNode, clientSocket, 'server');
         useSocketIO(serverNode, serverSocket);
 
@@ -67,7 +64,7 @@ describe('@otpjs/transports-socket.io', function() {
         expect(serverNode.nodes()).toContain(clientNode.name);
         expect(clientNode.nodes()).toContain(serverNode.name);
     });
-    it('can route to named remote processes', async function() {
+    it('can route to named remote processes', async function () {
         useSocketIO(clientNode, clientSocket);
         useSocketIO(serverNode, serverSocket);
 
@@ -85,7 +82,7 @@ describe('@otpjs/transports-socket.io', function() {
                 } catch (err) {
                     reject(err);
                 }
-            })
+            });
 
             await wait(100);
 
@@ -94,12 +91,12 @@ describe('@otpjs/transports-socket.io', function() {
                 log(ctx, 'send(%o, test)', target);
                 ctx.send(target, 'test');
                 await wait(100);
-            })
+            });
         });
 
         clientNode.deliver(pid, 'die');
     });
-    it('supports monitoring over the transport', async function() {
+    it('supports monitoring over the transport', async function () {
         useSocketIO(clientNode, clientSocket);
         useSocketIO(serverNode, serverSocket);
 
@@ -114,22 +111,24 @@ describe('@otpjs/transports-socket.io', function() {
         await wait(100);
 
         let mref, pidB;
-        await expect(new Promise((resolve, reject) => {
-            pidB = clientNode.spawn(async (ctx) => {
-                mref = ctx.monitor(['test', serverNode.name]);
-                ctx.send(['test', serverNode.name], 'stop');
-                resolve(await ctx.receive());
-            });
-        })).resolves.toMatchPattern([
+        await expect(
+            new Promise((resolve, reject) => {
+                pidB = clientNode.spawn(async (ctx) => {
+                    mref = ctx.monitor(['test', serverNode.name]);
+                    ctx.send(['test', serverNode.name], 'stop');
+                    resolve(await ctx.receive());
+                });
+            })
+        ).resolves.toMatchPattern([
             DOWN,
             mref,
             'process',
             otp.Pid.isPid,
-            normal
-        ])
-    })
+            normal,
+        ]);
+    });
 
-    it('can be unregistered', async function() {
+    it('can be unregistered', async function () {
         const destroyClient = useSocketIO(clientNode, clientSocket);
         const destroyServer = useSocketIO(serverNode, serverSocket);
 
@@ -145,26 +144,31 @@ describe('@otpjs/transports-socket.io', function() {
 
         expect(serverNode.nodes()).not.toContain(clientNode.name);
         expect(clientNode.nodes()).not.toContain(serverNode.name);
-    })
+    });
 
-    it('can be bridged over another node', async function() {
+    it('can be bridged over another node', async function () {
         const loadServerSocket = new Promise((resolve, reject) => {
-            serverManager.once(
-                'connection',
-                resolve
-            );
+            serverManager.once('connection', resolve);
         });
 
         const clientNodeB = new otp.Node();
         const port = server.address().port;
-        const clientSocketB = clientIO(`http://localhost:${port}`)
+        const clientSocketB = clientIO(`http://localhost:${port}`);
         const serverSocketB = await loadServerSocket;
 
-        const destroyClientA = useSocketIO(clientNode, clientSocket, { bridge: true });
-        const destroyServerA = useSocketIO(serverNode, serverSocket, { bridge: true })
+        const destroyClientA = useSocketIO(clientNode, clientSocket, {
+            bridge: true,
+        });
+        const destroyServerA = useSocketIO(serverNode, serverSocket, {
+            bridge: true,
+        });
 
-        const destroyClientB = useSocketIO(clientNodeB, clientSocketB, { bridge: true });
-        const destroyServerB = useSocketIO(serverNode, serverSocketB, { bridge: true })
+        const destroyClientB = useSocketIO(clientNodeB, clientSocketB, {
+            bridge: true,
+        });
+        const destroyServerB = useSocketIO(serverNode, serverSocketB, {
+            bridge: true,
+        });
 
         await wait(100);
 
@@ -175,7 +179,7 @@ describe('@otpjs/transports-socket.io', function() {
                 const [message, from] = await ctx.receive();
                 ctx.send(from, 'received');
                 resolve(message);
-            })
+            });
         });
 
         await wait(100);
@@ -193,5 +197,5 @@ describe('@otpjs/transports-socket.io', function() {
         destroyServerA();
         destroyClientB();
         destroyServerB();
-    })
-})
+    });
+});

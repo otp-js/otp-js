@@ -8,15 +8,19 @@ expect.extend({
         if (pass) {
             return {
                 message: () =>
-                `expected ${core.serialize(received)} not to match ${core.serialize(pattern)}`,
-                pass: true
+                    `expected ${core.serialize(
+                        received
+                    )} not to match ${core.serialize(pattern)}`,
+                pass: true,
             };
         } else {
             return {
                 message: () =>
-                `expected ${core.serialize(received)} to match ${core.serialize(pattern)}`,
-                pass: false
+                    `expected ${core.serialize(
+                        received
+                    )} to match ${core.serialize(pattern)}`,
+                pass: false,
             };
         }
-    }
+    },
 });

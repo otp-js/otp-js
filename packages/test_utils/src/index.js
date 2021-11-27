@@ -14,15 +14,19 @@ expect.extend({
         if (pass) {
             return {
                 message: () =>
-                    `expected ${OTP.serialize(received)} not to match ${OTP.serialize(pattern)}`,
-                pass: true
+                    `expected ${OTP.serialize(
+                        received
+                    )} not to match ${OTP.serialize(pattern)}`,
+                pass: true,
             };
         } else {
             return {
                 message: () =>
-                    `expected ${OTP.serialize(received)} to match ${OTP.serialize(pattern)}`,
-                pass: false
+                    `expected ${OTP.serialize(
+                        received
+                    )} to match ${OTP.serialize(pattern)}`,
+                pass: false,
             };
         }
-    }
+    },
 });

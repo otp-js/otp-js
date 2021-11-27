@@ -17,10 +17,7 @@ const flags = Symbol();
 const lastMessage = Symbol();
 const status = Symbol();
 
-const isExitMessage = match(
-    [EXIT, _, _],
-    [EXIT, _, _, _]
-);
+const isExitMessage = match([EXIT, _, _], [EXIT, _, _, _]);
 
 export class Context {
     constructor(parent) {
@@ -30,8 +27,8 @@ export class Context {
         const logComponents = [
             'otpjs',
             parent.name.toString(),
-            this[pid].toLowerCase()
-        ]
+            this[pid].toLowerCase(),
+        ];
         this.log = debug(logComponents.join(':'));
         this._log = this.log.extend('context');
 
@@ -56,16 +53,19 @@ export class Context {
         this[forwardWithPid]('unregister');
 
         this.death = new Promise(
-            resolve => this.die = (reason) => {
-                this.log('die(%o) : lastMessage : %o', reason, this[lastMessage]);
-                resolve(reason);
-            }
+            (resolve) =>
+                (this.die = (reason) => {
+                    this.log(
+                        'die(%o) : lastMessage : %o',
+                        reason,
+                        this[lastMessage]
+                    );
+                    resolve(reason);
+                })
         );
         this._dead = false;
 
-        this.death.then(
-            (reason) => this.destroy(reason)
-        );
+        this.death.then((reason) => this.destroy(reason));
     }
 
     _link(other) {
@@ -86,16 +86,8 @@ export class Context {
 
     _notifyLinks(reason) {
         const pid = this.self();
-        this[links].forEach(
-            link => this.send(
-                link,
-                [
-                    EXIT,
-                    pid,
-                    reason,
-                    Error().stack
-                ]
-            )
+        this[links].forEach((link) =>
+            this.send(link, [EXIT, pid, reason, Error().stack])
         );
     }
 
@@ -109,18 +101,9 @@ export class Context {
 
     _notifyMonitors(reason) {
         const pid = this.self();
-        this[monitors].forEach(
-            (monitor, ref) => this.send(
-                monitor,
-                [
-                    DOWN,
-                    ref,
-                    'process',
-                    pid,
-                    reason
-                ]
-            )
-        )
+        this[monitors].forEach((monitor, ref) =>
+            this.send(monitor, [DOWN, ref, 'process', pid, reason])
+        );
     }
 
     destroy(reason) {
@@ -149,10 +132,7 @@ export class Context {
     _deliver(message) {
         this._log('_deliver() : message : %o', message);
         if (!this._dead) {
-            if (
-                isExitMessage(message)
-                && !this[trap_exit]
-            ) {
+            if (isExitMessage(message) && !this[trap_exit]) {
                 if (message.length === 3) {
                     this.die(message[message.length - 1]);
                 } else if (message.length === 4) {
@@ -174,42 +154,44 @@ export class Context {
     [forward](operation, name = operation) {
         this[name] = (...args) => {
             try {
-                return this[node][operation](
-                    ...args
-                );
+                return this[node][operation](...args);
             } catch (err) {
                 this._log('forward(%o, %o) : error : %o', operation, name, err);
                 throw err;
             }
-        }
+        };
     }
 
     [forwardWithSelf](operation, name = operation) {
         this[name] = (...args) => {
             try {
-                return this[node][operation](
-                    this,
-                    ...args
-                );
+                return this[node][operation](this, ...args);
             } catch (err) {
-                this._log('forwardWithSelf(%o, %o) : error : %o', operation, name, err);
+                this._log(
+                    'forwardWithSelf(%o, %o) : error : %o',
+                    operation,
+                    name,
+                    err
+                );
                 throw err;
             }
-        }
+        };
     }
 
     [forwardWithPid](operation, name = operation) {
         this[name] = (...args) => {
             try {
-                return this[node][operation](
-                    this.self(),
-                    ...args
-                );
+                return this[node][operation](this.self(), ...args);
             } catch (err) {
-                this._log('forwardWithPid(%o, %o) : error : %o', operation, name, err);
+                this._log(
+                    'forwardWithPid(%o, %o) : error : %o',
+                    operation,
+                    name,
+                    err
+                );
                 throw err;
             }
-        }
+        };
     }
 
     self() {
@@ -293,8 +275,8 @@ export class Context {
                 links: [],
                 messageQueueLength: 0,
                 messages: [],
-                monitors: []
-            }
+                monitors: [],
+            };
         } else {
             return {
                 status: this[status],

@@ -23,7 +23,7 @@ function where(ctx, name) {
     const compare = Core.caseOf(name);
 
     if (compare(localName)) {
-        return ctx.whereis(getName(name))
+        return ctx.whereis(getName(name));
     } else {
         return undefined;
     }
@@ -33,7 +33,7 @@ export function start(ctx, linking, name, init_it, options = {}) {
     const response = where(ctx, name);
     const compare = Core.caseOf(response);
     if (compare(undefined)) {
-        return doSpawn(ctx, linking, name, init_it, options)
+        return doSpawn(ctx, linking, name, init_it, options);
     } else if (compare([error, Pid.isPid])) {
         const [, pid] = response;
         throw new OTPError(['already_started', pid]);
@@ -43,36 +43,24 @@ export function start(ctx, linking, name, init_it, options = {}) {
 function doSpawn(ctx, linking, name, init_it, options) {
     log(ctx, 'doSpawn() : linking : %o', linking);
     if (linking === link) {
-        const timeout = 'timeout' in options
-            ? options.timeout
-            : Infinity;
+        const timeout = 'timeout' in options ? options.timeout : Infinity;
         log(ctx, 'doSpawn() : proc_lib.startLink()');
         return proc_lib.startLink(
             ctx,
-            initializer(
-                name,
-                init_it,
-                options
-            ),
+            initializer(name, init_it, options),
             timeout
-        )
+        );
     } else if (linking === monitor) {
         log(ctx, 'doSpawn() : proc_lib.startMonitor()');
         throw new OTPError(['not_yet_implemented', link]);
     } else if (linking === nolink) {
-        const timeout = 'timeout' in options
-            ? options.timeout
-            : Infinity;
+        const timeout = 'timeout' in options ? options.timeout : Infinity;
         log(ctx, 'doSpawn() : proc_lib.start()');
         return proc_lib.start(
             ctx,
-            initializer(
-                name,
-                init_it,
-                options
-            ),
+            initializer(name, init_it, options),
             timeout
-        )
+        );
     } else {
         throw new OTPError(badarg);
     }
@@ -80,25 +68,21 @@ function doSpawn(ctx, linking, name, init_it, options) {
 
 function initializer(name, initIt, options) {
     return async function initialize(ctx, starter) {
-        const response = registerName(ctx, name)
+        const response = registerName(ctx, name);
         log(ctx, 'initialize() : registerName(%o) -> %o', name, response);
         log(ctx, 'initialize() : initIt : %o', initIt);
         const compare = Core.caseOf(response);
         if (compare(ok)) {
-            log(ctx, "initialize() : initIt(%o)", starter);
+            log(ctx, 'initialize() : initIt(%o)', starter);
             return initIt(ctx, starter);
         } else if (compare([false, Core.Pid.isPid])) {
             const [, pid] = response;
-            return proc_lib.initAck(
-                ctx,
-                starter,
-                [
-                    error,
-                    ['already_started', pid]
-                ]
-            )
+            return proc_lib.initAck(ctx, starter, [
+                error,
+                ['already_started', pid],
+            ]);
         }
-    }
+    };
 }
 
 export function registerName(ctx, name) {
@@ -128,7 +112,6 @@ export function getName(name) {
     }
 }
 
-
 export function unregisterName(ctx, name) {
     const compare = Core.caseOf(name);
 
@@ -156,10 +139,7 @@ export async function call(ctx, pid, message, timeout = DEFAULT_TIMEOUT) {
     }
 }
 
-const callReplyPattern = ref => Core.compile([
-    ref,
-    _
-]);
+const callReplyPattern = (ref) => Core.compile([ref, _]);
 const downPattern = (mref, pid) => Core.compile([DOWN, mref, _, pid, _]);
 async function doCall(ctx, pid, message, timeout) {
     const self = ctx.self();
@@ -170,27 +150,16 @@ async function doCall(ctx, pid, message, timeout) {
         const isReply = callReplyPattern(ref);
         const isDown = downPattern(mref, pid);
 
-        ctx.send(pid, [
-            Symbols.call,
-            [self, ref],
-            message
-        ]);
-        log(
-            ctx,
-            'doCall(%o, %o) : receive(%o, %o)',
-            pid,
-            ref,
-            isReply,
-            isDown
-        );
+        ctx.send(pid, [Symbols.call, [self, ref], message]);
+        log(ctx, 'doCall(%o, %o) : receive(%o, %o)', pid, ref, isReply, isDown);
         const [ret, predicate] = await ctx.receiveWithPredicate(
             isDown,
             isReply,
             timeout
         );
 
-        log(ctx, 'doCall(%o, %o) : ret : %o', pid, ref, ret)
-        log(ctx, 'doCall(%o, %o) : predicate : %o', pid, ref, predicate)
+        log(ctx, 'doCall(%o, %o) : ret : %o', pid, ref, ret);
+        log(ctx, 'doCall(%o, %o) : predicate : %o', pid, ref, predicate);
         if (predicate === isReply) {
             const [ref, response] = ret;
             ctx.demonitor(mref);
@@ -201,7 +170,13 @@ async function doCall(ctx, pid, message, timeout) {
             log(ctx, 'doCall(%o, %o) : throw OTPError(%o)', pid, ref, reason);
             throw new OTPError(reason);
         } else {
-            log(ctx, 'doCall(%o, %o) : unrecognized_predicate : %o', pid, ref, predicate);
+            log(
+                ctx,
+                'doCall(%o, %o) : unrecognized_predicate : %o',
+                pid,
+                ref,
+                predicate
+            );
             throw new OTPError(['unrecognized_predicate', predicate]);
         }
     } catch (err) {
@@ -214,7 +189,7 @@ export function cast(ctx, pid, message) {
     if (Pid.isPid(pid)) {
         return doCast(ctx, pid, message);
     } else {
-        const fun = pid => doCast(ctx, pid, message);
+        const fun = (pid) => doCast(ctx, pid, message);
         return doForProcess(ctx, pid, fun);
     }
 }
@@ -225,8 +200,7 @@ function doCast(ctx, pid, message) {
 
 const isString = (v) => typeof v === 'string';
 const isKeyedSymbol = (v) =>
-    typeof v === 'symbol'
-    && Symbol.keyFor(v) !== undefined;
+    typeof v === 'symbol' && Symbol.keyFor(v) !== undefined;
 function doForProcess(ctx, process, fun) {
     // TODO: look up process (which is not a Pid)
     // As of the time of this comment, core/node handles routing remote messages
@@ -235,10 +209,7 @@ function doForProcess(ctx, process, fun) {
     if (compare(Pid.isPid)) {
         log(ctx, 'doForProcess(%o) : found : %o', process, process);
         return fun(process);
-    } else if (
-        compare(isString)
-        || compare(isKeyedSymbol)
-    ) {
+    } else if (compare(isString) || compare(isKeyedSymbol)) {
         const result = ctx.whereis(process);
         log(ctx, 'doForProcess(%o) : found : %o', process, result);
         if (result === undefined) {
@@ -256,7 +227,11 @@ function doForProcess(ctx, process, fun) {
         }
     } else {
         log(ctx, 'doForProcess(%o) : not_found', process);
-        log(ctx, 'doForProcess(%o) : error : %o', new OTPError('not_implemented'));
+        log(
+            ctx,
+            'doForProcess(%o) : error : %o',
+            new OTPError('not_implemented')
+        );
     }
 }
 
@@ -265,5 +240,4 @@ export function reply(ctx, [pid, ref], reply) {
     ctx.send(pid, [ref, reply]);
 }
 
-export function stop() {
-}
+export function stop() {}

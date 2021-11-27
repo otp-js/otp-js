@@ -1,4 +1,4 @@
-import { Pid, Ref } from "./types";
+import { Pid, Ref } from './types';
 import { caseOf } from './matching';
 import { _ } from './symbols';
 
@@ -24,7 +24,7 @@ function kvCompose(...funs) {
     return funs.reduceRight(
         (acc, fun) => (key, value) => fun(key, acc(key, value)),
         (_key, value) => value
-    )
+    );
 }
 
 function reviveOTP(key, value) {
@@ -34,15 +34,12 @@ function reviveOTP(key, value) {
     } else if (compare(['$otp.function', _, _])) {
         return new (Function.bind.apply(
             Function,
-            [Function].concat(
-                value[1],
-                [value[2]]
-            )
-        ));
+            [Function].concat(value[1], [value[2]])
+        ))();
     } else if (compare(['$otp.pid', _])) {
         return new Pid(value[1]);
     } else if (compare(['$otp.ref', _])) {
-        return new Ref(value[1])
+        return new Ref(value[1]);
     } else {
         return value;
     }
@@ -60,17 +57,18 @@ function replaceOTP(key, value) {
             return undefined;
         }
     } else if (compare(isFunction)) {
-        const parts = value.toString().match(
-            /^\s*(?:function)?[^(]*\(?([^]*?)\)\s*(?:=>)?\s*{?([^]*?)}?\s*$/,
-        );
+        const parts = value
+            .toString()
+            .match(
+                /^\s*(?:function)?[^(]*\(?([^]*?)\)\s*(?:=>)?\s*{?([^]*?)}?\s*$/
+            );
 
-        if (parts == null)
-            throw 'Function form not supported';
+        if (parts == null) throw 'Function form not supported';
 
         return [
             '$otp.function',
             parts[1].trim().split(/\s*,\s*/),
-            parts[2].replace(/\s+/, ' ')
+            parts[2].replace(/\s+/, ' '),
         ];
     } else if (compare(Pid.isPid)) {
         return ['$otp.pid', value.toString()];

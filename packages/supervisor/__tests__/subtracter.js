@@ -27,7 +27,7 @@ function handleInfo(ctx, info, state) {
 const callbacks = { init, handleCall, handleCast, handleInfo };
 
 export function start(ctx, ...args) {
-    return gen_server.start(ctx, callbacks, args)
+    return gen_server.start(ctx, callbacks, args);
 }
 
 export function startLink(ctx, ...args) {

@@ -1,6 +1,24 @@
-import { Pid, Ref, serialize, compile, caseOf, deserialize, Symbols } from '@otpjs/core';
+import {
+    Pid,
+    Ref,
+    serialize,
+    compile,
+    caseOf,
+    deserialize,
+    Symbols,
+} from '@otpjs/core';
 
-const { relay, monitor, shutdown, DOWN, _, trap_exit, discover, temporary, lost } = Symbols;
+const {
+    relay,
+    monitor,
+    shutdown,
+    DOWN,
+    _,
+    trap_exit,
+    discover,
+    temporary,
+    lost,
+} = Symbols;
 
 const disconnect = Symbol.for('disconnect');
 const TRANSPORT_COST = 1;
@@ -19,7 +37,7 @@ const receivers = {
 function defaultOptions() {
     return {
         bridge: false,
-        type: temporary
+        type: temporary,
     };
 }
 
@@ -50,9 +68,7 @@ export function register(node, socket, options = defaultOptions()) {
             ctx.receive(...Object.values(receivers))
                 .then(forward)
                 .then(recycle)
-                .catch(
-                    err => log(ctx, 'recycle() : error : %o', err)
-                );
+                .catch((err) => log(ctx, 'recycle() : error : %o', err));
         }
     }
 
@@ -66,12 +82,14 @@ export function register(node, socket, options = defaultOptions()) {
             to = serialize(to, replace);
             message = serialize(message, replace);
 
-            log(ctx, 'forward(%o) : socket.emit(otp-message, %o, %o)', to, to, message);
-            socket.emit(
-                'otp-message',
+            log(
+                ctx,
+                'forward(%o) : socket.emit(otp-message, %o, %o)',
+                to,
                 to,
                 message
             );
+            socket.emit('otp-message', to, message);
         } else if (compare(receivers.monitor)) {
             let [, pid, ref, watcher] = op;
             log(ctx, 'monitor(%o, %o, %o)', pid, ref, watcher);
@@ -79,13 +97,14 @@ export function register(node, socket, options = defaultOptions()) {
             ref = serialize(ref, replace);
             watcher = serialize(watcher, replace);
 
-            log(ctx, 'monitor(%o, %o, %o) : socket.emit(otp-monitor)', pid, ref, watcher);
-            socket.emit(
-                'otp-monitor',
+            log(
+                ctx,
+                'monitor(%o, %o, %o) : socket.emit(otp-monitor)',
                 pid,
                 ref,
                 watcher
-            )
+            );
+            socket.emit('otp-monitor', pid, ref, watcher);
         } else if (compare(receivers.discover)) {
             let [, source, score, name, pid] = op;
 
@@ -94,14 +113,15 @@ export function register(node, socket, options = defaultOptions()) {
             name = serialize(name, replace);
             pid = serialize(pid, replace);
 
-            log(ctx, 'socket.emit(otp-discover, %o, %o)', source, score, name, pid);
-            socket.emit(
-                'otp-discover',
+            log(
+                ctx,
+                'socket.emit(otp-discover, %o, %o)',
                 source,
                 score,
                 name,
                 pid
             );
+            socket.emit('otp-discover', source, score, name, pid);
         }
     }
 
@@ -115,7 +135,7 @@ export function register(node, socket, options = defaultOptions()) {
                 serialize(null, replace),
                 serialize(0, replace),
                 serialize(node.name, replace),
-                serialize(null, replace),
+                serialize(null, replace)
             );
 
             running = true;
@@ -195,13 +215,7 @@ export function register(node, socket, options = defaultOptions()) {
             node.monitor(watcher, pid, ref);
         } catch (err) {
             log(ctx, 'handleMonitor(%o, %o) : error : %o', pid, ref, err);
-            node.deliver(watcher, [
-                DOWN,
-                ref,
-                'process',
-                pid,
-                err.message
-            ]);
+            node.deliver(watcher, [DOWN, ref, 'process', pid, err.message]);
         }
     }
 

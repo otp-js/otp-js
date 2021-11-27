@@ -5,10 +5,10 @@ export class OTPError extends Error {
     constructor(message) {
         let json = false;
         if (
-            typeof message !== 'string'
-            && typeof message !== 'number'
-            && typeof message !== 'boolean'
-            && typeof message !== 'undefined'
+            typeof message !== 'string' &&
+            typeof message !== 'number' &&
+            typeof message !== 'boolean' &&
+            typeof message !== 'undefined'
         ) {
             json = true;
             message = serialize(message);
@@ -29,9 +29,6 @@ export class OTPError extends Error {
             message = deserialize(message);
         }
 
-        return [
-            error,
-            message,
-        ];
+        return [error, message];
     }
 }

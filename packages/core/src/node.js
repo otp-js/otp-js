@@ -22,7 +22,6 @@ const {
     lost,
 } = Symbols;
 
-
 const log = debug('otpjs:core:node');
 
 function getNodeId() {
@@ -59,16 +58,10 @@ export class Node {
             name: this.name,
             source: null,
             score: 0,
-        }
-        this._routers = new Map([
-            [this.name, this._router]
-        ]);
-        this._routersById = new Map([
-            ['0', this._router]
-        ]);
-        this._routersByPid = new Map([
-            [this._system, this._router]
-        ]);
+        };
+        this._routers = new Map([[this.name, this._router]]);
+        this._routersById = new Map([['0', this._router]]);
+        this._routersByPid = new Map([[this._system, this._router]]);
         this._bridges = new Map();
         this._routerCount = 1;
         this._refCount = 0;
@@ -84,17 +77,14 @@ export class Node {
     }
 
     nodes() {
-        return Array.from(this._routers.values()).reduce(
-            (acc, router) => {
-                this._log('nodes() : router : %o', router);
-                if (router.pid) {
-                    return [...acc, router.name];
-                } else {
-                    return acc;
-                }
-            },
-            []
-        );
+        return Array.from(this._routers.values()).reduce((acc, router) => {
+            this._log('nodes() : router : %o', router);
+            if (router.pid) {
+                return [...acc, router.name];
+            } else {
+                return acc;
+            }
+        }, []);
     }
 
     exit(pid, reason) {
@@ -115,33 +105,17 @@ export class Node {
                 ctx._link(watchee);
                 watchee._link(pidA);
             } else {
-                this.deliver(
-                    pidA,
-                    [
-                        EXIT,
-                        pidB,
-                        'noproc',
-                        Error().stack
-                    ]
-                );
+                this.deliver(pidA, [EXIT, pidB, 'noproc', Error().stack]);
             }
             return ok;
         } else if (compare(Pid.isPid)) {
             this._log('monitor(%o, %o) : remote', pidA, pidB);
-            const router = this._routersById.get(pidB.node)
+            const router = this._routersById.get(pidB.node);
             if (router) {
                 ctx._link(pidB);
                 this.deliver(router.pid, [link, pidB, pidA]);
             } else {
-                this.deliver(
-                    pidA,
-                    [
-                        EXIT,
-                        pidB,
-                        'noconnection',
-                        Error().stack
-                    ]
-                );
+                this.deliver(pidA, [EXIT, pidB, 'noconnection', Error().stack]);
             }
             return ok;
         } else {
@@ -162,33 +136,17 @@ export class Node {
                 ctx._unlink(watchee);
                 watchee._unlink(pidA);
             } else {
-                this.deliver(
-                    pidA,
-                    [
-                        EXIT,
-                        pidB,
-                        'noproc',
-                        Error().stack
-                    ]
-                );
+                this.deliver(pidA, [EXIT, pidB, 'noproc', Error().stack]);
             }
             return ok;
         } else if (compare(Pid.isPid)) {
             this._log('unlink(%o, %o) : remote', pidA, pidB);
-            const router = this._routers.get(node)
+            const router = this._routers.get(node);
             if (router) {
                 ctx._unlink(pidB);
                 this.deliver(router.pid, [unlink, pidB, pidA]);
             } else {
-                this.deliver(
-                    pidA,
-                    [
-                        EXIT,
-                        pidB,
-                        'noconnection',
-                        Error().stack
-                    ]
-                );
+                this.deliver(pidA, [EXIT, pidB, 'noconnection', Error().stack]);
             }
             return ok;
         } else {
@@ -209,54 +167,50 @@ export class Node {
                 watchee._monitor(ref, watcherPid);
                 this._monitors.set(ref, watchee);
             } else {
-                this.deliver(
-                    watcherPid,
-                    [
-                        DOWN,
-                        ref,
-                        'process',
-                        watcheePid,
-                        'noproc'
-                    ]
-                );
+                this.deliver(watcherPid, [
+                    DOWN,
+                    ref,
+                    'process',
+                    watcheePid,
+                    'noproc',
+                ]);
             }
             return ref;
         } else if (compare(Pid.isPid)) {
             this._log('monitor(%o, %o) : remote', watcherPid, watcheePid);
-            const router = this._routersById.get(watcheePid.node)
+            const router = this._routersById.get(watcheePid.node);
             if (router) {
-                this.deliver(router.pid, [monitor, watcheePid, ref, watcherPid]);
-            } else {
-                this.deliver(
+                this.deliver(router.pid, [
+                    monitor,
+                    watcheePid,
+                    ref,
                     watcherPid,
-                    [
-                        DOWN,
-                        ref,
-                        'process',
-                        watcheePid,
-                        'noconnection'
-                    ]
-                );
+                ]);
+            } else {
+                this.deliver(watcherPid, [
+                    DOWN,
+                    ref,
+                    'process',
+                    watcheePid,
+                    'noconnection',
+                ]);
             }
         } else if (compare([_, _])) {
             const [name, node] = watcheePid;
             if (node === this.name) {
                 return this.monitor(watcherPid, name, ref);
             } else {
-                const router = this._routers.get(node)
+                const router = this._routers.get(node);
                 if (router) {
                     this.deliver(router.pid, [monitor, name, ref, watcherPid]);
                 } else {
-                    this.deliver(
-                        watcherPid,
-                        [
-                            DOWN,
-                            ref,
-                            'process',
-                            watcheePid,
-                            'noconnection'
-                        ]
-                    );
+                    this.deliver(watcherPid, [
+                        DOWN,
+                        ref,
+                        'process',
+                        watcheePid,
+                        'noconnection',
+                    ]);
                 }
                 return ref;
             }
@@ -278,14 +232,12 @@ export class Node {
         } else if (Pid.isPid(ref)) {
             const pid = ref;
             const toRemove = [];
-            this._monitors.forEach(
-                (target, ref) => {
-                    if (Pid.compare(target, pid) === 0) {
-                        toRemove.push(ref);
-                    }
+            this._monitors.forEach((target, ref) => {
+                if (Pid.compare(target, pid) === 0) {
+                    toRemove.push(ref);
                 }
-            )
-            toRemove.forEach(ref => this.demonitor(ref));
+            });
+            toRemove.forEach((ref) => this.demonitor(ref));
         }
     }
 
@@ -301,19 +253,21 @@ export class Node {
         const proc = this._processes.get(pid.process);
         if (proc) {
             if (this._registrations.has(name)) {
-                this._log('register(%o, %o) : registration.has(name)', pid, name);
+                this._log(
+                    'register(%o, %o) : registration.has(name)',
+                    pid,
+                    name
+                );
                 throw new OTPError(badarg);
             } else {
                 this._registrations.set(name, pid);
 
                 this._log('register(%o, %o)', pid, name);
-                proc.death.finally(
-                    () => {
-                        this.unregister(pid);
-                        this.demonitor(pid);
-                        this._processes.delete(pid.process);
-                    }
-                );
+                proc.death.finally(() => {
+                    this.unregister(pid);
+                    this.demonitor(pid);
+                    this._processes.delete(pid.process);
+                });
 
                 return ok;
             }
@@ -325,20 +279,16 @@ export class Node {
     unregister(pid, name = undefined) {
         if (name === undefined) {
             const toUnregister = [];
-            this._registrations.forEach(
-                (registered, name) => {
-                    if (Pid.compare(pid, registered) === 0) {
-                        toUnregister.push(name);
-                    }
+            this._registrations.forEach((registered, name) => {
+                if (Pid.compare(pid, registered) === 0) {
+                    toUnregister.push(name);
                 }
-            )
-            toUnregister.forEach(
-                name => this._registrations.delete(name)
-            )
+            });
+            toUnregister.forEach((name) => this._registrations.delete(name));
             return ok;
         } else if (
-            this._registrations.has(name)
-            && this._registrations.get(name) === pid
+            this._registrations.has(name) &&
+            this._registrations.get(name) === pid
         ) {
             this._registrations.delete(name);
             return ok;
@@ -360,50 +310,54 @@ export class Node {
             const router = this._routersByPid.get(bridge);
             this.deliver(bridge, operation(source, score, name, pid));
             for (let name of names) {
-                this.deliver(pid, operation(router.source, router.score, name, bridge));
+                this.deliver(
+                    pid,
+                    operation(router.source, router.score, name, bridge)
+                );
             }
         }
     }
 
     saveBridge(name, pid) {
-        let existing = this._bridges.has(pid)
-            ? this._bridges.get(pid)
-            : [];
+        let existing = this._bridges.has(pid) ? this._bridges.get(pid) : [];
         let index = existing.indexOf(name);
 
         if (index >= 0) {
-            this._bridges.set(
-                pid,
-                [
-                    ...existing.slice(0, index),
-                    name,
-                    ...existing.slice(index + 1)
-                ]
-            );
+            this._bridges.set(pid, [
+                ...existing.slice(0, index),
+                name,
+                ...existing.slice(index + 1),
+            ]);
         } else {
-            this._bridges.set(
-                pid,
-                [
-                    ...existing,
-                    name,
-                ]
-            )
+            this._bridges.set(pid, [...existing, name]);
         }
     }
 
     registerRouter(source, score, name, pid, options = {}) {
-        this._log('registerRouter(%o, %o, %o, %o) : this._routers : %o', source, score, name, pid, this._routers);
+        this._log(
+            'registerRouter(%o, %o, %o, %o) : this._routers : %o',
+            source,
+            score,
+            name,
+            pid,
+            this._routers
+        );
         if (this._routers.has(name)) {
             const router = this._routers.get(name);
             const { source: oldSource, pid: oldPid, id } = router;
 
-            this._log('registerRouter(%o, %o, %o, %o) : oldPid : %o', source, score, name, pid, oldPid);
+            this._log(
+                'registerRouter(%o, %o, %o, %o) : oldPid : %o',
+                source,
+                score,
+                name,
+                pid,
+                oldPid
+            );
             if (
-                Pid.compare(pid, oldPid) != 0   // Make sure it's not an echo of the current router
-                && (
-                    score < router.score        // Ensure it provides better connectivity
-                    || oldPid === null          // ...unless the last router died
-                )
+                Pid.compare(pid, oldPid) != 0 && // Make sure it's not an echo of the current router
+                (score < router.score || // Ensure it provides better connectivity
+                    oldPid === null) // ...unless the last router died
             ) {
                 const nextRouter = {
                     source,
@@ -411,10 +365,10 @@ export class Node {
                     id,
                     name,
                     score,
-                    type: options.type ?? temporary
+                    type: options.type ?? temporary,
                 };
                 this._routers.set(name, nextRouter);
-                this._routersById.set(id, nextRouter)
+                this._routersById.set(id, nextRouter);
                 this._routersByPid.set(pid, nextRouter);
                 if (options.bridge) {
                     this.updatePeers(source, score, name, pid, _discover);
@@ -431,10 +385,10 @@ export class Node {
                 name,
                 source,
                 score,
-                type: options.type ?? temporary
+                type: options.type ?? temporary,
             };
             this._routers.set(name, router);
-            this._routersById.set(id, router)
+            this._routersById.set(id, router);
             this._routersByPid.set(pid, router);
 
             if (options.bridge) {
@@ -488,7 +442,11 @@ export class Node {
     }
 
     getRouterName(id) {
-        this._log('getRouterName(%o) : this._routersById : %o', id, this._routersById);
+        this._log(
+            'getRouterName(%o) : this._routersById : %o',
+            id,
+            this._routersById
+        );
         const router = this._routersById.get(id);
 
         if (router) {
@@ -512,15 +470,12 @@ export class Node {
         return Ref.for(Pid.LOCAL, this._refCount++);
     }
     pid() {
-        return Pid.of(Pid.LOCAL, this._processesCount++)
+        return Pid.of(Pid.LOCAL, this._processesCount++);
     }
 
     makeContext() {
         const ctx = new Context(this);
-        this._processes.set(
-            ctx.self().process,
-            ctx
-        );
+        this._processes.set(ctx.self().process, ctx);
         this._log('makeContext() : pid : %o', ctx.self());
         return ctx;
     }
@@ -578,7 +533,7 @@ export class Node {
             if (node === this.name) {
                 return this.deliver(name, message);
             } else {
-                const router = this._routers.get(node)
+                const router = this._routers.get(node);
                 if (router) {
                     return this.deliver(router.pid, [relay, name, message]);
                 } else {
@@ -588,7 +543,11 @@ export class Node {
         } else if (compare(undefined)) {
             throw new OTPError(badarg);
         } else {
-            this._log('deliver(%o) : NAME : LOCAL : %O', to, this._registrations);
+            this._log(
+                'deliver(%o) : NAME : LOCAL : %O',
+                to,
+                this._registrations
+            );
             to = this._registrations.get(to);
             return this.deliver(to, message);
         }

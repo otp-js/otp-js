@@ -21,10 +21,7 @@ export class MessageBox extends Array {
     }
 
     clear(reason) {
-        this.splice(
-            0,
-            this.length
-        );
+        this.splice(0, this.length);
 
         const droppedReceivers = this[resolvers].splice(
             0,
@@ -42,11 +39,9 @@ export class MessageBox extends Array {
                 for (let predicate of predicates) {
                     try {
                         if (predicate(message)) {
-                            const [[
-                                resolve,
-                                _reject,
-                                _predicates
-                            ]] = this[resolvers].splice(index, 1);
+                            const [[resolve, _reject, _predicates]] = this[
+                                resolvers
+                            ].splice(index, 1);
                             return resolve([ok, message, predicate]);
                         }
                     } catch (err) {
@@ -97,7 +92,7 @@ export class MessageBox extends Array {
                                 return resolve([
                                     ok,
                                     this._consume(index),
-                                    predicate
+                                    predicate,
                                 ]);
                             }
                         } catch (err) {
@@ -106,21 +101,11 @@ export class MessageBox extends Array {
                     }
                 }
 
-                this._defer(
-                    resolve,
-                    reject,
-                    predicates,
-                    timeout
-                );
+                this._defer(resolve, reject, predicates, timeout);
             } else {
-                this._defer(
-                    resolve,
-                    reject,
-                    predicates,
-                    timeout
-                );
+                this._defer(resolve, reject, predicates, timeout);
             }
-        })
+        });
     }
 
     _defer(resolve, reject, predicate, timeout) {
@@ -138,10 +123,10 @@ export class MessageBox extends Array {
             reject = (...args) => {
                 clearTimeout(timer);
                 originalReject(...args);
-            }
+            };
 
             timer = setTimeout(() => {
-                reject(Error('timeout'))
+                reject(Error('timeout'));
 
                 const index = this[resolvers].indexOf(record);
                 if (index >= 0) {
@@ -149,17 +134,9 @@ export class MessageBox extends Array {
                 }
             }, timeout);
 
-            record = [
-                resolve,
-                reject,
-                predicate,
-            ];
+            record = [resolve, reject, predicate];
         } else {
-            record = [
-                resolve,
-                reject,
-                predicate,
-            ];
+            record = [resolve, reject, predicate];
         }
 
         this._log('_defer() : record : %o', record);
