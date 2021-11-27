@@ -6,14 +6,7 @@ import * as proc_lib from '@otpjs/proc_lib';
 import * as Symbols from './symbols';
 
 export { Symbols };
-export {
-    call,
-    cast,
-    enterLoop,
-    reply,
-    start,
-    startLink,
-};
+export { call, cast, enterLoop, reply, start, startLink };
 
 function log(ctx, ...args) {
     const logger = ctx.log.extend('gen_server');
@@ -66,31 +59,19 @@ function initializer(callbacks, args) {
             if (compare([ok, _])) {
                 const [ok, initialState] = response;
                 state = initialState;
-                proc_lib.initAck(
-                    ctx,
-                    caller,
-                    [ok, ctx.self()]
-                )
+                proc_lib.initAck(ctx, caller, [ok, ctx.self()]);
             } else if (compare([Symbols.stop, _])) {
                 const [_stop, reason] = response;
                 log(ctx, 'initialize() : stop : %o', reason);
-                proc_lib.initAck(
-                    ctx,
-                    caller,
-                    [error, reason]
-                )
+                proc_lib.initAck(ctx, caller, [error, reason]);
                 ctx.die(reason);
             } else {
                 log(ctx, 'initialize() stop : invalid_init_response');
-                throw new OTPError('invalid_init_response')
+                throw new OTPError('invalid_init_response');
             }
         } catch (err) {
             log(ctx, 'initialize() : error : %o', err);
-            proc_lib.initAck(
-                ctx,
-                caller,
-                [error, err]
-            );
+            proc_lib.initAck(ctx, caller, [error, err]);
             throw err;
         }
 
@@ -136,19 +117,13 @@ async function enterLoop(ctx, callbacks, state) {
 }
 
 const callPattern = [gen.Symbols.call, [Pid.isPid, Ref.isRef], _];
-const castPattern = [gen.Symbols.cast, _]
+const castPattern = [gen.Symbols.cast, _];
 
 async function loop(ctx, callbacks, incoming, state) {
     const compare = caseOf(incoming);
     if (compare(callPattern)) {
         const [, from, call] = incoming;
-        const result = await tryHandleCall(
-            ctx,
-            callbacks,
-            call,
-            from,
-            state
-        );
+        const result = await tryHandleCall(ctx, callbacks, call, from, state);
         return handleCallReply(ctx, callbacks, from, state, result);
     } else if (compare(castPattern)) {
         const [, cast] = incoming;
@@ -158,7 +133,7 @@ async function loop(ctx, callbacks, incoming, state) {
             cast,
             state
         );
-        return handleCommonReply(ctx, callbacks, result, state)
+        return handleCommonReply(ctx, callbacks, result, state);
     } else {
         const info = incoming;
         const result = await tryDispatch(
@@ -167,7 +142,7 @@ async function loop(ctx, callbacks, incoming, state) {
             info,
             state
         );
-        return handleCommonReply(ctx, callbacks, result, state)
+        return handleCommonReply(ctx, callbacks, result, state);
     }
 }
 
@@ -199,28 +174,43 @@ async function handleCallReply(ctx, callbacks, from, state, result) {
     } else if (compare([ok, stopReplyDemand])) {
         const [ok, [_stop, reason, response, nextState]] = result;
         try {
-            await terminate(ctx, callbacks, exit, reason, nextState, Error().stack);
+            await terminate(
+                ctx,
+                callbacks,
+                exit,
+                reason,
+                nextState,
+                Error().stack
+            );
         } catch (err) {
-            log(ctx, 'handleCallReply(%o, %o) : error : %o', callbacks, response, err);
+            log(
+                ctx,
+                'handleCallReply(%o, %o) : error : %o',
+                callbacks,
+                response,
+                err
+            );
             reply(ctx, from, response);
             throw err;
         }
     } else if (compare([ok, stopNoReplyDemand])) {
         const [ok, [_stop, reason, nextState]] = result;
         try {
-            await terminate(ctx, callbacks, exit, reason, nextState, Error().stack);
+            await terminate(
+                ctx,
+                callbacks,
+                exit,
+                reason,
+                nextState,
+                Error().stack
+            );
         } catch (err) {
             log(ctx, 'handleCallReply(%o) : error : %o', callbacks, err);
             reply(ctx, from, response);
             throw err;
         }
     } else {
-        return handleCommonReply(
-            ctx,
-            callbacks,
-            result,
-            state
-        );
+        return handleCommonReply(ctx, callbacks, result, state);
     }
 }
 
@@ -232,41 +222,20 @@ async function handleCommonReply(ctx, callbacks, result, state) {
     log(ctx, 'handleCommonReply() : result : %o', result);
     if (compare([ok, stopPattern])) {
         const [ok, [_stop, reason, state]] = result;
-        return await terminate(
-            ctx,
-            callbacks,
-            exit,
-            reason,
-            state
-        )
+        return await terminate(ctx, callbacks, exit, reason, state);
     } else if (compare([ok, noreplyWithNoTimeout])) {
         const [ok, [_noreply, nextState]] = result;
         log(ctx, 'handleCommonReply() : nextState : %o', nextState);
-        return [
-            ok,
-            nextState,
-            Infinity,
-        ];
+        return [ok, nextState, Infinity];
     } else if (compare([ok, noreplyWithTimeout])) {
         const [ok, [_noreply, nextState, timeout]] = result;
         log(ctx, 'handleCommonReply() : nextState : %o', nextState);
         log(ctx, 'handleCommonReply() : timeout : %o', timeout);
-        return [
-            ok,
-            nextState,
-            timeout
-        ];
+        return [ok, nextState, timeout];
     } else if (compare(exitPattern)) {
         const [_exit, type, reason, stack] = result;
-        log(ctx, 'handleCommonReply() : exit : %s', stack)
-        return await terminate(
-            ctx,
-            callbacks,
-            type,
-            reason,
-            state,
-            stack
-        );
+        log(ctx, 'handleCommonReply() : exit : %s', stack);
+        return await terminate(ctx, callbacks, type, reason, state, stack);
     } else if (compare([ok, _])) {
         const [, badReply] = result;
         log(ctx, 'handleCommonReply() : badReply : %o', badReply);
@@ -287,7 +256,7 @@ async function handleCommonReply(ctx, callbacks, result, state) {
             ['bad_result_value', result],
             state,
             Error().stack
-        )
+        );
     }
 }
 
@@ -309,7 +278,13 @@ async function tryDispatch(ctx, callback, message, state) {
         return [ok, await callback(ctx, message, state)];
     } catch (err) {
         if (err instanceof Error) {
-            log(ctx, 'tryDispatch(%o, %o) : error : %o', callback, message, err);
+            log(
+                ctx,
+                'tryDispatch(%o, %o) : error : %o',
+                callback,
+                message,
+                err
+            );
             return [EXIT, err.name, err.message, err.stack];
         } else {
             return [ok, err];
@@ -330,13 +305,18 @@ async function terminate(ctx, callbacks, type, reason, state, stack = null) {
     const compare = caseOf(response);
     if (compare(exitPattern)) {
         const [, , innerReason] = response;
-        log(ctx, 'terminate(%o) : exitPattern<%o> : throw OTPError(%o)', reason, innerReason);
+        log(
+            ctx,
+            'terminate(%o) : exitPattern<%o> : throw OTPError(%o)',
+            reason,
+            innerReason
+        );
         throw new OTPError(reason);
     } else {
         if (reason === normal) {
             throw normal;
         } else {
-            log(ctx, 'terminate(%o) : throw OTPError(%o)', reason, reason)
+            log(ctx, 'terminate(%o) : throw OTPError(%o)', reason, reason);
             throw new OTPError(reason);
         }
     }
@@ -353,12 +333,7 @@ async function tryTerminate(ctx, callbacks, reason, state) {
     } catch (err) {
         if (err instanceof Error) {
             log(ctx, 'tryTerminate(%o) : error : %o', reason, err);
-            return [
-                EXIT,
-                err.name,
-                err.message,
-                err.stack
-            ]
+            return [EXIT, err.name, err.message, err.stack];
         } else {
             return [ok, err];
         }
@@ -378,22 +353,13 @@ export function callbacks(builder) {
             init = handler;
         },
         onCall(pattern, handler) {
-            callHandlers.push([
-                core.compile(pattern),
-                handler
-            ]);
+            callHandlers.push([core.compile(pattern), handler]);
         },
         onCast(pattern, handler) {
-            castHandlers.push([
-                core.compile(pattern),
-                handler
-            ]);
+            castHandlers.push([core.compile(pattern), handler]);
         },
         onInfo(pattern, handler) {
-            infoHandlers.push([
-                core.compile(pattern),
-                handler
-            ]);
+            infoHandlers.push([core.compile(pattern), handler]);
         },
         onTerminate(handler) {
             terminate = handler;
@@ -408,38 +374,35 @@ export function callbacks(builder) {
         terminate,
     };
 
-    function handleCall(call, from, state) {
-        const found = callHandlers.find(
-            ([pattern, _handler]) => pattern(call)
-        );
+    function handleCall(ctx, call, from, state) {
+        const found = callHandlers.find(([pattern, _handler]) => pattern(call));
+        ctx.log('handleCall(%o) : handler : %o', call, found);
 
         if (found) {
             const [, handler] = found;
-            return handler(call, from, state);
+            return handler(ctx, call, from, state);
         } else {
             return [noreply, state];
         }
     }
-    function handleCast(cast, state) {
-        const found = castHandlers.find(
-            ([pattern, _handler]) => pattern(cast)
-        );
+    function handleCast(ctx, cast, state) {
+        const found = castHandlers.find(([pattern, _handler]) => pattern(cast));
+        ctx.log('handleCast(%o) : handler : %o', cast, found);
 
         if (found) {
             const [, handler] = found;
-            return handler(cast, state);
+            return handler(ctx, cast, state);
         } else {
             return [noreply, state];
         }
     }
-    function handleInfo(info, state) {
-        const found = infoHandlers.find(
-            ([pattern, _handler]) => pattern(info)
-        );
+    function handleInfo(ctx, info, state) {
+        const found = infoHandlers.find(([pattern, _handler]) => pattern(info));
+        ctx.log('handleInfo(%o) : handler : %o', info, found);
 
         if (found) {
             const [, handler] = found;
-            return handler(info, state);
+            return handler(ctx, info, state);
         } else {
             return [noreply, state];
         }
