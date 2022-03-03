@@ -28,7 +28,9 @@ node.spawn(async (ctx) => {
 });
 ```
 
-## Symbols
+## Conventions
+
+### Symbols
 
 Symbols are used in places to replicate the behavior of atoms in Erlang. `@otpjs/core`
 provides its own serialize/deserialize functions for passing data over a text channel.
@@ -56,6 +58,18 @@ const tupleB = deserialize(json);
 
 console.log(tupleB); // [Symbol($otp.symbol.ok), "test", 123, false]
 ```
+
+Symbols are written using `snake_case` in `otp-js`.
+
+### Variables
+
+In order to distinguish variable names from atom or symbol names, we advise writing them with `camelCase`.
+
+### Functions
+
+All public functions should be exported with names written in `camelCase`.
+
+Internal functions should be prefixed by an underscore (e.g., `_privateMethod()`).
 
 ## Pattern Matching
 
