@@ -5,46 +5,36 @@ import * as rooms from './rooms';
 const { ok, _ } = otp.Symbols;
 const { reply, noreply } = gen_server.Symbols;
 
-const callbacks = {
-    async init(ctx, socket) {
-        const subscriptions = [];
-
-        _installHandlers(ctx, socket);
-
-        return [ok, { socket, subscriptions }];
-    },
-    async handleCall(ctx, call, from, state) {
-        return [noreply, state];
-    },
-    async handleCast(ctx, cast, state) {
-        const compare = otp.caseOf(cast);
-
-        if (compare(['join', _])) {
-            const [, name] = cast;
-            return doJoin(ctx, name, state);
-        } else if (compare(['leave', _])) {
-            const [, name] = cast;
-            return doLeave(ctx, name, state);
-        }
-    },
-    async handleInfo(ctx, info, state) {
-        return [noreply, state];
-    }
-}
-
-async function doJoin(ctx, name, state) {
+const callbacks = gen_server.callbacks((server) => {
+    server.onInit(_init);
+    server.onCast(['join', _], _join);
+    server.onCast(['leave', _], _leave);
+});
+function _join(ctx, cast, state) {
+    const [, name] = cast;
     if (state.subscriptions.includes(name)) {
         return [noreply, state];
     } else {
         await rooms.join(ctx, name);
 
-        const nextSubscriptions = [
-            ...state.subscriptions,
-            name,
-        ]
+        const nextSubscriptions = [...state.subscriptions, name];
         const nextState = { ...state, subscriptions: nextSubscriptions };
 
         return [noreply, nextState];
+    }
+}
+function _leave(ctx, cast, state) {
+    const [, name] = cast;
+    const index = state.subscriptions.indexOf(name);
+    if (index >= 0) {
+        const subscriptions = [
+            ...state.subscriptions.slice(0, index),
+            ...state.subscriptions.slice(index + 1),
+        ];
+        const nextState = { ...state, subscriptions };
+        return [noreply, nextState];
+    } else {
+        return [noreply, state];
     }
 }
 
@@ -52,7 +42,9 @@ function _installHandlers(ctx, socket) {
     socket.on('set_from', (from) => _setFrom(ctx, from));
     socket.on('join', (roomName) => _join(ctx, roomName));
     socket.on('leave', (roomName) => _leave(ctx, roomName));
-    socket.on('message', (roomName, message) => _message(ctx, roomName, message));
+    socket.on('message', (roomName, message) =>
+        _message(ctx, roomName, message)
+    );
     socket.on('disconnect', () => ctx.exit(ctx.self(), 'disconnected'));
     socket.emit('who_are_you');
 }
