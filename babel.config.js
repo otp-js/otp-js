@@ -1,4 +1,4 @@
-module.exports = function(api) {
+module.exports = function (api) {
     api.cache(true);
     return {
         sourceMaps: false,
@@ -7,17 +7,15 @@ module.exports = function(api) {
                 '@babel/env',
                 {
                     useBuiltIns: 'entry',
-                    corejs: { version: '3.19', proposals: true },
+                    corejs: { version: '3.19' },
                     targets: {
-                        browsers: ['>0.25%, not dead, not ie < 12'],
+                        browsers: 'last 2 Chrome versions',
                         node: 'current',
-                        esmodules: false
-                    }
-                }
-            ]
+                        esmodules: false,
+                    },
+                },
+            ],
         ],
-        plugins: [
-            '@babel/transform-runtime'
-        ]
+        plugins: ['@babel/transform-runtime'],
     };
-}
+};
