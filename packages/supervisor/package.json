@@ -34,6 +34,7 @@
     "@otpjs/gen_server": "^0.9.14"
   },
   "devDependencies": {
+    "@babel/cli": "^7.17.6",
     "@babel/preset-env": "^7.15.6",
     "@otpjs/core": "^0.9.14",
     "@otpjs/test_utils": "^0.9.14",
