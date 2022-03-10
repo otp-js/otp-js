@@ -30,7 +30,7 @@
         "url": "https://github.com/otp-js/otp-js/issues"
     },
     "dependencies": {
-        "@otpjs/epmd-client": "^0.0.3-beta.1",
+        "@otpjs/epmd-client": "^0.1.0",
         "@otpjs/transports-ertf": "file:../ertf",
         "epmd-client": "^0.0.2",
         "erlpack": "^0.1.4"
