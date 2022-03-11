@@ -60,22 +60,26 @@ class _List {
             result += prefix;
         }
 
-        result += inspect(this.#head, newOptions);
+        let node = this;
+        let firstDone = false;
+        let count = 0;
+        while (
+            List.isList(node) &&
+            node != nil &&
+            count++ < options.maxArrayLength
+        ) {
+            if (firstDone) {
+                result += ', ';
+            }
+            result += `${inspect(node.head, newOptions)}`;
+            node = node.tail;
+            firstDone = true;
+        }
 
-        if (List.isList(this.#tail) && this.#tail !== nil) {
-            const newOptions = {
-                ...options,
-                drewPrefix: true,
-                depth: options.depth === null ? null : options.depth,
-            };
-            result += `, ${inspect(this.#tail, newOptions)}`;
-        } else if (this.#tail !== nil) {
-            const newOptions = {
-                ...options,
-                drewPrefix: true,
-                depth: options.depth === null ? null : options.depth,
-            };
-            result += ` | ${inspect(this.#tail, newOptions)}`;
+        if (List.isList(node) && node != nil) {
+            result += `, ... ${node.length()} more elements`;
+        } else {
+            result += `|${inspect(node, newOptions)}`;
         }
 
         if (!drewPrefix) {
