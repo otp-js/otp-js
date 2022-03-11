@@ -1,11 +1,14 @@
-import { Pid, Ref } from '@otpjs/types';
+import { Pid, Ref, list, improperList, tuple } from '@otpjs/types';
 import { caseOf, Symbols } from '@otpjs/matching';
 
 const { _ } = Symbols;
 
 export function deserialize(string, reviver = undefined) {
     if (reviver) {
-        reviver = kvCompose(reviveOTP, reviver);
+        reviver = kvCompose(
+            (key, value) => reviveOTP(key, value, reviver),
+            reviver
+        );
     } else {
         reviver = reviveOTP;
     }
@@ -14,7 +17,10 @@ export function deserialize(string, reviver = undefined) {
 
 export function serialize(data, replacer = undefined) {
     if (replacer) {
-        replacer = kvCompose(replaceOTP, replacer);
+        replacer = kvCompose(
+            (key, value) => replaceOTP(key, value, replacer),
+            replacer
+        );
     } else {
         replacer = replaceOTP;
     }
@@ -41,6 +47,10 @@ function reviveOTP(key, value) {
         return new Pid(value[1]);
     } else if (compare(['$otp.ref', _])) {
         return new Ref(value[1]);
+    } else if (compare(['$otp.list', _, _])) {
+        return improperList(...value[1], value[2]);
+    } else if (compare(['$otp.tuple', _])) {
+        return tuple(...value[1]);
     } else {
         return value;
     }
@@ -75,6 +85,19 @@ function replaceOTP(key, value) {
         return ['$otp.pid', value.toString()];
     } else if (compare(Ref.isRef)) {
         return ['$otp.ref', value.toString()];
+    } else if (list.isList(value) && value != list.nil) {
+        let result = [];
+        let node = value;
+
+        while (list.isList(node) && node != list.nil) {
+            result.push(node.head);
+            node = node.tail;
+        }
+        let tail = node;
+
+        return ['$otp.list', result, tail];
+    } else if (tuple.isTuple(value)) {
+        return ['$otp.tuple', Array.from(value)];
     } else {
         return value;
     }
