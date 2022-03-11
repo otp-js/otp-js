@@ -42,9 +42,19 @@ class _Tuple {
             depth: options.depth === null ? null : options.depth - 1,
         };
 
-        return `{ ${this.#elements
-            .map((value) => inspect(value, newOptions))
-            .join(', ')} }`;
+        if (this.#size < options.maxArrayLength) {
+            return `{ ${this.#elements
+                .slice(0, options.maxArrayLength)
+                .map((value) => inspect(value, newOptions))
+                .join(', ')} }`;
+        } else {
+            return `{ ${this.#elements
+                .slice(0, options.maxArrayLength)
+                .map((value) => inspect(value, newOptions))
+                .join(', ')} ... ${
+                this.#size - options.maxArrayLength
+            } more elements }`;
+        }
     }
 }
 
