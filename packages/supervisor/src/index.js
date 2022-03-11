@@ -2,7 +2,7 @@ import debug from 'debug';
 import * as core from '@otpjs/core';
 import * as gen_server from '@otpjs/gen_server';
 import * as Symbols from './symbols.js';
-import { OTPError } from '@otpjs/core/lib/error';
+import { OTPError } from '@otpjs/types';
 
 export { Symbols };
 

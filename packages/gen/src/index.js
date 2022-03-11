@@ -1,5 +1,5 @@
-import * as Core from '@otpjs/core';
-import { caseOf, OTPError, Pid } from '@otpjs/core';
+import * as match from '@otpjs/matching';
+import { OTPError, Pid } from '@otpjs/types';
 import { caseClause, DOWN } from '@otpjs/core/lib/symbols';
 import * as proc_lib from '@otpjs/proc_lib';
 import * as Symbols from './symbols';
@@ -12,15 +12,15 @@ function log(ctx, ...args) {
     return ctx.log.extend('gen')(...args);
 }
 
-const { ok, error, _, nodedown, EXIT } = Core.Symbols;
+const { ok, error, _, nodedown, EXIT } = match.Symbols;
 
 const DEFAULT_TIMEOUT = 5000;
 
 const localName = ['local', _];
-const isPid = Core.Pid.isPid;
+const isPid = Pid.isPid;
 
 function where(ctx, name) {
-    const compare = Core.caseOf(name);
+    const compare = match.caseOf(name);
 
     if (compare(localName)) {
         return ctx.whereis(getName(name));
@@ -31,7 +31,7 @@ function where(ctx, name) {
 
 export function start(ctx, linking, name, init_it, options = {}) {
     const response = where(ctx, name);
-    const compare = Core.caseOf(response);
+    const compare = match.caseOf(response);
     if (compare(undefined)) {
         return doSpawn(ctx, linking, name, init_it, options);
     } else if (compare([error, Pid.isPid])) {
@@ -71,11 +71,11 @@ function initializer(name, initIt, options) {
         const response = registerName(ctx, name);
         log(ctx, 'initialize() : registerName(%o) -> %o', name, response);
         log(ctx, 'initialize() : initIt : %o', initIt);
-        const compare = Core.caseOf(response);
+        const compare = match.caseOf(response);
         if (compare(ok)) {
             log(ctx, 'initialize() : initIt(%o)', starter);
             return initIt(ctx, starter);
-        } else if (compare([false, Core.Pid.isPid])) {
+        } else if (compare([false, Pid.isPid])) {
             const [, pid] = response;
             return proc_lib.initAck(ctx, starter, [
                 error,
@@ -86,7 +86,7 @@ function initializer(name, initIt, options) {
 }
 
 export function registerName(ctx, name) {
-    const compare = Core.caseOf(name);
+    const compare = match.caseOf(name);
     if (compare(localName)) {
         if (ctx.register(getName(name))) {
             return ok;
@@ -101,7 +101,7 @@ export function registerName(ctx, name) {
 }
 
 export function getName(name) {
-    const compare = Core.caseOf(name);
+    const compare = match.caseOf(name);
 
     if (compare(localName)) {
         return name[1];
@@ -113,7 +113,7 @@ export function getName(name) {
 }
 
 export function unregisterName(ctx, name) {
-    const compare = Core.caseOf(name);
+    const compare = match.caseOf(name);
 
     if (compare(localName)) {
         try {
@@ -139,8 +139,8 @@ export async function call(ctx, pid, message, timeout = DEFAULT_TIMEOUT) {
     }
 }
 
-const callReplyPattern = (ref) => Core.compile([ref, _]);
-const downPattern = (mref, pid) => Core.compile([DOWN, mref, _, pid, _]);
+const callReplyPattern = (ref) => match.compile([ref, _]);
+const downPattern = (mref, pid) => match.compile([DOWN, mref, _, pid, _]);
 async function doCall(ctx, pid, message, timeout) {
     const self = ctx.self();
     const ref = ctx.ref();
@@ -204,7 +204,7 @@ const isKeyedSymbol = (v) =>
 function doForProcess(ctx, process, fun) {
     // TODO: look up process (which is not a Pid)
     // As of the time of this comment, core/node handles routing remote messages
-    const compare = Core.caseOf(process);
+    const compare = match.caseOf(process);
 
     if (compare(Pid.isPid)) {
         log(ctx, 'doForProcess(%o) : found : %o', process, process);

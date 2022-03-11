@@ -1,12 +1,14 @@
 import * as core from '@otpjs/core';
-import { caseOf, OTPError, Pid, Ref } from '@otpjs/core';
-import { exit } from '@otpjs/core/lib/symbols';
+import { OTPError, Pid, Ref } from '@otpjs/types';
+import { caseOf } from '@otpjs/matching';
 import * as gen from '@otpjs/gen';
 import * as proc_lib from '@otpjs/proc_lib';
 import * as Symbols from './symbols';
 
 export { Symbols };
 export { call, cast, enterLoop, reply, start, startLink };
+
+const { exit } = core.Symbols;
 
 function log(ctx, ...args) {
     const logger = ctx.log.extend('gen_server');

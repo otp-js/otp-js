@@ -1,4 +1,6 @@
-import { Pid, Ref, compile, caseOf, Symbols } from '@otpjs/core';
+import { Symbols } from '@otpjs/core';
+import { Pid, Ref } from '@otpjs/types';
+import { compile, caseOf } from '@otpjs/matching';
 import * as net from 'net';
 import * as ertf from '@otpjs/transports-ertf';
 import epmd from '@otpjs/epmd-client';

@@ -1,8 +1,9 @@
-import { Pid, Ref, compile, caseOf, Symbols } from '@otpjs/core';
+import { Symbols } from '@otpjs/core';
+import { Pid, Ref } from '@otpjs/types';
+import { compile, caseOf } from '@otpjs/matching';
 import makeParser from './parser';
 import * as net from 'net';
 import * as handshake from './handshake';
-import assert from 'assert';
 import { makeLengthScanner } from './handshake/common';
 
 function log(ctx, ...formatters) {

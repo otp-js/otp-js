@@ -1,6 +1,7 @@
-import { caseOf, Node, OTPError, Pid, Symbols } from '@otpjs/core';
+import { Node, Symbols } from '@otpjs/core';
+import { caseOf } from '@otpjs/matching';
+import { OTPError, Pid } from '@otpjs/types';
 import '@otpjs/test_utils';
-import debug from 'debug';
 import * as GenServer from '../src';
 
 function log(ctx, ...args) {

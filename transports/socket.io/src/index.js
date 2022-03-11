@@ -1,12 +1,7 @@
-import {
-    Pid,
-    Ref,
-    serialize,
-    compile,
-    caseOf,
-    deserialize,
-    Symbols,
-} from '@otpjs/core';
+import { Symbols } from '@otpjs/core';
+import { serialize, deserialize } from '@otpjs/serializer-json';
+import { caseOf, compile } from '@otpjs/matching';
+import { Pid, Ref } from '@otpjs/types';
 
 const {
     relay,
