@@ -113,9 +113,19 @@ export function ImproperList(...elements) {
 List.isList = function (value) {
     return value instanceof _List || value === nil;
 };
+Object.defineProperty(List, 'nil', {
+    value: nil,
+    writable: false,
+    configurable: false,
+});
 ImproperList.isList = function (value) {
     return value instanceof _List || value === nil;
 };
+Object.defineProperty(ImproperList, 'nil', {
+    value: nil,
+    writable: false,
+    configurable: false,
+});
 export const l = List;
 export const il = ImproperList;
 export const list = List;
