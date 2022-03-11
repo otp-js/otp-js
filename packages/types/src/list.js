@@ -35,7 +35,7 @@ class _List {
     *[Symbol.iterator]() {
         let node = this;
         do {
-            yield node;
+            yield node.#head;
             node = node.#tail;
         } while (node instanceof _List);
     }
