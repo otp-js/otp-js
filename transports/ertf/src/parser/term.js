@@ -1,4 +1,4 @@
-import { Pid, Ref } from '@otpjs/core';
+import { Pid, Ref, tuple, t, list, l } from '@otpjs/core';
 import debug from 'debug';
 
 const log = debug('otpjs:transports:ertf:parser:term');
@@ -87,22 +87,22 @@ async function parseRef(buff, atomCache) {
 }
 async function parseTuple(buff, atomCache) {
     const arity = buff.readUInt8(0);
-    const term = new Array(arity);
+    const term = tuple.create(arity);
     buff = buff.slice(1);
     for (let i = 0; i < arity; i++) {
         const [element, nextBuff] = await parseTerm(buff, atomCache);
-        term[i] = element;
+        term.set(i, element);
         buff = nextBuff;
     }
-    return [term, buff];
+    return [t(...term), buff];
 }
 async function parseLargeTuple(buff, atomCache) {
     const arity = buff.readUInt32BE(0);
-    const term = new Array(arity);
+    const term = tuple.create(arity);
     buff = buff.slice(4);
     for (let i = 0; i < arity; i++) {
         const [element, nextBuff] = await parseTerm(buff, atomCache);
-        term[i] = element;
+        term.set(i, element);
         buff = nextBuff;
     }
     return [term, buff];
