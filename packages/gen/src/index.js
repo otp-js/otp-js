@@ -1,6 +1,6 @@
 import * as match from '@otpjs/matching';
-import { OTPError, Pid } from '@otpjs/types';
-import { caseClause, DOWN } from '@otpjs/core/lib/symbols';
+import { OTPError, Pid, t, l } from '@otpjs/types';
+import { case_clause, DOWN } from '@otpjs/core/lib/symbols';
 import * as proc_lib from '@otpjs/proc_lib';
 import * as Symbols from './symbols';
 
@@ -16,7 +16,7 @@ const { ok, error, _, nodedown, EXIT } = match.Symbols;
 
 const DEFAULT_TIMEOUT = 5000;
 
-const localName = ['local', _];
+const localName = t('local', _);
 const isPid = Pid.isPid;
 
 function where(ctx, name) {
@@ -34,9 +34,9 @@ export function start(ctx, linking, name, init_it, options = {}) {
     const compare = match.caseOf(response);
     if (compare(undefined)) {
         return doSpawn(ctx, linking, name, init_it, options);
-    } else if (compare([error, Pid.isPid])) {
+    } else if (compare(t(error, Pid.isPid))) {
         const [, pid] = response;
-        throw new OTPError(['already_started', pid]);
+        throw new OTPError(t('already_started', pid));
     }
 }
 
@@ -52,7 +52,7 @@ function doSpawn(ctx, linking, name, init_it, options) {
         );
     } else if (linking === monitor) {
         log(ctx, 'doSpawn() : proc_lib.startMonitor()');
-        throw new OTPError(['not_yet_implemented', link]);
+        throw new OTPError(t('not_yet_implemented', link));
     } else if (linking === nolink) {
         const timeout = 'timeout' in options ? options.timeout : Infinity;
         log(ctx, 'doSpawn() : proc_lib.start()');
@@ -75,12 +75,13 @@ function initializer(name, initIt, options) {
         if (compare(ok)) {
             log(ctx, 'initialize() : initIt(%o)', starter);
             return initIt(ctx, starter);
-        } else if (compare([false, Pid.isPid])) {
+        } else if (compare(t(false, Pid.isPid))) {
             const [, pid] = response;
-            return proc_lib.initAck(ctx, starter, [
-                error,
-                ['already_started', pid],
-            ]);
+            return proc_lib.initAck(
+                ctx,
+                starter,
+                t(error, t('already_started', pid))
+            );
         }
     };
 }
@@ -91,7 +92,7 @@ export function registerName(ctx, name) {
         if (ctx.register(getName(name))) {
             return ok;
         } else {
-            return [false, where(name)];
+            return t(false, where(name));
         }
     } else if (compare(isPid)) {
         return ok;
@@ -108,7 +109,7 @@ export function getName(name) {
     } else if (compare(isPid)) {
         return name;
     } else {
-        throw new OTPError([caseClause, name]);
+        throw new OTPError(t(case_clause, name));
     }
 }
 
@@ -124,7 +125,7 @@ export function unregisterName(ctx, name) {
     } else if (compare(isPid)) {
         return ok;
     } else {
-        throw new OTPError([caseClause, name]);
+        throw new OTPError(t(case_clause, name));
     }
 }
 
@@ -139,8 +140,8 @@ export async function call(ctx, pid, message, timeout = DEFAULT_TIMEOUT) {
     }
 }
 
-const callReplyPattern = (ref) => match.compile([ref, _]);
-const downPattern = (mref, pid) => match.compile([DOWN, mref, _, pid, _]);
+const callReplyPattern = (ref) => match.compile(t(ref, _));
+const downPattern = (mref, pid) => match.compile(t(DOWN, mref, _, pid, _));
 async function doCall(ctx, pid, message, timeout) {
     const self = ctx.self();
     const ref = ctx.ref();
@@ -150,7 +151,7 @@ async function doCall(ctx, pid, message, timeout) {
         const isReply = callReplyPattern(ref);
         const isDown = downPattern(mref, pid);
 
-        ctx.send(pid, [$gen_call, [self, ref], message]);
+        ctx.send(pid, t($gen_call, t(self, ref), message));
         log(ctx, 'doCall(%o, %o) : receive(%o, %o)', pid, ref, isReply, isDown);
         const [ret, predicate] = await ctx.receiveWithPredicate(
             isDown,
@@ -177,7 +178,7 @@ async function doCall(ctx, pid, message, timeout) {
                 ref,
                 predicate
             );
-            throw new OTPError(['unrecognized_predicate', predicate]);
+            throw new OTPError(t('unrecognized_predicate', predicate));
         }
     } catch (err) {
         log(ctx, 'doCall(%o, %o, %o) : error : %o', pid, ref, timeout, err);
@@ -195,7 +196,7 @@ export function cast(ctx, pid, message) {
 }
 
 function doCast(ctx, pid, message) {
-    ctx.send(pid, [$gen_cast, message]);
+    ctx.send(pid, t($gen_cast, message));
 }
 
 const isString = (v) => typeof v === 'string';
@@ -218,12 +219,12 @@ function doForProcess(ctx, process, fun) {
             log(ctx, 'fun(%o)', result);
             return fun(result);
         }
-    } else if (compare([_, _])) {
+    } else if (compare(t(_, _))) {
         const [name, node] = process;
         if (ctx.nodes().includes(node)) {
             return fun(process);
         } else {
-            ctx.exit([nodedown, node]);
+            ctx.exit(t(nodedown, node));
         }
     } else {
         log(ctx, 'doForProcess(%o) : not_found', process);
@@ -236,8 +237,8 @@ function doForProcess(ctx, process, fun) {
 }
 
 export function reply(ctx, [pid, ref], reply) {
-    log(ctx, 'ctx.send(%o, %o)', pid, [ref, reply]);
-    ctx.send(pid, [ref, reply]);
+    log(ctx, 'ctx.send(%o, %o)', pid, t(ref, reply));
+    ctx.send(pid, t(ref, reply));
 }
 
 export function stop() {}
