@@ -6,7 +6,7 @@ import * as Symbols from './symbols';
 
 export { Symbols };
 
-const { monitor, link, nolink } = Symbols;
+const { monitor, link, nolink, $gen_call, $gen_cast } = Symbols;
 
 function log(ctx, ...args) {
     return ctx.log.extend('gen')(...args);
@@ -150,7 +150,7 @@ async function doCall(ctx, pid, message, timeout) {
         const isReply = callReplyPattern(ref);
         const isDown = downPattern(mref, pid);
 
-        ctx.send(pid, [Symbols.call, [self, ref], message]);
+        ctx.send(pid, [$gen_call, [self, ref], message]);
         log(ctx, 'doCall(%o, %o) : receive(%o, %o)', pid, ref, isReply, isDown);
         const [ret, predicate] = await ctx.receiveWithPredicate(
             isDown,
@@ -195,7 +195,7 @@ export function cast(ctx, pid, message) {
 }
 
 function doCast(ctx, pid, message) {
-    ctx.send(pid, [Symbols.cast, message]);
+    ctx.send(pid, [$gen_cast, message]);
 }
 
 const isString = (v) => typeof v === 'string';
