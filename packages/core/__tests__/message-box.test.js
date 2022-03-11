@@ -1,5 +1,5 @@
-import './extend';
 import * as core from '../src';
+import '@otpjs/test_utils';
 
 const { ok, _ } = core.Symbols;
 

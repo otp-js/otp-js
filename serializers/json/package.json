@@ -1,15 +1,10 @@
 {
-    "name": "@otpjs/core",
+    "name": "@otpjs/serializer-json",
     "version": "0.9.14",
-    "description": "Open Telecom Platform",
-    "keywords": [
-        "otp",
-        "erlang",
-        "javascript"
-    ],
+    "description": "> TODO: description",
     "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
     "homepage": "https://github.com/otp-js/otp-js#readme",
-    "license": "MIT",
+    "license": "ISC",
     "main": "lib/index.js",
     "directories": {
         "lib": "lib",
@@ -29,22 +24,13 @@
         "build": "babel src --out-dir lib",
         "watch": "babel src --out-dir lib --watch",
         "prepublish": "npm run build",
-        "test": "jest --coverage --verbose"
+        "test": "echo \"Error: run tests from root\" && exit 1"
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"
     },
-    "devDependencies": {
-        "@babel/preset-env": "^7.15.6",
-        "babel-plugin-source-map-support": "^2.1.3"
-    },
-    "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e",
     "dependencies": {
-        "@otpjs/matching": "file:../matching",
-        "@otpjs/types": "file:../types",
-        "@otpjs/serializer-json": "file:../../serializers/json",
-        "@otpjs/test_utils": "file:../test_utils",
-        "inspect-custom-symbol": "^1.1.1",
-        "nanoid": "^3.1.30"
+        "@otpjs/matching": "file:../../packages/matching",
+        "@otpjs/types": "file:../../packages/types"
     }
 }

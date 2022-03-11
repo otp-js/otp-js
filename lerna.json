@@ -1,7 +1,4 @@
 {
-  "packages": [
-    "packages/*",
-    "transports/*"
-  ],
-  "version": "0.9.14"
+    "packages": ["packages/*", "serializers/*", "transports/*"],
+    "version": "0.9.14"
 }

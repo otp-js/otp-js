@@ -31,6 +31,7 @@
     },
     "workspaces": [
         "packages/*",
+        "serializers/*",
         "transports/*"
     ],
     "dependencies": {

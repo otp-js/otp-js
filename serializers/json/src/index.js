@@ -1,6 +1,7 @@
-import { Pid, Ref } from './types';
-import { caseOf } from './matching';
-import { _ } from './symbols';
+import { Pid, Ref } from '@otpjs/types';
+import { caseOf, Symbols } from '@otpjs/matching';
+
+const { _ } = Symbols;
 
 export function deserialize(string, reviver = undefined) {
     if (reviver) {

@@ -1,5 +1,5 @@
 import * as core from '../src';
-import './extend';
+import '@otpjs/test_utils';
 
 function log(ctx, ...args) {
     return ctx.log.extend('core:__tests__')(...args);

@@ -1,7 +1,9 @@
 import debug from 'debug';
-import { _, spread } from './symbols';
-import { OTPError } from './error';
-import { Pid, Ref } from './types';
+import * as Symbols from './symbols';
+import { OTPError, Pid, Ref, tuple, list } from '@otpjs/types';
+
+export { Symbols };
+const { _, spread } = Symbols;
 
 const log = debug('otpjs:core:matching');
 
@@ -51,7 +53,6 @@ function doCompile(pattern) {
     return compiledPattern;
     function compiledPattern(message) {
         for (let compare of comparisons) {
-            log('%o(%o)', compare, message);
             if (!compare(message)) {
                 return false;
             }
@@ -61,7 +62,11 @@ function doCompile(pattern) {
 }
 
 function comparator(pattern, comparisons = []) {
-    if (Array.isArray(pattern)) {
+    if (tuple.isTuple(pattern)) {
+        tupleComparator(pattern, comparisons);
+    } else if (list.isList(pattern)) {
+        listComparator(pattern, comparisons);
+    } else if (Array.isArray(pattern)) {
         arrayComparator(pattern, comparisons);
     } else if (Pid.isPid(pattern)) {
         pidComparator(pattern, comparisons);
@@ -211,6 +216,77 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
     }
 }
 
+function tupleComparator(pattern, comparisons, subComparisons = []) {
+    comparisons.push(tuple.isTuple);
+
+    const size = pattern.size;
+    comparisons.push(function matchesSize(message) {
+        log('%o(%o) : matchesSize(%o)', tupleComparator, pattern, length);
+        return message.length === length;
+    });
+
+    for (let index = 0; index < pattern.size; index++) {
+        const subPattern = pattern[index];
+        const subComparison = compile(subPattern);
+        subComparisons.push(subComparison);
+    }
+
+    comparisons.push(function compareTupleItems(message) {
+        let index;
+        let matches = true;
+
+        log('%o(%o)', compareTupleItems, message);
+
+        for (index = 0; index < subComparisons.length && matches; index++) {
+            const compare = subComparisons[index];
+            matches = matches && compare(message[index]);
+        }
+
+        return matches;
+    });
+}
+
+function listComparator(pattern, comparisons, subComparisons = []) {
+    comparisons.push(list.isList);
+
+    let node = pattern;
+    while (list.isList(node) && node != list.nil) {
+        const subPattern = node.head;
+        const subComparison = compile(subPattern);
+        subComparisons.push(subComparison);
+        node = node.tail;
+    }
+
+    log('listComparator(node: %o)', node);
+    const tailPattern = node;
+    const tailComparison = compile(tailPattern);
+
+    comparisons.push(function compareListItems(message) {
+        let index;
+        let matches = true;
+        let node = message;
+
+        log('%o(%o)', compareListItems, node);
+
+        for (
+            index = 0;
+            index < subComparisons.length &&
+            matches &&
+            list.isList(node) &&
+            node != list.nil;
+            index++
+        ) {
+            const compare = subComparisons[index];
+            matches &&= compare(node.head);
+            node = node.tail;
+        }
+
+        matches &&= index == subComparisons.length;
+        matches &&= tailComparison(node);
+
+        return matches;
+    });
+}
 function objectComparator(pattern, comparisons) {
     comparisons.push(function isObject(message) {
         return typeof message === 'object';
@@ -238,10 +314,6 @@ function objectComparator(pattern, comparisons) {
         if (subPattern === _) {
             subComparisons[key] = underscore;
         } else {
-            let keyName = key;
-            if (typeof key === 'symbol') {
-                keyName = key.toString();
-            }
             subComparisons[key] = compile(subPattern);
         }
     }

@@ -1,9 +1,8 @@
 import debug from 'debug';
-import { Pid, Ref } from './types.js';
+import { Pid, Ref, OTPError } from '@otpjs/types';
 import { Context } from './context.js';
 import * as Symbols from './symbols';
-import { OTPError } from './error';
-import { caseOf } from './matching';
+import { caseOf } from '@otpjs/matching';
 
 const {
     DOWN,
@@ -492,6 +491,16 @@ export class Node {
         const pid = ctx.self();
 
         this.link(linked, pid);
+        this.doSpawn(ctx, fun);
+
+        return pid;
+    }
+
+    spawnMonitor(monitoring, fun) {
+        const ctx = this.makeContext();
+        const pid = ctx.self();
+
+        const mref = this.monitor(monitoring, pid);
         this.doSpawn(ctx, fun);
 
         return pid;

@@ -1,0 +1,35 @@
+{
+    "name": "@otpjs/types",
+    "version": "0.9.14",
+    "description": "> TODO: description",
+    "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
+    "homepage": "https://github.com/otp-js/otp-js#readme",
+    "license": "ISC",
+    "main": "lib/index.js",
+    "directories": {
+        "lib": "lib",
+        "test": "__tests__"
+    },
+    "files": [
+        "lib"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/otp-js/otp-js.git"
+    },
+    "scripts": {
+        "build": "babel src --out-dir lib",
+        "watch": "babel src --out-dir lib --watch",
+        "prepublish": "npm run build",
+        "test": "echo \"Error: run tests from root\" && exit 1"
+    },
+    "dependencies": {
+        "@otpjs/serializer-json": "file:../../serializers/json"
+    },
+    "bugs": {
+        "url": "https://github.com/otp-js/otp-js/issues"
+    }
+}

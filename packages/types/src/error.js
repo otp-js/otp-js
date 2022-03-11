@@ -1,5 +1,4 @@
-import { error } from './symbols';
-import { serialize, deserialize } from './serializer';
+import { serialize, deserialize } from '@otpjs/serializer-json';
 
 export class OTPError extends Error {
     constructor(message) {
@@ -23,12 +22,11 @@ export class OTPError extends Error {
 
     toJSON() {
         let message = this.message;
-        let stack = this.stack;
 
         if (this._json) {
             message = deserialize(message);
         }
 
-        return [error, message];
+        return message;
     }
 }

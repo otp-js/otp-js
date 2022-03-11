@@ -1,9 +1,8 @@
 import debug from 'debug';
-import { OTPError } from './error';
-import { match, compile } from './matching';
+import { OTPError, Pid } from '@otpjs/types';
+import { match, compile } from '@otpjs/matching';
 import { MessageBox } from './message-box.js';
 import { DOWN, EXIT, _, trap_exit } from './symbols';
-import { Pid } from './types';
 
 const node = Symbol();
 const mb = Symbol();
@@ -46,6 +45,7 @@ export class Context {
         this[forward]('nodes');
         this[forward]('processInfo');
         this[forwardWithSelf]('spawnLink');
+        this[forwardWithSelf]('spawnMonitor');
         this[forwardWithSelf]('link');
         this[forwardWithSelf]('unlink');
         this[forwardWithPid]('monitor');

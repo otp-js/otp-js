@@ -1,6 +1,7 @@
 import './extend';
 import { _, spread } from '../src/symbols';
-import { match, compile } from '../src/matching';
+import { compile } from '../src';
+import { t, l, il } from '@otpjs/types';
 
 describe('@otpjs/core/matching/compile', function () {
     it('understands _ to match everything', function () {
@@ -79,6 +80,30 @@ describe('@otpjs/core/matching/compile', function () {
                     const message = [1];
                     expect(compiled(message)).toBe(false);
                 });
+            });
+        });
+        describe('such as lists', function () {
+            it('compares child elements', function () {
+                const compiled = compile(l(1, 2, 3));
+                expect(compiled(l(1, 2, 3))).toBe(true);
+                expect(compiled(l(3, 2, 1))).toBe(false);
+            });
+            it('does not allow fewer than the number of specified elements', function () {
+                const compiled = compile(l(_, _, _));
+                const message = l(1, 2);
+                expect(compiled(message)).toBe(false);
+            });
+            it('matches equal number of elements exactly', function () {
+                const compiled = compile(l(_, _, _));
+                const message = l(1, 2, 3);
+                expect(compiled(message)).toBe(true);
+            });
+            it('matches invalid tails', function () {
+                const compiled = compile(il(1, 2, 3));
+                const improper = il(1, 2, 3);
+                const proper = l(1, 2, 3);
+                expect(compiled(improper)).toBe(true);
+                expect(compiled(proper)).toBe(false);
             });
         });
         describe('such as objects', function () {
