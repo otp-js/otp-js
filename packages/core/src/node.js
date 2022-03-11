@@ -1,5 +1,5 @@
 import debug from 'debug';
-import { Pid, Ref, OTPError } from '@otpjs/types';
+import { Pid, Ref, OTPError, t, l } from '@otpjs/types';
 import { Context } from './context.js';
 import * as Symbols from './symbols';
 import { caseOf } from '@otpjs/matching';
@@ -87,7 +87,7 @@ export class Node {
     }
 
     exit(pid, reason) {
-        const message = [EXIT, reason, Error().stack];
+        const message = t(EXIT, reason, Error().stack);
         return this.deliver(pid, message);
     }
 
@@ -194,7 +194,7 @@ export class Node {
                     'noconnection',
                 ]);
             }
-        } else if (compare([_, _])) {
+        } else if (compare(t(_, _))) {
             const [name, node] = watcheePid;
             if (node === this.name) {
                 return this.monitor(watcherPid, name, ref);
