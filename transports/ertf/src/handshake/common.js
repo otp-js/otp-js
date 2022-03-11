@@ -8,21 +8,16 @@ function log(ctx, ...formatters) {
 
 export function ourFlags() {
     return (
-        flags.PUBLISHED |
-        flags.EXTENDED_REFERENCES |
-        flags.NEW_FUN_TAGS |
-        flags.EXTENDED_PIDS_PORTS |
-        flags.EXPORT_PTR_TAG |
-        flags.DIST_HDR_ATOM_CACHE |
-        flags.SMALL_ATOM_TAGS |
-        flags.UTF8_ATOMS |
-        flags.MAP_TAG |
-        flags.BIT_BINARIES |
-        flags.HANDSHAKE_23 |
-        flags.UNLINK_ID |
-        flags.V4_NC |
-        flags.BIG_CREATION |
-        flags.SPAWN
+        flags.BIG_CREATION +
+        flags.DIST_MONITOR +
+        flags.EXPORT_PTR_TAG +
+        flags.EXTENDED_PIDS_PORTS +
+        flags.EXTENDED_REFERENCES +
+        flags.FUN_TAGS +
+        flags.NEW_FUN_TAGS +
+        flags.PUBLISHED +
+        flags.UTF8_ATOMS +
+        flags.DIST_HDR_ATOM_CACHE
     );
 }
 export function waitForChunk(ctx, stream) {
@@ -56,12 +51,12 @@ export function makeLengthScanner(ctx) {
 
     function scan(chunk, encoding) {
         chunk = Buffer.concat([cache, chunk]);
-        log(ctx, 'scan(%o)', chunk.length);
+        log(ctx, 'scan(chunk: %o)', chunk);
         if (chunk.length >= 2) {
             const size = chunk.readUInt16BE(0);
             if (chunk.length - 2 >= size) {
                 const message = chunk.slice(0, size + 2);
-                log(ctx, 'scan(%o) : scanner.push(%o)', chunk.length, message);
+                log(ctx, 'scan(chunk: %o) : scanner.push(%o)', chunk, message);
                 scanner.push(message);
 
                 const remainder = chunk.slice(size + 2);

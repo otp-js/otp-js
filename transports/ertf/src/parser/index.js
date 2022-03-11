@@ -7,8 +7,11 @@ function log(...formatters) {
 }
 
 export default function make(ctx) {
-    let cache = Buffer.from('', 'utf8');
     const log = ctx.log.extend('transports:ertf:parser');
+
+    let cache = Buffer.from('', 'utf8');
+    let atomCache = [];
+
     const transformer = new Transform({
         objectMode: true,
         async transform(chunk, encoding, callback) {
@@ -20,7 +23,11 @@ export default function make(ctx) {
                     buff = buff.slice(2);
                     this.push({ type: 'heartbeat' });
                 } else if (buff.length >= length + 2) {
-                    await consume(buff.slice(2, 2 + length));
+                    const sentAtomCache = await consume(
+                        buff.slice(2, 2 + length),
+                        atomCache
+                    );
+                    atomCache = [...atomCache, ...sentAtomCache];
                     buff = buff.slice(2 + length);
                 } else {
                     break;
@@ -35,14 +42,16 @@ export default function make(ctx) {
 
     return transformer;
 
-    async function consume(buff) {
+    async function consume(buff, atomCache) {
         const [header, buff2] = await parseDistributionHeader(buff);
-        const { atomCache } = header;
+        const { atomCache: nextAtomCache } = header;
+        atomCache = [...atomCache, ...nextAtomCache].slice(-256);
         log('consume(%o) : distributionHeader : %o', buff2, header);
         const [controlMessage, buff3] = await parseTerm(buff2, atomCache);
         log('consume(%o) : controlMessage : %o', buff3, controlMessage);
         const [message, remainder] = await parseTerm(buff3, atomCache);
         log('consume(%o) : message : %o', remainder, message);
         transformer.push({ header, controlMessage, message });
+        return atomCache;
     }
 }

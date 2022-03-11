@@ -140,7 +140,9 @@ function parseAtomCacheRef(buff, flags, hasLongAtoms, atomCache) {
     if (newCacheEntry) {
         const length = hasLongAtoms ? buff.readUInt16BE(0) : buff.readUInt8(0);
         log('parseAtomCacheRef(length: %o, buff: %o)', length, buff);
-        const atomText = buff.slice(lengthSize, lengthSize + length);
+        const atomText = buff
+            .slice(lengthSize, lengthSize + length)
+            .toString('utf8');
         log('atomCache.push([%d, %s])', internalSegmentIndex, atomText);
         atomCache.push([internalSegmentIndex, atomText]);
         buff = buff.slice(lengthSize + length);
