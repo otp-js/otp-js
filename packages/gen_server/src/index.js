@@ -20,7 +20,7 @@ const { noreply } = Symbols;
 const { link, nolink, monitor, $gen_cast, $gen_call } = gen.Symbols;
 
 async function start(ctx, name, callbacks, args = t()) {
-    if (!Array.isArray(name) && name !== undefined) {
+    if (!t.isTuple(name) && name !== undefined) {
         args = callbacks || args;
         callbacks = name;
         name = undefined;
@@ -29,7 +29,7 @@ async function start(ctx, name, callbacks, args = t()) {
 }
 
 async function startLink(ctx, name, callbacks, args = t()) {
-    if (!Array.isArray(name) && name !== undefined) {
+    if (!t.isTuple(name) && name !== undefined) {
         args = callbacks || args;
         callbacks = name;
         name = undefined;

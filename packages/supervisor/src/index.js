@@ -325,7 +325,7 @@ const callbacks = {
 };
 
 export async function startLink(ctx, name, supCallbacks, args = l()) {
-    if (!Array.isArray(name) && name !== undefined) {
+    if (!t.isTuple(name) && name !== undefined) {
         args = supCallbacks || args;
         supCallbacks = name;
         name = undefined;
