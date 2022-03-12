@@ -1,6 +1,6 @@
 {
   "name": "@otpjs/gen_server",
-  "version": "0.10.0-beta.0",
+  "version": "0.10.0-beta.1",
   "description": "A gen_server implementation for @otp-js/core",
   "keywords": [
     "open",
@@ -41,12 +41,12 @@
   },
   "devDependencies": {
     "@babel/preset-env": "^7.15.6",
-    "@otpjs/test_utils": "^0.10.0-beta.0",
+    "@otpjs/test_utils": "^0.10.0-beta.1",
     "babel-plugin-source-map-support": "^2.1.3"
   },
   "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e",
   "dependencies": {
-    "@otpjs/gen": "^0.10.0-beta.0",
-    "@otpjs/proc_lib": "^0.10.0-beta.0"
+    "@otpjs/gen": "^0.10.0-beta.1",
+    "@otpjs/proc_lib": "^0.10.0-beta.1"
   }
 }
