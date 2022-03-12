@@ -273,6 +273,7 @@ export function il(...elements) {
 }
 export const cons = List;
 export const list = l;
+export const improperList = il;
 
 Reflect.defineProperty(list, 'nil', {
     configurable: false,
@@ -281,6 +282,20 @@ Reflect.defineProperty(list, 'nil', {
 });
 
 Reflect.defineProperty(list, 'isList', {
+    configurable: false,
+    writable: false,
+    value: function (value) {
+        return value instanceof List || value === nil;
+    },
+});
+
+Reflect.defineProperty(improperList, 'nil', {
+    configurable: false,
+    writable: false,
+    value: nil,
+});
+
+Reflect.defineProperty(improperList, 'isList', {
     configurable: false,
     writable: false,
     value: function (value) {
