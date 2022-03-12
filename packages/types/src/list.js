@@ -193,6 +193,7 @@ List.prototype.deleteIndex = function (deleteIndex) {
 
     while (List.isList(stack) && stack != nil) {
         node = cons(stack.head, node);
+        stack = stack.tail;
     }
 
     return node;
