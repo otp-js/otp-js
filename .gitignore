@@ -105,3 +105,4 @@ dist
 
 packages/*/lib/
 transports/*/lib/
+serializers/*/lib/
