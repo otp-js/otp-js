@@ -150,7 +150,7 @@ List.prototype.find = function (predicate) {
         }
     }
 
-    return false;
+    return undefined;
 };
 
 List.prototype.slice = function (start = 0, end = Infinity) {
