@@ -1,4 +1,5 @@
 import '@otpjs/test_utils';
+import { t, l } from '@otpjs/types';
 import { createServer } from 'http';
 import io from 'socket.io';
 import clientIO from 'socket.io-client';
@@ -87,7 +88,7 @@ describe('@otpjs/transports-socket.io', function () {
             await wait(100);
 
             pid = clientNode.spawn(async (ctx) => {
-                const target = ['test', serverNode.name];
+                const target = t('test', serverNode.name);
                 log(ctx, 'send(%o, test)', target);
                 ctx.send(target, 'test');
                 await wait(100);
@@ -114,18 +115,14 @@ describe('@otpjs/transports-socket.io', function () {
         await expect(
             new Promise((resolve, reject) => {
                 pidB = clientNode.spawn(async (ctx) => {
-                    mref = ctx.monitor(['test', serverNode.name]);
-                    ctx.send(['test', serverNode.name], 'stop');
+                    mref = ctx.monitor(t('test', serverNode.name));
+                    ctx.send(t('test', serverNode.name), 'stop');
                     resolve(await ctx.receive());
                 });
             })
-        ).resolves.toMatchPattern([
-            DOWN,
-            mref,
-            'process',
-            otp.Pid.isPid,
-            normal,
-        ]);
+        ).resolves.toMatchPattern(
+            t(DOWN, mref, 'process', otp.Pid.isPid, normal)
+        );
     });
 
     it('can be unregistered', async function () {
@@ -185,7 +182,7 @@ describe('@otpjs/transports-socket.io', function () {
         await wait(100);
 
         const pidB = clientNodeB.spawn(async (ctx) => {
-            ctx.send(['test', clientNode.name], [payload, ctx.self()]);
+            ctx.send(t('test', clientNode.name), t(payload, ctx.self()));
             await expect(ctx.receive()).resolves.toBe('received');
         });
 

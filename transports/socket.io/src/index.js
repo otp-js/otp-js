@@ -1,7 +1,7 @@
 import { Symbols } from '@otpjs/core';
 import { serialize, deserialize } from '@otpjs/serializer-json';
 import { caseOf, compile } from '@otpjs/matching';
-import { Pid, Ref } from '@otpjs/types';
+import { Pid, Ref, t, l } from '@otpjs/types';
 
 const {
     relay,
@@ -23,10 +23,10 @@ function log(ctx, ...args) {
 }
 
 const receivers = {
-    relay: compile([relay, _, _]),
-    monitor: compile([monitor, _, _, _]),
-    discover: compile([discover, _, _, _, _]),
-    lost: compile([lost, _, _, _, _]),
+    relay: compile(t(relay, _, _)),
+    monitor: compile(t(monitor, _, _, _)),
+    discover: compile(t(discover, _, _, _, _)),
+    lost: compile(t(lost, _, _, _, _)),
 };
 
 function defaultOptions() {
@@ -210,7 +210,7 @@ export function register(node, socket, options = defaultOptions()) {
             node.monitor(watcher, pid, ref);
         } catch (err) {
             log(ctx, 'handleMonitor(%o, %o) : error : %o', pid, ref, err);
-            node.deliver(watcher, [DOWN, ref, 'process', pid, err.message]);
+            node.deliver(watcher, t(DOWN, ref, 'process', pid, err.message));
         }
     }
 
