@@ -383,7 +383,7 @@ export function callbacks(builder) {
             const [, handler] = found;
             return handler(ctx, call, from, state);
         } else {
-            throw new OTPError(`unhandled call: ${call}`);
+            throw new OTPError(t('unhandled_call', call));
         }
     }
     function handleCast(ctx, cast, state) {
@@ -394,7 +394,7 @@ export function callbacks(builder) {
             const [, handler] = found;
             return handler(ctx, cast, state);
         } else {
-            throw new OTPError(`unhandled cast: ${cast}`);
+            throw new OTPError(t('unhandled_cast', cast));
         }
     }
     function handleInfo(ctx, info, state) {
@@ -405,7 +405,7 @@ export function callbacks(builder) {
             const [, handler] = found;
             return handler(ctx, info, state);
         } else {
-            throw new OTPError(`unhandled info: ${info}`);
+            throw new OTPError(t('unhandled_info', info));
         }
     }
 }
