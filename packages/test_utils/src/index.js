@@ -1,6 +1,7 @@
 import debug from 'debug';
 import * as matching from '@otpjs/matching';
 import * as otpJSON from '@otpjs/serializer-json';
+import util from 'util';
 
 const log = debug('otpjs:test_utils');
 
@@ -15,17 +16,47 @@ expect.extend({
         if (pass) {
             return {
                 message: () =>
-                    `expected ${otpJSON.serialize(
-                        received
-                    )} not to match ${otpJSON.serialize(pattern)}`,
+                    `expected ${util
+                        .inspect(received)
+                        .replace(/[\r\n]+/g, ' ')} not to match ${util
+                        .inspect(pattern)
+                        .replace(/[\r\n]+/g, ' ')}`,
                 pass: true,
             };
         } else {
             return {
                 message: () =>
-                    `expected ${otpJSON.serialize(
-                        received
-                    )} to match ${otpJSON.serialize(pattern)}`,
+                    `expected ${util
+                        .inspect(received)
+                        .replace(/[\r\n]+/g, ' ')} to match ${util
+                        .inspect(pattern)
+                        .replace(/[\r\n]+/g, ' ')}`,
+                pass: false,
+            };
+        }
+    },
+    toThrowTerm(received, pattern, thrown) {
+        const compiled = matching.compile(pattern);
+        const pass = compiled(received?.term);
+
+        if (pass) {
+            return {
+                message: () =>
+                    `expected ${util
+                        .inspect(received.term)
+                        .replace(/[\r\n]+/g, ' ')} not to match ${util
+                        .inspect(pattern)
+                        .replace(/[\r\n]+/g, ' ')}`,
+                pass: true,
+            };
+        } else {
+            return {
+                message: () =>
+                    `expected ${util
+                        .inspect(received.term)
+                        .replace(/[\r\n]+/g, ' ')} to match ${util
+                        .inspect(pattern)
+                        .replace(/[\r\n]+/g, ' ')}`,
                 pass: false,
             };
         }

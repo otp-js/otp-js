@@ -10,7 +10,7 @@ async function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const { ok, normal, DOWN, spread, _ } = core.Symbols;
+const { ok, normal, error, DOWN, spread, _ } = core.Symbols;
 
 describe('@otpjs/core.Node', () => {
     let node = null;
@@ -89,9 +89,7 @@ describe('@otpjs/core.Node', () => {
             });
         });
 
-        await expect(result).rejects.toThrow(
-            core.serialize(core.Symbols.badarg)
-        );
+        await expect(result).rejects.toThrowTerm(core.Symbols.badarg);
         node.deliver(pidA, 'stop');
     });
     it('can route messages to a name', async function () {

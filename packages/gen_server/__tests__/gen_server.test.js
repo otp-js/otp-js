@@ -136,10 +136,7 @@ function describeGenServer() {
         });
 
         expect(response).toMatchPattern(
-            t(error, {
-                message: 'dying',
-                [spread]: _,
-            })
+            t(error, { term: 'dying', [spread]: _ })
         );
 
         function init(ctx) {
