@@ -1,5 +1,5 @@
 import * as core from '@otpjs/core';
-import { OTPError, Pid, Ref, t, l } from '@otpjs/types';
+import { OTPError, Pid, Ref, t, l, cons } from '@otpjs/types';
 import { caseOf } from '@otpjs/matching';
 import * as gen from '@otpjs/gen';
 import * as proc_lib from '@otpjs/proc_lib';
