@@ -1,32 +1,29 @@
-import { serialize, deserialize } from '@otpjs/serializer-json';
+import { tuple } from '@otpjs/types';
 
 export class OTPError extends Error {
+    #original;
+
     constructor(message) {
-        let json = false;
-        if (
-            typeof message !== 'string' &&
-            typeof message !== 'number' &&
-            typeof message !== 'boolean' &&
-            typeof message !== 'undefined'
-        ) {
-            json = true;
-            message = serialize(message);
+        let json = null;
+        if (typeof message !== 'string' && typeof message !== 'number') {
+            json = JSON.stringify(message);
         }
 
-        super(message);
+        super(json ?? null);
 
-        if (json) {
-            this._json = true;
-        }
+        this.#original = message;
+    }
+
+    [Symbol.for('nodejs.util.inspect.custom')](depth, options, inspect) {
+        const newOptions = {
+            ...options,
+            depth: options.depth === null ? null : options.depth - 1,
+        };
+        const stacktrace = this.stack.slice(this.stack.indexOf('\n') + 1);
+        return `Error: ${inspect(this.#original, newOptions)}\n${stacktrace}`;
     }
 
     toJSON() {
-        let message = this.message;
-
-        if (this._json) {
-            message = deserialize(message);
-        }
-
-        return message;
+        return this.#original;
     }
 }
