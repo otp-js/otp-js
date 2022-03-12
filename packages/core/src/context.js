@@ -1,5 +1,5 @@
 import debug from 'debug';
-import { OTPError, Pid } from '@otpjs/types';
+import { OTPError, Pid, t, l } from '@otpjs/types';
 import { match, compile } from '@otpjs/matching';
 import { MessageBox } from './message-box.js';
 import { DOWN, EXIT, _, trap_exit } from './symbols';
@@ -16,7 +16,7 @@ const flags = Symbol();
 const lastMessage = Symbol();
 const status = Symbol();
 
-const isExitMessage = match([EXIT, _, _], [EXIT, _, _, _]);
+const isExitMessage = match(t(EXIT, _, _), t(EXIT, _, _, _));
 
 export class Context {
     constructor(parent) {
@@ -80,14 +80,18 @@ export class Context {
         if (flag in this) {
             this[flag] = value;
         } else {
-            throw new OTPError(['unknown_flag', flag]);
+            throw new OTPError(t('unknown_flag', flag));
         }
     }
 
     _notifyLinks(reason) {
         const pid = this.self();
         this[links].forEach((link) =>
-            this.send(link, [EXIT, pid, reason, Error().stack])
+            try {
+                this.send(link, t(EXIT, pid, reason, Error().stack))
+            } catch(err) {
+                this.log('_notifyLinks() : error : %o', err);
+            }
         );
     }
 
@@ -102,7 +106,11 @@ export class Context {
     _notifyMonitors(reason) {
         const pid = this.self();
         this[monitors].forEach((monitor, ref) =>
-            this.send(monitor, [DOWN, ref, 'process', pid, reason])
+            try {
+                this.send(monitor, t(DOWN, ref, 'process', pid, reason))
+            } catch(err) {
+                this.log('_notifyMonitors() : error : %o', err);
+            }
         );
     }
 
