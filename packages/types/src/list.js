@@ -92,7 +92,7 @@ List.prototype.push = function (value) {
 };
 
 List.prototype.reverse = function () {
-    let reversed = List();
+    let reversed = nil;
     let node = this;
 
     while (List.isList(node) && node != nil) {
