@@ -342,9 +342,9 @@ async function tryTerminate(ctx, callbacks, reason, state) {
 }
 
 export function callbacks(builder) {
-    const callHandlers = l();
-    const castHandlers = l();
-    const infoHandlers = l();
+    let callHandlers = l();
+    let castHandlers = l();
+    let infoHandlers = l();
 
     let init = null;
     let terminate = null;
@@ -354,18 +354,31 @@ export function callbacks(builder) {
             init = handler;
         },
         onCall(pattern, handler) {
-            callHandlers.push([core.compile(pattern), handler]);
+            callHandlers = cons(
+                t(core.compile(pattern), handler),
+                callHandlers
+            );
         },
         onCast(pattern, handler) {
-            castHandlers.push([core.compile(pattern), handler]);
+            castHandlers = cons(
+                t(core.compile(pattern), handler),
+                castHandlers
+            );
         },
         onInfo(pattern, handler) {
-            infoHandlers.push([core.compile(pattern), handler]);
+            infoHandlers = cons(
+                t(core.compile(pattern), handler),
+                infoHandlers
+            );
         },
         onTerminate(handler) {
             terminate = handler;
         },
     });
+
+    callHandlers = callHandlers.reverse();
+    castHandlers = castHandlers.reverse();
+    infoHandlers = infoHandlers.reverse();
 
     return {
         init,
