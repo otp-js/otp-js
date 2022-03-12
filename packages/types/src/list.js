@@ -125,6 +125,55 @@ List.prototype.replaceWhere = function (predicate, nextValue, insert) {
     return node;
 };
 
+List.prototype.includes = function (value) {
+    let node = this;
+
+    while (l.isList(node) && node != nil) {
+        if (node.head === value) {
+            return true;
+        } else {
+            node = node.tail;
+        }
+    }
+
+    return false;
+};
+
+List.prototype.find = function (predicate) {
+    let node = this;
+
+    while (List.isList(node) && node != nil) {
+        if (predicate(node.head)) {
+            return node.head;
+        } else {
+            node = node.tail;
+        }
+    }
+
+    return false;
+};
+
+List.prototype.slice = function (start = 0, end = Infinity) {
+    let node = this;
+    let index = 0;
+    let stack = nil;
+
+    if (end < 0) {
+        end = node.length() + end;
+    }
+
+    while (List.isList(node) && node != nil && index < end) {
+        if (index > start) {
+            stack = cons(node.head, stack);
+        }
+
+        index++;
+        node = node.tail;
+    }
+
+    return stack.reverse();
+};
+
 List.prototype.deleteIndex = function (deleteIndex) {
     let node = this;
     let stack = nil;
