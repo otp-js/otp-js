@@ -2,7 +2,7 @@ import inspect from 'inspect-custom-symbol';
 import { nil } from './symbols';
 
 export function List(head, tail = nil) {
-    if (this === undefined) {
+    if (!(this instanceof List)) {
         return new List(head, tail);
     }
 
@@ -91,6 +91,37 @@ List.prototype[inspect] = function inspect(
     return result;
 };
 
+export function l(...elements) {
+    return List.from(...elements);
+}
+export function il(...elements) {
+    if (elements.length === 0) {
+        return undefined;
+    } else {
+        let tail = elements.pop();
+        for (let i = elements.length - 1; i >= 0; i--) {
+            const head = elements[i];
+            tail = List(head, tail);
+        }
+        return tail;
+    }
+}
+export const cons = List;
+export const list = l;
+
+Object.defineProperty(list, 'nil', {
+    configurable: false,
+    writable: false,
+    value: nil,
+});
+
+Object.defineProperty(list, 'isList', {
+    configurable: false,
+    writable: false,
+    value: function (value) {
+        return value instanceof List || value === nil;
+    },
+});
 Object.defineProperty(List, 'nil', {
     configurable: false,
     writable: false,
@@ -120,20 +151,3 @@ Object.defineProperty(List, 'from', {
         }
     },
 });
-
-export function l(...elements) {
-    return List.from(...elements);
-}
-export function il(...elements) {
-    if (elements.length === 0) {
-        return undefined;
-    } else {
-        let tail = elements.pop();
-        for (let i = elements.length - 1; i >= 0; i--) {
-            const head = elements[i];
-            tail = List(head, tail);
-        }
-        return tail;
-    }
-}
-export const cons = List;
