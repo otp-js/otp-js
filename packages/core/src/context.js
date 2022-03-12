@@ -86,13 +86,13 @@ export class Context {
 
     _notifyLinks(reason) {
         const pid = this.self();
-        this[links].forEach((link) =>
+        this[links].forEach((link) => {
             try {
-                this.send(link, t(EXIT, pid, reason, Error().stack))
-            } catch(err) {
+                this.send(link, t(EXIT, pid, reason, Error().stack));
+            } catch (err) {
                 this.log('_notifyLinks() : error : %o', err);
             }
-        );
+        });
     }
 
     _monitor(ref, watcher) {
@@ -105,13 +105,13 @@ export class Context {
 
     _notifyMonitors(reason) {
         const pid = this.self();
-        this[monitors].forEach((monitor, ref) =>
+        this[monitors].forEach((monitor, ref) => {
             try {
-                this.send(monitor, t(DOWN, ref, 'process', pid, reason))
-            } catch(err) {
+                this.send(monitor, t(DOWN, ref, 'process', pid, reason));
+            } catch (err) {
                 this.log('_notifyMonitors() : error : %o', err);
             }
-        );
+        });
     }
 
     destroy(reason) {
