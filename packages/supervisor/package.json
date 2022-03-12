@@ -1,6 +1,6 @@
 {
   "name": "@otpjs/supervisor",
-  "version": "0.9.14",
+  "version": "0.10.0-beta.0",
   "description": "Supervisor implementation for OTP-JS",
   "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
   "homepage": "https://github.com/otp-js/otp-js#readme",
@@ -31,13 +31,13 @@
     "url": "https://github.com/otp-js/otp-js/issues"
   },
   "dependencies": {
-    "@otpjs/gen_server": "^0.9.14"
+    "@otpjs/gen_server": "^0.10.0-beta.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.17.6",
     "@babel/preset-env": "^7.15.6",
-    "@otpjs/core": "^0.9.14",
-    "@otpjs/test_utils": "^0.9.14",
+    "@otpjs/core": "^0.10.0-beta.0",
+    "@otpjs/test_utils": "^0.10.0-beta.0",
     "babel-jest": "^27.0.6",
     "babel-plugin-source-map-support": "^2.1.3",
     "jest": "^27.0.6"

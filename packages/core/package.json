@@ -1,6 +1,6 @@
 {
     "name": "@otpjs/core",
-    "version": "0.9.14",
+    "version": "0.10.0-beta.0",
     "description": "Open Telecom Platform",
     "keywords": [
         "otp",
@@ -41,9 +41,9 @@
     "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e",
     "dependencies": {
         "@otpjs/matching": "file:../matching",
-        "@otpjs/types": "file:../types",
         "@otpjs/serializer-json": "file:../../serializers/json",
         "@otpjs/test_utils": "file:../test_utils",
+        "@otpjs/types": "file:../types",
         "inspect-custom-symbol": "^1.1.1",
         "nanoid": "^3.1.30"
     }

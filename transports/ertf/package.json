@@ -1,6 +1,6 @@
 {
     "name": "@otpjs/transports-ertf",
-    "version": "0.9.14",
+    "version": "0.10.0-beta.0",
     "description": "> TODO: description",
     "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
     "homepage": "https://github.com/otp-js/otp-js#readme",
