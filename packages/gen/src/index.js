@@ -105,7 +105,7 @@ export function getName(name) {
     const compare = match.caseOf(name);
 
     if (compare(localName)) {
-        return name[1];
+        return name.get(1);
     } else if (compare(isPid)) {
         return name;
     } else {
