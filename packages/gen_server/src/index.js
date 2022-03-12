@@ -16,7 +16,6 @@ function log(ctx, ...args) {
 }
 
 const { ok, error, EXIT, _, normal } = core.Symbols;
-const { noreply } = Symbols;
 const { link, nolink, monitor, $gen_cast, $gen_call } = gen.Symbols;
 
 async function start(ctx, name, callbacks, args = t()) {
@@ -150,8 +149,8 @@ async function loop(ctx, callbacks, incoming, state) {
 
 const replyWithNoTimeout = t(Symbols.reply, _, _);
 const replyWithTimeout = t(Symbols.reply, _, _, Number.isInteger);
-const noreplyWithNoTimeout = t(noreply, _);
-const noreplyWithTimeout = t(noreply, _, Number.isInteger);
+const noreplyWithNoTimeout = t(Symbols.noreply, _);
+const noreplyWithTimeout = t(Symbols.noreply, _, Number.isInteger);
 const stopNoReplyDemand = t(Symbols.stop, _, _);
 const stopReplyDemand = t(Symbols.stop, _, _, _);
 
@@ -384,7 +383,7 @@ export function callbacks(builder) {
             const [, handler] = found;
             return handler(ctx, call, from, state);
         } else {
-            return [noreply, state];
+            throw OTPError(`unhandled call: ${call}`);
         }
     }
     function handleCast(ctx, cast, state) {
@@ -395,7 +394,7 @@ export function callbacks(builder) {
             const [, handler] = found;
             return handler(ctx, cast, state);
         } else {
-            return [noreply, state];
+            throw OTPError(`unhandled cast: ${cast}`);
         }
     }
     function handleInfo(ctx, info, state) {
@@ -406,7 +405,7 @@ export function callbacks(builder) {
             const [, handler] = found;
             return handler(ctx, info, state);
         } else {
-            return [noreply, state];
+            throw OTPError(`unhandled info: ${info}`);
         }
     }
 }
