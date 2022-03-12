@@ -1,7 +1,9 @@
 import { Pid, Ref, list, improperList, tuple } from '@otpjs/types';
-import { caseOf, Symbols } from '@otpjs/matching';
+import { caseOf, compile, Symbols } from '@otpjs/matching';
+import debug from 'debug';
 
 const { _ } = Symbols;
+const log = debug('otpjs:serializers:json');
 
 export function deserialize(string, reviver = undefined) {
     if (reviver) {
@@ -34,29 +36,40 @@ function kvCompose(...funs) {
     );
 }
 
-function reviveOTP(key, value) {
+const isEncodedSymbol = compile(['$otp.symbol', _]);
+const isEncodedFunction = compile(['$otp.function', _, _]);
+const isEncodedPid = compile(['$otp.pid', _]);
+const isEncodedRef = compile(['$otp.ref', _]);
+const isEncodedList = compile(['$otp.list', _, _]);
+const isEncodedTuple = compile(['$otp.tuple', _]);
+const isEncodedNil = compile('$otp.list.nil');
+function reviveOTP(key, value, reviver) {
     const compare = caseOf(value);
-    if (compare(['$otp.symbol', _])) {
+    if (compare(isEncodedSymbol)) {
         return Symbol.for(value[1]);
-    } else if (compare(['$otp.function', _, _])) {
+    } else if (compare(isEncodedFunction)) {
+        log('reviveOTP(key: %o, value: %o)', key, value);
         return new (Function.bind.apply(
             Function,
             [Function].concat(value[1], [value[2]])
         ))();
-    } else if (compare(['$otp.pid', _])) {
+    } else if (compare(isEncodedPid)) {
         return new Pid(value[1]);
-    } else if (compare(['$otp.ref', _])) {
+    } else if (compare(isEncodedRef)) {
         return new Ref(value[1]);
-    } else if (compare(['$otp.list', _, _])) {
+    } else if (compare(isEncodedList)) {
         return improperList(...value[1], value[2]);
-    } else if (compare(['$otp.tuple', _])) {
+    } else if (compare(isEncodedTuple)) {
         return tuple(...value[1]);
+    } else if (compare(isEncodedNil)) {
+        return list.nil;
     } else {
         return value;
     }
 }
 
 const isSymbol = (v) => typeof v === 'symbol';
+const isNil = (v) => v === list.nil;
 const isFunction = (v) => typeof v === 'function';
 function replaceOTP(key, value) {
     const compare = caseOf(value);
@@ -97,7 +110,9 @@ function replaceOTP(key, value) {
         let tail = node;
 
         return ['$otp.list', result, tail];
-    } else if (tuple.isTuple(value)) {
+    } else if (compare(isNil)) {
+        return '$otp.list.nil';
+    } else if (compare(tuple.isTuple)) {
         return ['$otp.tuple', Array.from(value)];
     } else {
         return value;
