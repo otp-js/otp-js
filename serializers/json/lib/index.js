@@ -75,7 +75,7 @@ function replaceOTP(key, value) {
     }
   } else if (compare(isFunction)) {
     const parts = value.toString().match(/^\s*(?:function)?[^(]*\(?([^]*?)\)\s*(?:=>)?\s*{?([^]*?)}?\s*$/);
-    if (parts == null) throw 'Function form not supported';
+    if (parts == null) throw `Function form not supported: ${value.toString()}`;
     return ['$otp.function', parts[1].trim().split(/\s*,\s*/), parts[2].replace(/\s+/, ' ')];
   } else if (compare(_types.Pid.isPid)) {
     return ['$otp.pid', value.toString()];

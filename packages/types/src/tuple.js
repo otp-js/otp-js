@@ -1,7 +1,7 @@
 import inspect from 'inspect-custom-symbol';
 
 export function Tuple(...elements) {
-    if (this === undefined) {
+    if (!(this instanceof Tuple)) {
         return new Tuple(...elements);
     }
     const size = elements.length;
@@ -78,7 +78,7 @@ Tuple.prototype[inspect] = function (depth, options, inspect) {
 };
 
 Tuple.isTuple = function (value) {
-    return value instanceof _Tuple;
+    return value instanceof Tuple;
 };
 
 export const t = Tuple;

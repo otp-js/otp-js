@@ -74,7 +74,8 @@ function replaceOTP(key, value) {
                 /^\s*(?:function)?[^(]*\(?([^]*?)\)\s*(?:=>)?\s*{?([^]*?)}?\s*$/
             );
 
-        if (parts == null) throw 'Function form not supported';
+        if (parts == null)
+            throw `Function form not supported: ${value.toString()}`;
 
         return [
             '$otp.function',

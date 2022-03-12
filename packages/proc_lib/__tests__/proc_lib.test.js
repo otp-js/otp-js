@@ -1,8 +1,10 @@
 import '@otpjs/test_utils';
 
 import * as OTP from '@otpjs/core';
-import { Pid } from '@otpjs/types';
+import { Pid, t, l } from '@otpjs/types';
 import * as proc_lib from '../src';
+
+Error.stackTraceLimit = Infinity;
 
 describe('ProcLib', function () {
     let node = null;
@@ -41,18 +43,15 @@ describe('ProcLib', function () {
         ctx.processFlag(OTP.Symbols.trap_exit, true);
 
         const result = await proc_lib.startLink(ctx, async (ctx, spawner) => {
-            proc_lib.initAck(ctx, spawner, [OTP.Symbols.ok, ctx.self()]);
+            proc_lib.initAck(ctx, spawner, t(OTP.Symbols.ok, ctx.self()));
         });
 
-        expect(OTP.compare([OTP.Symbols.ok, Pid.isPid], result)).toBe(true);
+        expect(OTP.compare(t(OTP.Symbols.ok, Pid.isPid), result)).toBe(true);
 
         const exitMessage = await ctx.receive();
 
-        expect(exitMessage).toMatchPattern([
-            OTP.Symbols.EXIT,
-            Pid.isPid,
-            OTP.Symbols._,
-            OTP.Symbols._,
-        ]);
+        expect(exitMessage).toMatchPattern(
+            t(OTP.Symbols.EXIT, Pid.isPid, OTP.Symbols._, OTP.Symbols._)
+        );
     });
 });

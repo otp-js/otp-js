@@ -3,7 +3,9 @@ export class Ref extends String {
     static REMOTE = 'r';
     static regex = /^Ref<(?<node>[0-9r]+)\.(?<ref>[0-9]+)>$/;
 
-    static isRef = (string) => string instanceof Ref;
+    static isRef(string) {
+        return string instanceof Ref;
+    }
     static for = (node, ref) => new Ref(`Ref<${node}.${ref}>`);
     static compare = (a, b) =>
         (a ?? '').toString().localeCompare((b ?? '').toString());

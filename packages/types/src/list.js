@@ -1,22 +1,56 @@
 import inspect from 'inspect-custom-symbol';
-import { nil } from './symbols';
+
+const hidden = new WeakMap();
+const nil = Object(Symbol.for('nil'));
+
+_bind(nil);
 
 export function List(head, tail = nil) {
     if (!(this instanceof List)) {
         return new List(head, tail);
     }
 
-    Object.defineProperty(this, 'head', {
+    _bind(this, head, tail);
+}
+
+function _bind(obj, head, tail, empty = false) {
+    Reflect.setPrototypeOf(obj, List.prototype);
+    Reflect.defineProperty(obj, 'head', {
         get() {
             return head;
         },
         configurable: false,
     });
-    Object.defineProperty(this, 'tail', {
+    Reflect.defineProperty(obj, 'tail', {
         get() {
             return tail;
         },
         configurable: false,
+    });
+    Reflect.defineProperty(obj, 'unshift', {
+        value(value) {
+            if (!empty) {
+                tail = cons(head, tail);
+            }
+            head = value;
+            empty = false;
+        },
+    });
+    Reflect.defineProperty(obj, 'shift', {
+        value() {
+            if (empty) {
+                return head;
+            } else if (tail !== nil && List.isList(tail)) {
+                let result = head;
+                head = tail.head;
+                tail = tail.tail;
+                return result;
+            } else if (tail === nil) {
+                head = undefined;
+                empty = true;
+                return head;
+            }
+        },
     });
 }
 
@@ -30,12 +64,97 @@ List.prototype.length = function () {
     return c;
 };
 
+List.prototype.push = function (value) {
+    if (this === nil) {
+        return cons(value, nil);
+    }
+
+    let node = this;
+    let previous = nil;
+    let stack = nil;
+
+    while (List.isList(node) && node != nil) {
+        stack.unshift(node);
+        previous = node;
+        node = node.tail;
+    }
+
+    if (!List.isList(node)) {
+        throw Error('pushed to improper list');
+    }
+
+    let result = cons(previous.head, cons(value, nil));
+    while (List.isList(stack) && stack != nil) {
+        result.unshift(stack.shift());
+    }
+
+    return result;
+};
+
+List.prototype.reverse = function () {
+    let reversed = List();
+    let node = this;
+
+    while (List.isList(node) && node != nil) {
+        reversed = cons(node.head, reversed);
+        node = node.tail;
+    }
+
+    return reversed;
+};
+
+List.prototype.replaceWhere = function (predicate, nextValue, insert) {
+    let node = this;
+    let stack = nil;
+
+    while (List.isList(node) && node != nil) {
+        if (predicate(node.head)) {
+            stack = cons(nextValue, node.tail);
+            break;
+        } else {
+            stack = cons(node.head, stack);
+        }
+
+        node = node.tail;
+    }
+
+    while (List.isList(stack) && stack != nil) {
+        node = cons(stack.head, node);
+    }
+
+    return node;
+};
+
+List.prototype.deleteIndex = function (deleteIndex) {
+    let node = this;
+    let stack = nil;
+
+    let index = 0;
+    while (List.isList(node) && node != nil) {
+        if (index == deleteIndex) {
+            node = node.tail;
+            break;
+        } else {
+            stack = cons(node.head, stack);
+        }
+
+        node = node.tail;
+        index++;
+    }
+
+    while (List.isList(stack) && stack != nil) {
+        node = cons(stack.head, node);
+    }
+
+    return node;
+};
+
 List.prototype[Symbol.iterator] = function* () {
     let node = this;
-    do {
+    while (node instanceof List && node != nil) {
         yield node.head;
         node = node.tail;
-    } while (node instanceof List);
+    }
 };
 
 List.prototype[inspect] = function inspect(
@@ -58,9 +177,7 @@ List.prototype[inspect] = function inspect(
 
     let result = '';
 
-    if (!drewPrefix) {
-        result += prefix;
-    }
+    result += prefix;
 
     let node = this;
     let firstDone = false;
@@ -84,9 +201,7 @@ List.prototype[inspect] = function inspect(
         result += ` | ${inspect(node, newOptions)}`;
     }
 
-    if (!drewPrefix) {
-        result += postfix;
-    }
+    result += postfix;
 
     return result;
 };
@@ -109,33 +224,32 @@ export function il(...elements) {
 export const cons = List;
 export const list = l;
 
-Object.defineProperty(list, 'nil', {
+Reflect.defineProperty(list, 'nil', {
     configurable: false,
     writable: false,
     value: nil,
 });
 
-Object.defineProperty(list, 'isList', {
+Reflect.defineProperty(list, 'isList', {
     configurable: false,
     writable: false,
     value: function (value) {
         return value instanceof List || value === nil;
     },
 });
-Object.defineProperty(List, 'nil', {
+Reflect.defineProperty(List, 'nil', {
     configurable: false,
     writable: false,
     value: nil,
 });
-
-Object.defineProperty(List, 'isList', {
+Reflect.defineProperty(List, 'isList', {
     configurable: false,
     writable: false,
     value: function (value) {
         return value instanceof List || value === nil;
     },
 });
-Object.defineProperty(List, 'from', {
+Reflect.defineProperty(List, 'from', {
     configurable: false,
     writable: false,
     value: function (...elements) {

@@ -6,6 +6,7 @@ import * as supervisor from '../src';
 import * as Adder from './adder';
 import * as Subtracter from './subtracter';
 import * as gen_server from '@otpjs/gen_server';
+import { t, l, cons } from '@otpjs/types';
 
 const { ok, _, trap_exit, EXIT, normal, kill, spread, error } = Symbols;
 const {
@@ -39,8 +40,8 @@ describe('@otp-js/supervisor', () => {
         ctx.processFlag(trap_exit, true);
         args = [];
         callbacks = {
-            init: jest.fn(() => {
-                return [ok, [{ strategy: one_for_one }, []]];
+            init: jest.fn(function () {
+                return t(ok, t({ strategy: one_for_one }, l()));
             }),
         };
     });
@@ -48,7 +49,7 @@ describe('@otp-js/supervisor', () => {
     it('can start a linked process', async function () {
         expect(supervisor.startLink).toBeInstanceOf(Function);
 
-        const pattern = [ok, Pid.isPid];
+        const pattern = t(ok, Pid.isPid);
         const start = supervisor.startLink(ctx, callbacks, args);
         await expect(start).resolves.toMatchPattern(pattern);
     });
@@ -73,15 +74,18 @@ describe('@otp-js/supervisor', () => {
                         init: jest.fn((ctx, ...args) => {
                             log(ctx, 'init(...%o)', args);
                             received = args;
-                            return [ok, null];
+                            return t(ok, null);
                         }),
                     };
-                    const [, pid] = await supervisor.startLink(ctx, callbacks, [
-                        arg1,
-                        arg2,
-                    ]);
+                    const [, pid] = await supervisor.startLink(
+                        ctx,
+                        callbacks,
+                        l(arg1, arg2)
+                    );
                     await new Promise((resolve) => setTimeout(resolve, 10));
                     expect(callbacks.init).toHaveBeenCalled();
+
+                    // use of spread operator means we'll capture this as an array
                     expect(received).toMatchPattern([arg1, arg2]);
                 });
             });
@@ -98,11 +102,11 @@ describe('@otp-js/supervisor', () => {
                 beforeEach(function () {
                     adder = jest.fn(Adder.startLink);
                     subtracter = jest.fn(Subtracter.startLink);
-                    config = [
+                    config = t(
                         {
                             strategy: one_for_one,
                         },
-                        [
+                        l(
                             {
                                 id: 'adder',
                                 start: [adder, [1, 2, 3]],
@@ -112,14 +116,14 @@ describe('@otp-js/supervisor', () => {
                                 id: 'subtracter',
                                 start: [subtracter, [1, 2, 3]],
                                 restart: transient,
-                            },
-                        ],
-                    ];
+                            }
+                        )
+                    );
 
                     callbacks = {
                         init: jest.fn((ctx, ...args) => {
                             log(ctx, 'callbacks.init()');
-                            return [ok, config];
+                            return t(ok, config);
                         }),
                     };
                 });
@@ -130,10 +134,9 @@ describe('@otp-js/supervisor', () => {
                         response = supervisor.startLink(ctx, callbacks);
                     }).not.toThrow();
 
-                    await expect(response).resolves.toMatchPattern([
-                        ok,
-                        Pid.isPid,
-                    ]);
+                    await expect(response).resolves.toMatchPattern(
+                        t(ok, Pid.isPid)
+                    );
 
                     const [, pid] = await response;
 
@@ -142,13 +145,19 @@ describe('@otp-js/supervisor', () => {
                     ).resolves.toBe(2);
                     await expect(
                         supervisor.whichChildren(ctx, pid)
-                    ).resolves.toMatchPattern([
-                        ok,
-                        [
-                            { id: 'adder', pid: Pid.isPid, [spread]: _ },
-                            { id: 'subtracter', pid: Pid.isPid, [spread]: _ },
-                        ],
-                    ]);
+                    ).resolves.toMatchPattern(
+                        t(
+                            ok,
+                            l(
+                                { id: 'adder', pid: Pid.isPid, [spread]: _ },
+                                {
+                                    id: 'subtracter',
+                                    pid: Pid.isPid,
+                                    [spread]: _,
+                                }
+                            )
+                        )
+                    );
 
                     node.exit(pid, kill);
                 });
@@ -186,10 +195,12 @@ describe('@otp-js/supervisor', () => {
                         ctx,
                         pid
                     );
-                    expect(nextChildren).toMatchPattern([
-                        { id: 'adder', pid: Pid.isPid },
-                        { id: 'subtracter', pid: Pid.isPid },
-                    ]);
+                    expect(nextChildren).toMatchPattern(
+                        l(
+                            { id: 'adder', pid: Pid.isPid },
+                            { id: 'subtracter', pid: Pid.isPid }
+                        )
+                    );
                 });
             });
 
@@ -205,18 +216,16 @@ describe('@otp-js/supervisor', () => {
                     start = jest.fn(Adder.startLink);
                     callbacks = {
                         init: jest.fn(() => {
-                            return [
+                            return t(
                                 ok,
-                                [
+                                t(
                                     { strategy: simple_one_for_one },
-                                    [
-                                        {
-                                            start: [start, [1, 2, 3]],
-                                            restart: transient,
-                                        },
-                                    ],
-                                ],
-                            ];
+                                    l({
+                                        start: [start, [1, 2, 3]],
+                                        restart: transient,
+                                    })
+                                )
+                            );
                         }),
                     };
                 });
@@ -225,10 +234,9 @@ describe('@otp-js/supervisor', () => {
                     expect(function () {
                         response = supervisor.startLink(ctx, callbacks);
                     }).not.toThrow();
-                    await expect(response).resolves.toMatchPattern([
-                        ok,
-                        Pid.isPid,
-                    ]);
+                    await expect(response).resolves.toMatchPattern(
+                        t(ok, Pid.isPid)
+                    );
 
                     const [, pid] = await response;
 
@@ -237,23 +245,22 @@ describe('@otp-js/supervisor', () => {
                     ).resolves.toBe(0);
                     await expect(
                         supervisor.whichChildren(ctx, pid)
-                    ).resolves.toMatchPattern([ok, []]);
+                    ).resolves.toMatchPattern(t(ok, l()));
 
                     expect(start).not.toHaveBeenCalled();
                     expect(callbacks.init.mock.results[0].value).toMatchPattern(
-                        [ok, [{ strategy: simple_one_for_one }, [spread]]]
+                        t(ok, t({ strategy: simple_one_for_one }, l.isList))
                     );
                 });
                 it('spawns processes when startChild is called', async function () {
                     const [, pid] = await supervisor.startLink(ctx, callbacks);
                     for (let i = 0; i < 10; i++) {
                         log(ctx, 'startChild(%o)', i);
-                        const response = supervisor.startChild(ctx, pid, [i]);
+                        const response = supervisor.startChild(ctx, pid, l(i));
 
-                        await expect(response).resolves.toMatchPattern([
-                            ok,
-                            Pid.isPid,
-                        ]);
+                        await expect(response).resolves.toMatchPattern(
+                            t(ok, Pid.isPid)
+                        );
 
                         const [, child] = await response;
 
@@ -261,7 +268,7 @@ describe('@otp-js/supervisor', () => {
                         expect(start.mock.calls[i][4]).toMatchPattern(i);
                         await expect(
                             start.mock.results[i].value
-                        ).resolves.toMatchPattern([ok, Pid.isPid]);
+                        ).resolves.toMatchPattern(t(ok, Pid.isPid));
 
                         // Adder adds six by default, we have extended with i
                         await expect(
@@ -278,10 +285,10 @@ describe('@otp-js/supervisor', () => {
                     beforeEach(function () {
                         serverCallbacks = {
                             init: jest.fn(() => {
-                                return [ok, null];
+                                return t(ok, null);
                             }),
                             handleCast: jest.fn((_ctx, _cast, state) => {
-                                return [stop, normal, state];
+                                return t(stop, normal, state);
                             }),
                         };
                         start = jest.fn((ctx, ...args) =>
@@ -289,18 +296,16 @@ describe('@otp-js/supervisor', () => {
                         );
                         callbacks = {
                             init: jest.fn(() => {
-                                return [
+                                return t(
                                     ok,
-                                    [
+                                    t(
                                         { strategy: simple_one_for_one },
-                                        [
-                                            {
-                                                start: [start, [1, 2, 3]],
-                                                restart: transient,
-                                            },
-                                        ],
-                                    ],
-                                ];
+                                        l({
+                                            start: [start, [1, 2, 3]],
+                                            restart: transient,
+                                        })
+                                    )
+                                );
                             }),
                         };
                     });
@@ -309,14 +314,13 @@ describe('@otp-js/supervisor', () => {
                             ctx,
                             callbacks
                         );
-                        const response = supervisor.startChild(ctx, pid, [1]);
-                        await expect(response).resolves.toMatchPattern([
-                            ok,
-                            Pid.isPid,
-                        ]);
+                        const response = supervisor.startChild(ctx, pid, l(1));
+                        await expect(response).resolves.toMatchPattern(
+                            t(ok, Pid.isPid)
+                        );
                         await expect(
                             supervisor.whichChildren(ctx, pid)
-                        ).resolves.toMatchPattern([ok, [_]]);
+                        ).resolves.toMatchPattern(t(ok, l(_)));
 
                         const [, childPid] = await response;
                         gen_server.cast(ctx, childPid, 'stop');
@@ -326,7 +330,7 @@ describe('@otp-js/supervisor', () => {
 
                         await expect(
                             supervisor.whichChildren(ctx, pid)
-                        ).resolves.toMatchPattern([ok, []]);
+                        ).resolves.toMatchPattern(t(ok, l()));
                     });
                 });
             });

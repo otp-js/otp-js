@@ -3,7 +3,9 @@ export class Pid extends String {
     static REMOTE = 'r';
     static regex = /^Pid<(?<node>[0-9r]+)\.(?<process>[0-9]+)>$/;
 
-    static isPid = (string) => string instanceof Pid;
+    static isPid(string) {
+        return string instanceof Pid;
+    }
     static of = (node, process) => new Pid(`Pid<${node}.${process}>`);
     static compare = (a, b) =>
         (a ?? '').toString().localeCompare((b ?? '').toString());

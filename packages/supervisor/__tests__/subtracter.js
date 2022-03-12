@@ -1,27 +1,28 @@
 import { Symbols } from '@otpjs/core';
 import * as gen_server from '@otpjs/gen_server';
+import { t, l } from '@otpjs/types';
 
 const { ok } = Symbols;
 const { noreply, reply } = gen_server.Symbols;
 
 function init(ctx, ...initial) {
     const state = initial.reduce((acc, n) => acc - n, 0);
-    return [ok, state];
+    return t(ok, state);
 }
 
 function handleCall(ctx, call, from, state) {
     const nextState = state - call;
-    return [reply, nextState, nextState];
+    return t(reply, nextState, nextState);
 }
 
 function handleCast(ctx, cast, state) {
     const nextState = state - cast;
-    return [noreply, nextState];
+    return t(noreply, nextState);
 }
 
 function handleInfo(ctx, info, state) {
     const nextState = state - info;
-    return [noreply, nextState];
+    return t(noreply, nextState);
 }
 
 const callbacks = { init, handleCall, handleCast, handleInfo };

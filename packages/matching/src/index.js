@@ -221,12 +221,12 @@ function tupleComparator(pattern, comparisons, subComparisons = []) {
 
     const size = pattern.size;
     comparisons.push(function matchesSize(message) {
-        log('%o(%o) : matchesSize(%o)', tupleComparator, pattern, length);
-        return message.length === length;
+        log('%o(%o) : matchesSize(%o)', tupleComparator, pattern, size);
+        return message.size === size;
     });
 
     for (let index = 0; index < pattern.size; index++) {
-        const subPattern = pattern[index];
+        const subPattern = pattern.get(index);
         const subComparison = compile(subPattern);
         subComparisons.push(subComparison);
     }
@@ -239,7 +239,7 @@ function tupleComparator(pattern, comparisons, subComparisons = []) {
 
         for (index = 0; index < subComparisons.length && matches; index++) {
             const compare = subComparisons[index];
-            matches = matches && compare(message[index]);
+            matches = matches && compare(message.get(index));
         }
 
         return matches;
@@ -248,6 +248,13 @@ function tupleComparator(pattern, comparisons, subComparisons = []) {
 
 function listComparator(pattern, comparisons, subComparisons = []) {
     comparisons.push(list.isList);
+
+    if (pattern == list.nil) {
+        simpleComparator(pattern, comparisons);
+        return;
+    }
+
+    log('listComparator(list.nil: %o)', list.nil);
 
     let node = pattern;
     while (list.isList(node) && node != list.nil) {

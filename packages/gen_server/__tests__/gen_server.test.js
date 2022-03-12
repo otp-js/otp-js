@@ -1,6 +1,6 @@
 import { Node, Symbols } from '@otpjs/core';
 import { caseOf } from '@otpjs/matching';
-import { OTPError, Pid } from '@otpjs/types';
+import { OTPError, Pid, t, l } from '@otpjs/types';
 import '@otpjs/test_utils';
 import * as GenServer from '../src';
 
@@ -17,17 +17,17 @@ async function wait(ms) {
 
 function init(ctx) {
     const state = null;
-    return [ok, state];
+    return t(ok, state);
 }
 
 function handleCall(ctx, message, from, state) {
     const compare = caseOf(message);
     log(ctx, 'handleCall(%o)', message);
-    if (compare(['set', _])) {
+    if (compare(t('set', _))) {
         const [_command, value] = message;
-        return [reply, ok, value];
+        return t(reply, ok, value);
     } else if (compare('get')) {
-        return [reply, state, state];
+        return t(reply, state, state);
     } else {
         throw new OTPError('invalid_call');
     }
@@ -35,9 +35,9 @@ function handleCall(ctx, message, from, state) {
 
 function handleCast(ctx, command, state) {
     const compare = caseOf(command);
-    if (compare(['set', _])) {
+    if (compare(t('set', _))) {
         const [, value] = command;
-        return [noreply, value];
+        return t(noreply, value);
     } else {
         throw new OTPError('invalid_cast');
     }
@@ -47,9 +47,9 @@ function handleInfo(ctx, command, state) {
     const ok = true;
 
     const compare = caseOf(command);
-    if (compare(['set', _])) {
+    if (compare(t('set', _))) {
         const [, value] = command;
-        return [noreply, value];
+        return t(noreply, value);
     } else {
         throw new OTPError('invalid_info');
     }
@@ -78,10 +78,9 @@ function describeGenServer() {
     it('starts a process', async function () {
         expect(GenServer.start).toBeInstanceOf(Function);
 
-        expect(await GenServer.start(ctx, callbacks)).toMatchPattern([
-            ok,
-            Pid.isPid,
-        ]);
+        expect(await GenServer.start(ctx, callbacks)).toMatchPattern(
+            t(ok, Pid.isPid)
+        );
     });
 
     it('can link on start', async function () {
@@ -96,7 +95,7 @@ function describeGenServer() {
 
         const [_ok, pid] = await GenServer.start(ctx, callbacks);
         const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-        const resultA = await GenServer.call(ctx, pid, ['set', value]);
+        const resultA = await GenServer.call(ctx, pid, t('set', value));
 
         log(ctx, 'resultA : %o', resultA);
         expect(resultA).toBe(ok);
@@ -112,7 +111,7 @@ function describeGenServer() {
         const [_ok, pid] = await GenServer.start(ctx, callbacks);
         const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
-        await GenServer.cast(ctx, pid, ['set', value]);
+        await GenServer.cast(ctx, pid, t('set', value));
 
         const result = await GenServer.call(ctx, pid, 'get');
 
@@ -123,7 +122,7 @@ function describeGenServer() {
         const [_ok, pid] = await GenServer.start(ctx, callbacks);
         const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
-        await ctx.send(pid, ['set', value]);
+        await ctx.send(pid, t('set', value));
 
         log(ctx, 'GenServer.call(%o, get)', pid);
         const result = await GenServer.call(ctx, pid, 'get');
@@ -136,13 +135,12 @@ function describeGenServer() {
             init,
         });
 
-        expect(response).toMatchPattern([
-            error,
-            {
+        expect(response).toMatchPattern(
+            t(error, {
                 message: 'dying',
                 [spread]: _,
-            },
-        ]);
+            })
+        );
 
         function init(ctx) {
             throw new OTPError('dying');
@@ -155,11 +153,11 @@ function describeGenServer() {
             init,
         });
 
-        expect(response).toMatchPattern([error, 'init_failed']);
+        expect(response).toMatchPattern(t(error, 'init_failed'));
 
         function init(ctx) {
             const reason = 'init_failed';
-            return [stop, reason];
+            return t(stop, reason);
         }
     });
 
@@ -169,11 +167,11 @@ function describeGenServer() {
             init,
         });
 
-        expect(response).toMatchPattern([error, normal]);
+        expect(response).toMatchPattern(t(error, normal));
 
         function init(ctx) {
             const reason = normal;
-            return [stop, reason];
+            return t(stop, reason);
         }
     });
 
@@ -183,16 +181,15 @@ function describeGenServer() {
             init,
         });
 
-        expect(response).toMatchPattern([
-            error,
-            {
+        expect(response).toMatchPattern(
+            t(error, {
                 message: 'init_failed',
                 [spread]: _,
-            },
-        ]);
+            })
+        );
 
         const message = await ctx.receive();
-        expect(message).toMatchPattern([EXIT, _, 'init_failed', _]);
+        expect(message).toMatchPattern(t(EXIT, _, 'init_failed', _));
 
         function init(_ctx) {
             const reason = 'init_failed';
@@ -236,12 +233,9 @@ function describeGenServer() {
 
             await wait(100);
 
-            await expect(ctx.receive()).resolves.toMatchPattern([
-                EXIT,
-                pid,
-                _,
-                _,
-            ]);
+            await expect(ctx.receive()).resolves.toMatchPattern(
+                t(EXIT, pid, _, _)
+            );
         })
     );
     // Above line goes away when testing single method

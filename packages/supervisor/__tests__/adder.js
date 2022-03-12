@@ -1,4 +1,5 @@
 import { Symbols, caseOf } from '@otpjs/core';
+import { t, l } from '@otpjs/types';
 import * as gen_server from '@otpjs/gen_server';
 
 const { ok } = Symbols;
@@ -6,7 +7,7 @@ const { noreply, reply } = gen_server.Symbols;
 
 function init(ctx, ...initial) {
     const state = initial.reduce((acc, n) => acc + n, 0);
-    return [ok, state];
+    return t(ok, state);
 }
 
 function handleCall(ctx, call, from, state) {
@@ -14,20 +15,20 @@ function handleCall(ctx, call, from, state) {
 
     if (compare((n) => typeof n === 'number')) {
         const nextState = state + call;
-        return [reply, nextState, nextState];
+        return t(reply, nextState, nextState);
     } else if (compare('get')) {
-        return [reply, state, state];
+        return t(reply, state, state);
     }
 }
 
 function handleCast(ctx, cast, state) {
     const nextState = state + cast;
-    return [noreply, nextState];
+    return t(noreply, nextState);
 }
 
 function handleInfo(ctx, info, state) {
     const nextState = state + info;
-    return [noreply, nextState];
+    return t(noreply, nextState);
 }
 
 const callbacks = { init, handleCall, handleCast, handleInfo };

@@ -1,4 +1,5 @@
 import * as core from '../src';
+import { t, l } from '@otpjs/types';
 import '@otpjs/test_utils';
 
 function log(ctx, ...args) {
@@ -164,13 +165,9 @@ describe('@otpjs/core.Node', () => {
                     resolve(await ctx.receive());
                 });
             });
-            await expect(result).resolves.toMatchPattern([
-                DOWN,
-                ref,
-                'process',
-                procA,
-                normal,
-            ]);
+            await expect(result).resolves.toMatchPattern(
+                t(DOWN, ref, 'process', procA, normal)
+            );
         });
     });
 });
