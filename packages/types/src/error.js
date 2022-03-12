@@ -2,16 +2,14 @@ import { tuple } from '@otpjs/types';
 
 export class OTPError extends Error {
     #original;
+    get term() {
+        return this.#original;
+    }
 
     constructor(message) {
-        let json = null;
-        if (typeof message !== 'string' && typeof message !== 'number') {
-            json = JSON.stringify(message);
-        }
-
-        super(json ?? null);
-
+        super(JSON.stringify(message));
         this.#original = message;
+        Error.captureStackTrace(this, OTPError);
     }
 
     [Symbol.for('nodejs.util.inspect.custom')](depth, options, inspect) {
