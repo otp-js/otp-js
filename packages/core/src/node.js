@@ -104,7 +104,7 @@ export class Node {
                 ctx._link(watchee);
                 watchee._link(pidA);
             } else {
-                this.deliver(pidA, [EXIT, pidB, 'noproc', Error().stack]);
+                this.deliver(pidA, t(EXIT, pidB, 'noproc', Error().stack));
             }
             return ok;
         } else if (compare(Pid.isPid)) {
@@ -112,13 +112,16 @@ export class Node {
             const router = this._routersById.get(pidB.node);
             if (router) {
                 ctx._link(pidB);
-                this.deliver(router.pid, [link, pidB, pidA]);
+                this.deliver(router.pid, t(link, pidB, pidA));
             } else {
-                this.deliver(pidA, [EXIT, pidB, 'noconnection', Error().stack]);
+                this.deliver(
+                    pidA,
+                    t(EXIT, pidB, 'noconnection', Error().stack)
+                );
             }
             return ok;
         } else {
-            throw new OTPError([badarg, pidB]);
+            throw new OTPError(t(badarg, pidB));
         }
     }
 
@@ -135,7 +138,7 @@ export class Node {
                 ctx._unlink(watchee);
                 watchee._unlink(pidA);
             } else {
-                this.deliver(pidA, [EXIT, pidB, 'noproc', Error().stack]);
+                this.deliver(pidA, t(EXIT, pidB, 'noproc', Error().stack));
             }
             return ok;
         } else if (compare(Pid.isPid)) {
@@ -143,13 +146,16 @@ export class Node {
             const router = this._routers.get(node);
             if (router) {
                 ctx._unlink(pidB);
-                this.deliver(router.pid, [unlink, pidB, pidA]);
+                this.deliver(router.pid, t(unlink, pidB, pidA));
             } else {
-                this.deliver(pidA, [EXIT, pidB, 'noconnection', Error().stack]);
+                this.deliver(
+                    pidA,
+                    t(EXIT, pidB, 'noconnection', Error().stack)
+                );
             }
             return ok;
         } else {
-            throw new OTPError([badarg, pidB]);
+            throw new OTPError(t(badarg, pidB));
         }
     }
 
@@ -166,33 +172,25 @@ export class Node {
                 watchee._monitor(ref, watcherPid);
                 this._monitors.set(ref, watchee);
             } else {
-                this.deliver(watcherPid, [
-                    DOWN,
-                    ref,
-                    'process',
-                    watcheePid,
-                    'noproc',
-                ]);
+                this.deliver(
+                    watcherPid,
+                    t(DOWN, ref, 'process', watcheePid, 'noproc')
+                );
             }
             return ref;
         } else if (compare(Pid.isPid)) {
             this._log('monitor(%o, %o) : remote', watcherPid, watcheePid);
             const router = this._routersById.get(watcheePid.node);
             if (router) {
-                this.deliver(router.pid, [
-                    monitor,
-                    watcheePid,
-                    ref,
-                    watcherPid,
-                ]);
+                this.deliver(
+                    router.pid,
+                    t(monitor, watcheePid, ref, watcherPid)
+                );
             } else {
-                this.deliver(watcherPid, [
-                    DOWN,
-                    ref,
-                    'process',
-                    watcheePid,
-                    'noconnection',
-                ]);
+                this.deliver(
+                    watcherPid,
+                    t(DOWN, ref, 'process', watcheePid, 'noconnection')
+                );
             }
         } else if (compare(t(_, _))) {
             const [name, node] = watcheePid;
@@ -201,15 +199,12 @@ export class Node {
             } else {
                 const router = this._routers.get(node);
                 if (router) {
-                    this.deliver(router.pid, [monitor, name, ref, watcherPid]);
+                    this.deliver(router.pid, t(monitor, name, ref, watcherPid));
                 } else {
-                    this.deliver(watcherPid, [
-                        DOWN,
-                        ref,
-                        'process',
-                        watcheePid,
-                        'noconnection',
-                    ]);
+                    this.deliver(
+                        watcherPid,
+                        t(DOWN, ref, 'process', watcheePid, 'noconnection')
+                    );
                 }
                 return ref;
             }
@@ -399,7 +394,7 @@ export class Node {
         }
 
         function _discover(source, score, name, pid) {
-            return [discover, source, score, name, pid];
+            return t(discover, source, score, name, pid);
         }
     }
 
@@ -436,7 +431,7 @@ export class Node {
         return ok;
 
         function _lost(_source, _score, _name, pid) {
-            return [lost, pid];
+            return t(lost, pid);
         }
     }
 
@@ -451,7 +446,7 @@ export class Node {
         if (router) {
             return router.name;
         } else {
-            throw new OTPError(['unrecognized_router_id', id]);
+            throw new OTPError(t('unrecognized_router_id', id));
         }
     }
 
@@ -461,7 +456,7 @@ export class Node {
         if (router) {
             return router.id;
         } else {
-            throw new OTPError(['unrecognized_router_name', name]);
+            throw new OTPError(t('unrecognized_router_name', name));
         }
     }
 
@@ -532,19 +527,19 @@ export class Node {
                 this._log('deliver(%o) : PID : REMOTE', to, to.node);
                 const router = this._routersById.get(to.node);
                 if (router) {
-                    return this.deliver(router.pid, [relay, to, message]);
+                    return this.deliver(router.pid, t(relay, to, message));
                 } else {
                     return ok;
                 }
             }
-        } else if (compare([_, _])) {
+        } else if (compare(t(_, _))) {
             const [name, node] = to;
             if (node === this.name) {
                 return this.deliver(name, message);
             } else {
                 const router = this._routers.get(node);
                 if (router) {
-                    return this.deliver(router.pid, [relay, name, message]);
+                    return this.deliver(router.pid, t(relay, name, message));
                 } else {
                     return ok;
                 }
