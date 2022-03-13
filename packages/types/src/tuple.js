@@ -6,7 +6,7 @@ export function Tuple(...elements) {
     }
     const size = elements.length;
 
-    for (let i = 0; i < size; ++i) {
+    for (let i = 0; i < size; i++) {
         Reflect.defineProperty(this, i, {
             get() {
                 return elements[i];
@@ -15,6 +15,7 @@ export function Tuple(...elements) {
                 elements[i] = value;
             },
             configurable: false,
+            enumerable: true,
         });
     }
 
@@ -23,6 +24,7 @@ export function Tuple(...elements) {
             return size;
         },
         configurable: false,
+        enumerable: false,
     });
     Reflect.defineProperty(this, 'get', {
         value: function get(index) {
@@ -35,6 +37,7 @@ export function Tuple(...elements) {
         },
         configurable: false,
         writable: false,
+        enumerable: false,
     });
     Reflect.defineProperty(this, 'set', {
         value: function set(index, value) {
@@ -47,6 +50,7 @@ export function Tuple(...elements) {
         },
         configurable: false,
         writable: false,
+        enumerable: false,
     });
 }
 
