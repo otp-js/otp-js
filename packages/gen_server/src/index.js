@@ -168,7 +168,7 @@ async function handleCallReply(ctx, callbacks, from, state, result) {
         return t(ok, nextState, timeout);
     } else if (compare(t(ok, noreplyWithNoTimeout))) {
         const [ok, [, nextState]] = result;
-        return [ok, nextState, Infinity];
+        return t(ok, nextState, Infinity);
     } else if (compare(t(ok, noreplyWithTimeout))) {
         const [ok, [, nextState, timeout]] = result;
         return t(ok, nextState, timeout);
