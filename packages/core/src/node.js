@@ -512,6 +512,16 @@ export class Node {
     }
 
     deliver(to, message) {
+        try {
+            this.#deliver(to, message);
+            return ok;
+        } catch (err) {
+            this._log('deliver(%o) : error : %o', err);
+            return ok;
+        }
+    }
+
+    #deliver(to, message) {
         const compare = caseOf(to);
         if (compare(Pid.isPid)) {
             to = new Pid(to);
@@ -527,7 +537,7 @@ export class Node {
                 this._log('deliver(%o) : PID : REMOTE', to, to.node);
                 const router = this._routersById.get(to.node);
                 if (router) {
-                    return this.deliver(router.pid, t(relay, to, message));
+                    return this.#deliver(router.pid, t(relay, to, message));
                 } else {
                     return ok;
                 }
@@ -535,11 +545,11 @@ export class Node {
         } else if (compare(t(_, _))) {
             const [name, node] = to;
             if (node === this.name) {
-                return this.deliver(name, message);
+                return this.#deliver(name, message);
             } else {
                 const router = this._routers.get(node);
                 if (router) {
-                    return this.deliver(router.pid, t(relay, name, message));
+                    return this.#deliver(router.pid, t(relay, name, message));
                 } else {
                     return ok;
                 }
@@ -553,7 +563,7 @@ export class Node {
                 this._registrations
             );
             to = this._registrations.get(to);
-            return this.deliver(to, message);
+            return this.#deliver(to, message);
         }
     }
 

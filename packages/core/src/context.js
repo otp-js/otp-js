@@ -86,13 +86,9 @@ export class Context {
 
     _notifyLinks(reason) {
         const pid = this.self();
-        this[links].forEach((link) => {
-            try {
-                this.send(link, t(EXIT, pid, reason, Error().stack));
-            } catch (err) {
-                this.log('_notifyLinks() : error : %o', err);
-            }
-        });
+        for (let link of this[links]) {
+            this.send(link, t(EXIT, pid, reason, Error().stack));
+        }
     }
 
     _monitor(ref, watcher) {
@@ -105,13 +101,9 @@ export class Context {
 
     _notifyMonitors(reason) {
         const pid = this.self();
-        this[monitors].forEach((monitor, ref) => {
-            try {
-                this.send(monitor, t(DOWN, ref, 'process', pid, reason));
-            } catch (err) {
-                this.log('_notifyMonitors() : error : %o', err);
-            }
-        });
+        for (let [ref, monitor] of this[monitors]) {
+            this.send(monitor, t(DOWN, ref, 'process', pid, reason));
+        }
     }
 
     destroy(reason) {
@@ -165,7 +157,6 @@ export class Context {
                 return this[node][operation](...args);
             } catch (err) {
                 this._log('forward(%o, %o) : error : %o', operation, name, err);
-                throw err;
             }
         };
     }
@@ -181,7 +172,6 @@ export class Context {
                     name,
                     err
                 );
-                throw err;
             }
         };
     }
@@ -197,7 +187,6 @@ export class Context {
                     name,
                     err
                 );
-                throw err;
             }
         };
     }
