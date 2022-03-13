@@ -6,13 +6,25 @@ export function Tuple(...elements) {
     }
     const size = elements.length;
 
-    Object.defineProperty(this, 'size', {
+    for (let i = 0; i < size; ++i) {
+        Reflect.defineProperty(this, i, {
+            get() {
+                return elements[i];
+            },
+            set(value) {
+                elements[i] = value;
+            },
+            configurable: false,
+        });
+    }
+
+    Reflect.defineProperty(this, 'size', {
         get() {
             return size;
         },
         configurable: false,
     });
-    Object.defineProperty(this, 'get', {
+    Reflect.defineProperty(this, 'get', {
         value: function get(index) {
             if (index >= size) {
                 throw RangeError(
@@ -24,7 +36,7 @@ export function Tuple(...elements) {
         configurable: false,
         writable: false,
     });
-    Object.defineProperty(this, 'set', {
+    Reflect.defineProperty(this, 'set', {
         value: function set(index, value) {
             if (index >= size) {
                 throw RangeError(
