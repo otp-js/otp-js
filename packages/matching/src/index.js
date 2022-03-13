@@ -101,7 +101,7 @@ function simpleComparator(pattern, comparisons) {
     comparisons.push(function simpleCompare(message) {
         log(
             '%o(%o, %o) = %o',
-            simpleCompare,
+            simpleCompare.name,
             pattern,
             message,
             pattern === message
@@ -119,15 +119,15 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
     });
 
     if (spreadIndex >= 0) {
-        log('%o(%o)', arrayComparator, pattern);
+        log('%o(%o)', arrayComparator.name, pattern);
         if (spreadIndex < pattern.length - 2) {
-            log('%o(%o) : invalid_pattern', arrayComparator, pattern);
+            log('%o(%o) : invalid_pattern', arrayComparator.name, pattern);
             throw new OTPError('invalid_match_pattern');
         } else {
             const length = spreadIndex;
             log(
                 '%o(%o) : containsAtLeast(%o)',
-                arrayComparator,
+                arrayComparator.name,
                 pattern,
                 length
             );
@@ -137,13 +137,18 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
         }
     } else {
         const length = pattern.length;
-        log('%o(%o) : matchesLength(%o)', arrayComparator, pattern, length);
+        log(
+            '%o(%o) : matchesLength(%o)',
+            arrayComparator.name,
+            pattern,
+            length
+        );
         comparisons.push(function matchesLength(message) {
             return message.length === length;
         });
     }
 
-    log('%o(%o)', arrayComparator, pattern);
+    log('%o(%o)', arrayComparator.name, pattern);
     for (let index = 0; index < pattern.length; index++) {
         const subPattern = pattern[index];
         log(
@@ -154,11 +159,11 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
             subPattern
         );
         if (subPattern === spread) {
-            log('%o(%o) : spread', arrayComparator, pattern);
+            log('%o(%o) : spread', arrayComparator.name, pattern);
             if (pattern.length === spreadIndex + 2) {
                 log(
                     '%o(%o) : spreadPattern : %o',
-                    arrayComparator,
+                    arrayComparator.name,
                     pattern,
                     spreadPattern
                 );
@@ -168,7 +173,7 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
             const subComparison = compile(subPattern);
             log(
                 '%o(%o) : subComparisons.push(%o)',
-                arrayComparator,
+                arrayComparator.name,
                 pattern,
                 subComparison
             );
@@ -180,13 +185,18 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
         let index;
         let matches = true;
 
-        log('%o(%o) : begin : %o', compareArrayItems, message, subComparisons);
+        log(
+            '%o(%o) : begin : %o',
+            compareArrayItems.name,
+            message,
+            subComparisons
+        );
 
         for (index = 0; index < subComparisons.length && matches; index++) {
             const compare = subComparisons[index];
             log(
                 '%o(%o) : %o(%o)',
-                compareArrayItems,
+                compareArrayItems.name,
                 message,
                 compare,
                 message[index]
@@ -194,7 +204,7 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
             matches = matches && compare(message[index]);
         }
 
-        log('%o(%o) : end : %O', compareArrayItems, message, matches);
+        log('%o(%o) : end : %O', compareArrayItems.name, message, matches);
 
         return matches;
     });
@@ -208,7 +218,7 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
                 index < message.length && matches;
                 index++
             ) {
-                log('%o(%o)', compareSpread, message[index]);
+                log('%o(%o)', compareSpread.name, message[index]);
                 matches = matches && compareSpread(message[index]);
             }
             return matches;
@@ -221,7 +231,7 @@ function tupleComparator(pattern, comparisons, subComparisons = []) {
 
     const size = pattern.size;
     comparisons.push(function matchesSize(message) {
-        log('%o(%o) : matchesSize(%o)', tupleComparator, pattern, size);
+        log('%o(%o) : matchesSize(%o)', tupleComparator.name, pattern, size);
         return message.size === size;
     });
 
@@ -235,7 +245,7 @@ function tupleComparator(pattern, comparisons, subComparisons = []) {
         let index;
         let matches = true;
 
-        log('%o(%o)', compareTupleItems, message);
+        log('%o(%o)', compareTupleItems.name, message);
 
         for (index = 0; index < subComparisons.length && matches; index++) {
             const compare = subComparisons[index];
@@ -273,7 +283,7 @@ function listComparator(pattern, comparisons, subComparisons = []) {
         let matches = true;
         let node = message;
 
-        log('%o(%o)', compareListItems, node);
+        log('%o(%o)', compareListItems.name, node);
 
         for (
             index = 0;
