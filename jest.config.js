@@ -1,25 +1,24 @@
 module.exports = {
-    testRegex: "(/test/.*|(\\.|/)(test|spec))\\.(jsx?)$",
+    automock: false,
+    testRegex: '(/test/.*|(\\.|/)(test|spec))\\.(jsx?)$',
     transform: {
-        "\\.jsx?$": "babel-jest"
+        '\\.jsx?$': 'babel-jest',
     },
     moduleNameMapper: {
-        "@valkyrie/transports-(.*)": "<rootDir>/transports/$1/src/index.js",
-        "@valkyrie/(.*)": "<rootDir>/packages/$1/src/index.js"
+        '@otpjs/transports-(.*)': '<rootDir>/transports/$1/src/index.js',
+        '@otpjs/serializer-(.*)': '<rootDir>/serializers/$1/src/index.js',
+        '@otpjs/(.*)': '<rootDir>/packages/$1/src/index.js',
     },
     setupFilesAfterEnv: ['./tools/regenerator.js'],
-    moduleFileExtensions: ["js", "jsx", "json", "node"],
+    moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
     collectCoverage: true,
-    collectCoverageFrom: [
-        "packages/*/src/**/*.js",
-        "transports/*/src/**/*.js"
-    ],
+    collectCoverageFrom: ['packages/*/src/**/*.js', 'transports/*/src/**/*.js'],
     rootDir: __dirname,
     testEnvironment: 'node',
     coverageReporters: [
-        "json",
-        "text",
-        "clover",
-        ["lcov", { projectRoot: __dirname }]
-    ]
+        'json',
+        'text',
+        'clover',
+        ['lcov', { projectRoot: __dirname }],
+    ],
 };
