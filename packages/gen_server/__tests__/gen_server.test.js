@@ -1,15 +1,16 @@
 import { Node, Symbols } from '@otpjs/core';
-import { caseOf } from '@otpjs/matching';
+import * as matching from '@otpjs/matching';
 import { OTPError, Pid, t, l } from '@otpjs/types';
 import '@otpjs/test_utils';
-import * as GenServer from '../src';
+import * as gen_server from '../src';
 
 function log(ctx, ...args) {
     const d = ctx.log.extend('gen_server:__tests__');
     return d(...args);
 }
-const { ok, _, spread, error, EXIT, trap_exit, normal } = Symbols;
-const { reply, noreply, stop } = GenServer.Symbols;
+const { ok, error, EXIT, trap_exit, normal } = Symbols;
+const { _, spread } = matching.Symbols;
+const { reply, noreply, stop } = gen_server.Symbols;
 
 async function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -21,7 +22,7 @@ function init(ctx) {
 }
 
 function handleCall(ctx, message, from, state) {
-    const compare = caseOf(message);
+    const compare = matching.caseOf(message);
     log(ctx, 'handleCall(%o)', message);
     if (compare(t('set', _))) {
         const [_command, value] = message;
@@ -34,7 +35,7 @@ function handleCall(ctx, message, from, state) {
 }
 
 function handleCast(ctx, command, state) {
-    const compare = caseOf(command);
+    const compare = matching.caseOf(command);
     if (compare(t('set', _))) {
         const [, value] = command;
         return t(noreply, value);
@@ -46,7 +47,7 @@ function handleCast(ctx, command, state) {
 function handleInfo(ctx, command, state) {
     const ok = true;
 
-    const compare = caseOf(command);
+    const compare = matching.caseOf(command);
     if (compare(t('set', _))) {
         const [, value] = command;
         return t(noreply, value);
@@ -62,7 +63,7 @@ const callbacks = {
     handleInfo,
 };
 
-describe('GenServer', describeGenServer);
+describe('gen_server', describeGenServer);
 
 function describeGenServer() {
     let node = null;
@@ -75,123 +76,190 @@ function describeGenServer() {
         ctx.processFlag(trap_exit, true);
     });
 
-    it('starts a process', async function () {
-        expect(GenServer.start).toBeInstanceOf(Function);
+    describe('during startup', function () {
+        it('returns the tuple {ok, Pid}', async function () {
+            expect(gen_server.start).toBeInstanceOf(Function);
 
-        expect(await GenServer.start(ctx, callbacks)).toMatchPattern(
-            t(ok, Pid.isPid)
-        );
-    });
+            expect(await gen_server.start(ctx, callbacks)).toMatchPattern(
+                t(ok, Pid.isPid)
+            );
+        });
+        it('can be linked', async function () {
+            expect(gen_server.startLink).toBeInstanceOf(Function);
 
-    it('can link on start', async function () {
-        expect(GenServer.startLink).toBeInstanceOf(Function);
-
-        const [_ok, pid] = await GenServer.startLink(ctx, callbacks);
-        expect(pid).toBeInstanceOf(Pid);
-    });
-
-    it('can be called', async function () {
-        expect(GenServer.call).toBeInstanceOf(Function);
-
-        const [_ok, pid] = await GenServer.start(ctx, callbacks);
-        const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-        const resultA = await GenServer.call(ctx, pid, t('set', value));
-
-        log(ctx, 'resultA : %o', resultA);
-        expect(resultA).toBe(ok);
-
-        const resultB = await GenServer.call(ctx, pid, 'get');
-
-        expect(resultB).toBe(value);
-    });
-
-    it('can receive casts', async function () {
-        expect(GenServer.cast).toBeInstanceOf(Function);
-
-        const [_ok, pid] = await GenServer.start(ctx, callbacks);
-        const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-
-        await GenServer.cast(ctx, pid, t('set', value));
-
-        const result = await GenServer.call(ctx, pid, 'get');
-
-        expect(result).toBe(value);
-    });
-
-    it('can receive arbitrary messages', async function () {
-        const [_ok, pid] = await GenServer.start(ctx, callbacks);
-        const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-
-        await ctx.send(pid, t('set', value));
-
-        log(ctx, 'GenServer.call(%o, get)', pid);
-        const result = await GenServer.call(ctx, pid, 'get');
-        expect(result).toBe(value);
-    });
-
-    it('fails to start if the init callback errors', async function () {
-        const response = await GenServer.start(ctx, {
-            ...callbacks,
-            init,
+            const [_ok, pid] = await gen_server.startLink(ctx, callbacks);
+            expect(pid).toBeInstanceOf(Pid);
         });
 
-        expect(response).toMatchPattern(
-            t(error, { term: 'dying', [spread]: _ })
-        );
+        it('fails if the init callback errors', async function () {
+            const response = await gen_server.start(ctx, {
+                ...callbacks,
+                init,
+            });
 
-        function init(ctx) {
-            throw new OTPError('dying');
-        }
-    });
+            expect(response).toMatchPattern(
+                t(error, { term: 'dying', [spread]: _ })
+            );
 
-    it('fails to start if the init callback indicates stopping', async function () {
-        const response = await GenServer.start(ctx, {
-            ...callbacks,
-            init,
+            function init(ctx) {
+                throw new OTPError('dying');
+            }
         });
 
-        expect(response).toMatchPattern(t(error, 'init_failed'));
+        it('fails if the init callback indicates stopping', async function () {
+            const response = await gen_server.start(ctx, {
+                ...callbacks,
+                init,
+            });
 
-        function init(ctx) {
-            const reason = 'init_failed';
-            return t(stop, reason);
-        }
-    });
+            expect(response).toMatchPattern(t(error, 'init_failed'));
 
-    it('does not throw an error when stopped normally', async function () {
-        const response = await GenServer.start(ctx, {
-            ...callbacks,
-            init,
+            function init(ctx) {
+                const reason = 'init_failed';
+                return t(stop, reason);
+            }
         });
 
-        expect(response).toMatchPattern(t(error, normal));
-
-        function init(ctx) {
-            const reason = normal;
-            return t(stop, reason);
-        }
-    });
-
-    it('sends an exit signal if the init callback fails', async function () {
-        const response = await GenServer.startLink(ctx, {
-            ...callbacks,
-            init,
+        it('fails if the init callback returns an unhandled response', async function () {
+            const response = gen_server.start(ctx, { ...callbacks, init });
+            expect(response).resolves.toMatchPattern(
+                t(error, { term: 'invalid_init_response', [spread]: _ })
+            );
+            function init(ctx) {
+                return l('pumpernickel', 'bread');
+            }
         });
 
-        expect(response).toMatchPattern(
-            t(error, {
-                message: 'init_failed',
-                [spread]: _,
-            })
-        );
+        it('sends an exit signal if the init callback fails', async function () {
+            const response = await gen_server.startLink(ctx, {
+                ...callbacks,
+                init,
+            });
 
-        const message = await ctx.receive();
-        expect(message).toMatchPattern(t(EXIT, _, 'init_failed', _));
+            expect(response).toMatchPattern(
+                t(error, {
+                    term: 'init_failed',
+                    [spread]: _,
+                })
+            );
 
-        function init(_ctx) {
-            const reason = 'init_failed';
-            throw Error(reason);
-        }
+            const message = await ctx.receive();
+            expect(message).toMatchPattern(t(EXIT, _, 'init_failed', _));
+
+            function init(_ctx) {
+                const reason = 'init_failed';
+                throw Error(reason);
+            }
+        });
+    });
+    describe('through messaging', function () {
+        it('receives calls', async function () {
+            expect(gen_server.call).toBeInstanceOf(Function);
+
+            const [_ok, pid] = await gen_server.start(ctx, callbacks);
+            const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+            const resultA = await gen_server.call(ctx, pid, t('set', value));
+
+            log(ctx, 'resultA : %o', resultA);
+            expect(resultA).toBe(ok);
+
+            const resultB = await gen_server.call(ctx, pid, 'get');
+
+            expect(resultB).toBe(value);
+        });
+
+        it('receives casts', async function () {
+            expect(gen_server.cast).toBeInstanceOf(Function);
+
+            const [_ok, pid] = await gen_server.start(ctx, callbacks);
+            const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+
+            await gen_server.cast(ctx, pid, t('set', value));
+
+            const result = await gen_server.call(ctx, pid, 'get');
+
+            expect(result).toBe(value);
+        });
+
+        it('receives arbitrary messages', async function () {
+            const [_ok, pid] = await gen_server.start(ctx, callbacks);
+            const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+
+            await ctx.send(pid, t('set', value));
+
+            log(ctx, 'GenServer.call(%o, get)', pid);
+            const result = await gen_server.call(ctx, pid, 'get');
+            expect(result).toBe(value);
+        });
+    });
+    describe('when reacting to messages', function () {
+        it('does not throw an error if stopped normally', async function () {
+            const response = await gen_server.start(ctx, {
+                ...callbacks,
+                init,
+            });
+
+            expect(response).toMatchPattern(t(error, normal));
+
+            function init(ctx) {
+                const reason = normal;
+                return t(stop, reason);
+            }
+        });
+        it('throws an error if it responds abnormally', async function () {
+            const [, pid] = await gen_server.startLink(ctx, {
+                ...callbacks,
+                handleCast,
+            });
+
+            gen_server.cast(ctx, pid, 'die');
+
+            await expect(ctx.receive()).resolves.toMatchPattern(
+                t(
+                    EXIT,
+                    pid,
+                    { term: t('bad_return_value', l.isList), [spread]: _ },
+                    _
+                )
+            );
+
+            function handleCast(ctx, cast, state) {
+                const reason = normal;
+                return l('oogie', 'boogie');
+            }
+        });
+
+        describe('like exit signals', function () {
+            describe('with trap_exit', function () {
+                it('receives the message via handleInfo', async function () {
+                    const reason = Math.floor(
+                        Math.random() * Number.MAX_SAFE_INTEGER
+                    );
+                    const handleInfo = jest.fn((ctx, info, state) => {
+                        expect(info).toMatchPattern(
+                            t(EXIT, Pid.isPid, { term: reason, [spread]: _ }, _)
+                        );
+                        return t(noreply, state);
+                    });
+                    const init = jest.fn(async (ctx) => {
+                        ctx.processFlag(trap_exit, true);
+                        const [, pid] = ctx.spawnLink((ctx) => {
+                            throw new OTPError(reason);
+                        });
+                        return t(ok, pid);
+                    });
+                    const [, pid] = await gen_server.startLink(ctx, {
+                        ...callbacks,
+                        init,
+                        handleInfo,
+                    });
+
+                    await wait(50);
+                    expect(handleInfo).toHaveBeenCalled();
+                });
+            });
+            describe('without trap_exit', function () {});
+        });
     });
 
     let methods = [
@@ -200,14 +268,14 @@ function describeGenServer() {
             (ctx, pid, message) => {
                 log(ctx, 'call(%o, %o)', pid, message);
                 return expect(
-                    GenServer.call(ctx, pid, message, Infinity)
+                    gen_server.call(ctx, pid, message, Infinity)
                 ).rejects.toThrow('invalid_call');
             },
         ],
         [
             'cast',
             (ctx, pid, message) =>
-                expect(GenServer.cast(ctx, pid, message)).resolves.toBe(ok),
+                expect(gen_server.cast(ctx, pid, message)).resolves.toBe(ok),
         ],
         [
             'info',
@@ -221,7 +289,7 @@ function describeGenServer() {
     // it.only(`dies when the ${methodName} callback handler throws an error`, async function() {
     methods.forEach(([type, method]) =>
         it(`dies when the ${type} callback handler throws an error`, async function () {
-            const [, pid] = await GenServer.startLink(ctx, callbacks);
+            const [, pid] = await gen_server.startLink(ctx, callbacks);
 
             await wait(100);
 
