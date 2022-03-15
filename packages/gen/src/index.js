@@ -1,6 +1,6 @@
+import * as otp from '@otpjs/core';
 import * as match from '@otpjs/matching';
 import { OTPError, Pid, t, l } from '@otpjs/types';
-import { case_clause, DOWN } from '@otpjs/core/lib/symbols';
 import * as proc_lib from '@otpjs/proc_lib';
 import * as Symbols from './symbols';
 
@@ -12,7 +12,8 @@ function log(ctx, ...args) {
     return ctx.log.extend('gen')(...args);
 }
 
-const { ok, error, _, nodedown, EXIT } = match.Symbols;
+const { ok, error, nodedown, DOWN } = otp.Symbols;
+const { _ } = match.Symbols;
 
 const DEFAULT_TIMEOUT = 5000;
 
@@ -39,10 +40,17 @@ export function start(ctx, linking, name, init_it, options = {}) {
         throw new OTPError(t('already_started', pid));
     }
 }
+const doSpawn = match.clauses((route) => {
+    route(link, _, _, _).to(doSpawnLink);
+    route(link, _, _, _, _).to(doSpawnLink);
+    route(monitor, _, _, _).to(doSpawnMonitor);
+    route(monitor, _, _, _, _).to(doSpawnMonitor);
+    route(nolink, _, _, _).to(doSpawnNoLink);
+    route(nolink, _, _, _, _).to(doSpawnNoLink);
+    route(_, _, _, _).to(doSpawnBadarg);
+    route(_, _, _, _, _).to(doSpawnBadarg);
 
-function doSpawn(ctx, linking, name, init_it, options) {
-    log(ctx, 'doSpawn() : linking : %o', linking);
-    if (linking === link) {
+    function doSpawnLink(ctx, linking, name, init_it, options) {
         const timeout = 'timeout' in options ? options.timeout : Infinity;
         log(ctx, 'doSpawn() : proc_lib.startLink()');
         return proc_lib.startLink(
@@ -50,10 +58,12 @@ function doSpawn(ctx, linking, name, init_it, options) {
             initializer(name, init_it, options),
             timeout
         );
-    } else if (linking === monitor) {
+    }
+    function doSpawnMonitor(ctx, linking, name, init_it, options) {
         log(ctx, 'doSpawn() : proc_lib.startMonitor()');
         throw new OTPError(t('not_yet_implemented', link));
-    } else if (linking === nolink) {
+    }
+    function doSpawnNoLink(ctx, linking, name, init_it, options) {
         const timeout = 'timeout' in options ? options.timeout : Infinity;
         log(ctx, 'doSpawn() : proc_lib.start()');
         return proc_lib.start(
@@ -61,87 +71,84 @@ function doSpawn(ctx, linking, name, init_it, options) {
             initializer(name, init_it, options),
             timeout
         );
-    } else {
-        throw new OTPError(badarg);
+    }
+    function doSpawnBadarg(ctx, linking, name, init_it, options) {
+        throw OTPError([badarg, linking]);
+    }
+});
+
+function initializer(name, initIt, options) {
+    const decision = match.buildCase((is) => {
+        is(ok, success);
+        is(t(false, Pid.isPid), alreadyStarted);
+    });
+
+    return async function initialize(ctx, starter) {
+        const registration = registerName(ctx, name);
+        const next = decision.for(registration);
+        return next(ctx, registration, initIt, starter);
+    };
+
+    function success(ctx, ok, initIt, starter) {
+        log(ctx, 'initialize() : initIt(%o)', starter);
+        return initIt(ctx, starter);
+    }
+
+    function alreadyStarted(ctx, [, pid], _initIt, starter) {
+        return proc_lib.initAck(
+            ctx,
+            starter,
+            t(error, t('already_started', pid))
+        );
     }
 }
 
-function initializer(name, initIt, options) {
-    return async function initialize(ctx, starter) {
-        const response = registerName(ctx, name);
-        log(ctx, 'initialize() : registerName(%o) -> %o', name, response);
-        log(ctx, 'initialize() : initIt : %o', initIt);
-        const compare = match.caseOf(response);
-        if (compare(ok)) {
-            log(ctx, 'initialize() : initIt(%o)', starter);
-            return initIt(ctx, starter);
-        } else if (compare(t(false, Pid.isPid))) {
-            const [, pid] = response;
-            return proc_lib.initAck(
-                ctx,
-                starter,
-                t(error, t('already_started', pid))
-            );
-        }
-    };
-}
-
-export function registerName(ctx, name) {
-    const compare = match.caseOf(name);
-    if (compare(localName)) {
+export const registerName = match.clauses((route) => {
+    route(localName).to(registerLocalName);
+    route(_).to(() => ok);
+    function registerLocalName(ctx, name) {
         if (ctx.register(getName(name))) {
             return ok;
         } else {
             return t(false, where(name));
         }
-    } else if (compare(isPid)) {
-        return ok;
-    } else {
-        return ok;
     }
-}
+});
+export const unregisterName = match.clauses((route) => {
+    route(localName).to(registerLocal);
+    route(Pid.isPid).to(doNothing);
 
-export function getName(name) {
-    const compare = match.caseOf(name);
-
-    if (compare(localName)) {
-        return name.get(1);
-    } else if (compare(isPid)) {
-        return name;
-    } else {
-        throw new OTPError(t(case_clause, name));
-    }
-}
-
-export function unregisterName(ctx, name) {
-    const compare = match.caseOf(name);
-
-    if (compare(localName)) {
+    function registerLocal(ctx, [, name]) {
         try {
-            ctx.unregister(name[1]);
+            ctx.unregister(name);
         } finally {
             return ok;
         }
-    } else if (compare(isPid)) {
-        return ok;
-    } else {
-        throw new OTPError(t(case_clause, name));
     }
-}
 
-export async function call(ctx, pid, message, timeout = DEFAULT_TIMEOUT) {
-    if (Pid.isPid(pid)) {
-        log(ctx, 'call(%o) : isPid', pid);
-        return doCall(ctx, pid, message, timeout);
-    } else {
-        const fun = (pid) => doCall(ctx, pid, message, timeout);
-        log(ctx, 'call(%o) : isNotPid', pid);
-        return doForProcess(ctx, pid, fun);
+    function doNothing() {
+        return ok;
     }
-}
+});
+const getName = match.clauses((route) => {
+    route(t('local', _)).to(([, name]) => name);
+    route(Pid.isPid).to((pid) => pid);
+    route(_).to((name) => t(false, where(name)));
+});
 
 const callReplyPattern = (ref) => match.compile(t(ref, _));
 const downPattern = (mref, pid) => match.compile(t(DOWN, mref, _, pid, _));
+export const call = match.clauses((route) => {
+    route(Pid.isPid, _).to(doCall);
+    route(Pid.isPid, _, _).to(doCall);
+    route(_, _).to(doRemoteCall);
+    route(_, _, _).to(doRemoteCall);
+});
+function doRemoteCall(ctx, pid, message, timeout = DEFAULT_TIMEOUT) {
+    const fun = (pid) => doCall(ctx, pid, message, timeout);
+    log(ctx, 'call(%o) : isNotPid', pid);
+    return doForProcess(ctx, pid, fun);
+}
 async function doCall(ctx, pid, message, timeout) {
     const self = ctx.self();
     const ref = ctx.ref();
@@ -167,7 +174,7 @@ async function doCall(ctx, pid, message, timeout) {
             log(ctx, 'doCall(%o, %o) : response : %o', pid, ref, response);
             return response;
         } else if (predicate === isDown) {
-            const [DOWN, ref, type, pid, reason] = ret;
+            const [_DOWN, ref, _type, pid, reason] = ret;
             log(ctx, 'doCall(%o, %o) : throw OTPError(%o)', pid, ref, reason);
             throw new OTPError(reason);
         } else {
@@ -186,18 +193,17 @@ async function doCall(ctx, pid, message, timeout) {
     }
 }
 
-export function cast(ctx, pid, message) {
-    if (Pid.isPid(pid)) {
-        return doCast(ctx, pid, message);
-    } else {
+export const cast = match.clauses((route) => {
+    route(Pid.isPid, _).to(doCast);
+    route(_, _).to(doRemoteCast);
+    function doCast(ctx, pid, message) {
+        ctx.send(pid, t($gen_cast, message));
+    }
+    function doRemoteCast(ctx, pid, message) {
         const fun = (pid) => doCast(ctx, pid, message);
         return doForProcess(ctx, pid, fun);
     }
-}
-
-function doCast(ctx, pid, message) {
-    ctx.send(pid, t($gen_cast, message));
-}
+});
 
 const isString = (v) => typeof v === 'string';
 const isKeyedSymbol = (v) =>
