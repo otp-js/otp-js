@@ -1,10 +1,10 @@
-import * as core from '@otpjs/core';
-import { t, l } from '@otpjs/types';
+import { t } from '@otpjs/types';
+import * as matching from '@otpjs/matching';
 import * as Symbols from './symbols';
 
 export { Symbols };
 
-const { ok, _ } = core.Symbols;
+const { _ } = matching.Symbols;
 const { init_ack } = Symbols;
 
 function log(ctx, ...args) {
