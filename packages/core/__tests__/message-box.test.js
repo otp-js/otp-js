@@ -1,7 +1,9 @@
 import * as core from '../src';
+import * as matching from '@otpjs/matching';
 import '@otpjs/test_utils';
 
-const { ok, _ } = core.Symbols;
+const { ok } = core.Symbols;
+const { _ } = matching.Symbols;
 
 function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));

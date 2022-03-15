@@ -1,5 +1,6 @@
 import * as core from '../src';
 import { t, l } from '@otpjs/types';
+import * as matching from '@otpjs/matching';
 import '@otpjs/test_utils';
 
 function log(ctx, ...args) {
@@ -10,7 +11,8 @@ async function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const { ok, normal, error, DOWN, spread, _ } = core.Symbols;
+const { ok, normal, error, DOWN } = core.Symbols;
+const { spread, _ } = matching.Symbols;
 
 describe('@otpjs/core.Node', () => {
     let node = null;
