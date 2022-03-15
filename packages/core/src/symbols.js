@@ -1,4 +1,3 @@
-export * from '@otpjs/matching/lib/symbols';
 export const normal = Symbol.for('normal');
 export const EXIT = Symbol.for('exit');
 export const DOWN = Symbol.for('down');
