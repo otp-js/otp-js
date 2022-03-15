@@ -26,9 +26,6 @@
         "prepublish": "npm run build",
         "test": "echo \"Error: run tests from root\" && exit 1"
     },
-    "dependencies": {
-        "@otpjs/serializer-json": "file:../../serializers/json"
-    },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"
     }

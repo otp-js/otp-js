@@ -1,11 +1,14 @@
 import inspect from 'inspect-custom-symbol';
+import debug from 'debug';
+
+const log = debug('otpjs:types:list');
 
 const hidden = new WeakMap();
 const nil = Object(Symbol.for('nil'));
 
 _bind(nil);
 
-export function List(head, tail = nil) {
+export function List(head, tail) {
     if (!(this instanceof List)) {
         return new List(head, tail);
     }
@@ -26,31 +29,6 @@ function _bind(obj, head, tail, empty = false) {
             return tail;
         },
         configurable: false,
-    });
-    Reflect.defineProperty(obj, 'unshift', {
-        value(value) {
-            if (!empty) {
-                tail = cons(head, tail);
-            }
-            head = value;
-            empty = false;
-        },
-    });
-    Reflect.defineProperty(obj, 'shift', {
-        value() {
-            if (empty) {
-                return head;
-            } else if (tail !== nil && List.isList(tail)) {
-                let result = head;
-                head = tail.head;
-                tail = tail.tail;
-                return result;
-            } else if (tail === nil) {
-                head = undefined;
-                empty = true;
-                return head;
-            }
-        },
     });
 }
 
@@ -74,7 +52,7 @@ List.prototype.push = function (value) {
     let stack = nil;
 
     while (List.isList(node) && node != nil) {
-        stack.unshift(node);
+        stack = cons(node.head, stack);
         previous = node;
         node = node.tail;
     }
@@ -83,12 +61,9 @@ List.prototype.push = function (value) {
         throw Error('pushed to improper list');
     }
 
-    let result = cons(previous.head, cons(value, nil));
-    while (List.isList(stack) && stack != nil) {
-        result.unshift(stack.shift());
-    }
+    stack = cons(value, stack);
 
-    return result;
+    return stack.reverse();
 };
 
 List.prototype.reverse = function () {
@@ -103,23 +78,46 @@ List.prototype.reverse = function () {
     return reversed;
 };
 
-List.prototype.replaceWhere = function (predicate, nextValue, insert) {
+List.prototype.replaceWhere = function (predicate, nextValue, insert = false) {
     let node = this;
     let stack = nil;
+    let replaced = false;
 
     while (List.isList(node) && node != nil) {
+        const result = predicate(node.head);
+        log(
+            'replaceWhere(predicate: %o, node.head: %o, result: %o, stack: %o)',
+            predicate,
+            node.head,
+            result,
+            stack
+        );
+
         if (predicate(node.head)) {
-            stack = cons(nextValue, node.tail);
+            stack = cons(nextValue, stack);
+            replaced = true;
+            node = node.tail;
             break;
         } else {
             stack = cons(node.head, stack);
+            node = node.tail;
         }
+    }
 
-        node = node.tail;
+    if (!replaced && insert) {
+        log('replaceWhere(insert: %o, stack: %o)', nextValue, stack);
+        stack = cons(nextValue, stack);
     }
 
     while (List.isList(stack) && stack != nil) {
+        log(
+            'replaceWhere(cons: ([%o|%o]), node: %o)',
+            node.head,
+            stack.tail,
+            node
+        );
         node = cons(stack.head, node);
+        stack = stack.tail;
     }
 
     return node;
@@ -163,7 +161,9 @@ List.prototype.slice = function (start = 0, end = Infinity) {
     }
 
     while (List.isList(node) && node != nil && index < end) {
-        if (index > start) {
+        log('slice(start: %o, end: %o, index: %o)', start, end, index);
+        if (index >= start) {
+            log('slice(stack: %o)', node.head);
             stack = cons(node.head, stack);
         }
 
@@ -199,6 +199,22 @@ List.prototype.deleteIndex = function (deleteIndex) {
     return node;
 };
 
+List.prototype.nth = function (index) {
+    let node = this;
+    let current = 0;
+
+    while (List.isList(node) && node != nil && current < index) {
+        current++;
+        node = node.tail;
+    }
+
+    if (current === index && node != nil) {
+        return node.head;
+    } else {
+        return undefined;
+    }
+};
+
 List.prototype[Symbol.iterator] = function* () {
     let node = this;
     while (node instanceof List && node != nil) {
@@ -222,7 +238,7 @@ List.prototype[inspect] = function inspect(
         depth: options.depth === null ? null : options.depth - 1,
     };
 
-    const prefix = '[ ';
+    const prefix = '[';
     const postfix = ' ]';
 
     let result = '';
@@ -238,15 +254,15 @@ List.prototype[inspect] = function inspect(
         count++ < options.maxArrayLength
     ) {
         if (firstDone) {
-            result += ', ';
+            result += ',';
         }
-        result += `${inspect(node.head, newOptions)}`;
+        result += ` ${inspect(node.head, newOptions)}`;
         node = node.tail;
         firstDone = true;
     }
 
     if (List.isList(node) && node != nil) {
-        result += `, ... ${node.length()} more elements`;
+        result += ` ... ${node.length()} more items`;
     } else if (node != nil) {
         result += ` | ${inspect(node, newOptions)}`;
     }
@@ -256,16 +272,21 @@ List.prototype[inspect] = function inspect(
     return result;
 };
 
-export function l(...elements) {
-    return List.from(...elements);
+List.prototype[Symbol.toStringTag] = function () {
+    return 'List';
+};
+
+export function l(...items) {
+    return List.from(...items);
 }
-export function il(...elements) {
-    if (elements.length === 0) {
+export function il(...items) {
+    if (items.length === 0) {
         return undefined;
     } else {
-        let tail = elements.pop();
-        for (let i = elements.length - 1; i >= 0; i--) {
-            const head = elements[i];
+        let tail = items.pop();
+        if (items.length === 0) items.push(undefined);
+        for (let i = items.length - 1; i >= 0; i--) {
+            const head = items[i];
             tail = List(head, tail);
         }
         return tail;
@@ -317,13 +338,13 @@ Reflect.defineProperty(List, 'isList', {
 Reflect.defineProperty(List, 'from', {
     configurable: false,
     writable: false,
-    value: function (...elements) {
-        if (elements.length === 0) {
+    value: function (...items) {
+        if (items.length === 0) {
             return nil;
         } else {
             let tail = nil;
-            for (let i = elements.length - 1; i >= 0; i--) {
-                const head = elements[i];
+            for (let i = items.length - 1; i >= 0; i--) {
+                const head = items[i];
                 tail = List(head, tail);
             }
             return tail;
