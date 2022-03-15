@@ -41,7 +41,6 @@
     "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e",
     "dependencies": {
         "@otpjs/matching": "file:../matching",
-        "@otpjs/serializer-json": "file:../../serializers/json",
         "@otpjs/test_utils": "file:../test_utils",
         "@otpjs/types": "file:../types",
         "inspect-custom-symbol": "^1.1.1",

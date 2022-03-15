@@ -1,6 +1,5 @@
 export * from '@otpjs/types';
 export * from '@otpjs/matching';
-export * from '@otpjs/serializer-json';
 
 export * from './node.js';
 export * from './context.js';
