@@ -24,13 +24,6 @@ function log(ctx, ...args) {
     return ctx.log.extend('transports:epmd')(...args);
 }
 
-const receivers = {
-    relay: compile([relay, _, _]),
-    monitor: compile([monitor, _, _, _]),
-    discover: compile([discover, _, _, _, _]),
-    lost: compile([lost, _, _, _, _]),
-};
-
 function defaultOptions() {
     return {
         bridge: false,
