@@ -1,8 +1,8 @@
 import { Pid, Ref, list, improperList, tuple } from '@otpjs/types';
-import { caseOf, compile, Symbols } from '@otpjs/matching';
+import * as matching from '@otpjs/matching';
 import debug from 'debug';
 
-const { _ } = Symbols;
+const { _ } = matching.Symbols;
 const log = debug('otpjs:serializers:json');
 
 export function deserialize(string, reviver = undefined) {
@@ -36,15 +36,15 @@ function kvCompose(...funs) {
     );
 }
 
-const isEncodedSymbol = compile(['$otp.symbol', _]);
-const isEncodedFunction = compile(['$otp.function', _, _]);
-const isEncodedPid = compile(['$otp.pid', _]);
-const isEncodedRef = compile(['$otp.ref', _]);
-const isEncodedList = compile(['$otp.list', _, _]);
-const isEncodedTuple = compile(['$otp.tuple', _]);
-const isEncodedNil = compile('$otp.list.nil');
+const isEncodedSymbol = matching.compile(['$otp.symbol', _]);
+const isEncodedFunction = matching.compile(['$otp.function', _, _]);
+const isEncodedPid = matching.compile(['$otp.pid', _]);
+const isEncodedRef = matching.compile(['$otp.ref', _]);
+const isEncodedList = matching.compile(['$otp.list', _, _]);
+const isEncodedTuple = matching.compile(['$otp.tuple', _]);
+const isEncodedNil = matching.compile('$otp.list.nil');
 function reviveOTP(key, value, reviver) {
-    const compare = caseOf(value);
+    const compare = matching.caseOf(value);
     if (compare(isEncodedSymbol)) {
         return Symbol.for(value[1]);
     } else if (compare(isEncodedFunction)) {
@@ -72,7 +72,7 @@ const isSymbol = (v) => typeof v === 'symbol';
 const isNil = (v) => v === list.nil;
 const isFunction = (v) => typeof v === 'function';
 function replaceOTP(key, value) {
-    const compare = caseOf(value);
+    const compare = matching.caseOf(value);
     if (compare(isSymbol)) {
         const key = Symbol.keyFor(value);
         if (key) {
