@@ -1,19 +1,12 @@
-import { Symbols } from '@otpjs/core';
+import * as otp from '@otpjs/core';
+import * as matching from '@otpjs/matching';
 import { serialize, deserialize } from '@otpjs/serializer-json';
 import { caseOf, compile } from '@otpjs/matching';
 import { Pid, Ref, t, l } from '@otpjs/types';
 
-const {
-    relay,
-    monitor,
-    shutdown,
-    DOWN,
-    _,
-    trap_exit,
-    discover,
-    temporary,
-    lost,
-} = Symbols;
+const { relay, monitor, shutdown, DOWN, trap_exit, discover, temporary, lost } =
+    otp.Symbols;
+const { _ } = matching.Symbols;
 
 const disconnect = Symbol.for('disconnect');
 const TRANSPORT_COST = 1;
@@ -180,7 +173,7 @@ export function register(node, socket, options = defaultOptions()) {
 
             // drain the messagebox
             try {
-                ctx.__drain(disconnect);
+                ctx.drain(disconnect);
             } catch (err) {
                 log(ctx, 'drain() : error : %o', err);
             }
