@@ -6,9 +6,11 @@ import * as supervisor from '../src';
 import * as Adder from './adder';
 import * as Subtracter from './subtracter';
 import * as gen_server from '@otpjs/gen_server';
-import { t, l, cons } from '@otpjs/types';
+import * as matching from '@otpjs/matching';
+import { t, l } from '@otpjs/types';
 
-const { ok, _, trap_exit, EXIT, normal, kill, spread, error } = Symbols;
+const { ok, trap_exit, normal, kill } = Symbols;
+const { _, spread } = matching.Symbols;
 const {
     one_for_one,
     simple_one_for_one,

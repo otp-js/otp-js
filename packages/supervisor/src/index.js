@@ -1,7 +1,7 @@
-import debug from 'debug';
 import * as core from '@otpjs/core';
 import * as gen_server from '@otpjs/gen_server';
-import { t, l, cons } from '@otpjs/types';
+import * as matching from '@otpjs/matching';
+import { Pid, t, l, cons } from '@otpjs/types';
 import * as Symbols from './symbols.js';
 import { OTPError } from '@otpjs/types';
 
@@ -11,9 +11,9 @@ function log(ctx, ...args) {
     return ctx.log.extend('supervisor')(...args);
 }
 
-const { ok, _, spread, trap_exit, EXIT, error, normal } = core.Symbols;
+const { ok, trap_exit, EXIT, error, normal } = core.Symbols;
+const { _, spread } = matching.Symbols;
 const { reply, noreply, stop } = gen_server.Symbols;
-const { Pid, Ref } = core;
 const { which_children, count_children, temporary, transient, permanent } =
     Symbols;
 
