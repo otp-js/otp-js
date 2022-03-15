@@ -1,13 +1,12 @@
 import debug from 'debug';
-import { Pid, Ref, OTPError, t, l } from '@otpjs/types';
-import { Context } from './context.js';
+import { Pid, Ref, OTPError, t } from '@otpjs/types';
 import * as Symbols from './symbols';
-import { caseOf } from '@otpjs/matching';
+import * as matching from '@otpjs/matching';
+import { Context } from './context';
 
 const {
     DOWN,
     EXIT,
-    _,
     badarg,
     discover,
     link,
@@ -20,8 +19,11 @@ const {
     permanent,
     lost,
 } = Symbols;
+const { _ } = matching.Symbols;
 
 const log = debug('otpjs:core:node');
+
+const isPidFromLocalNode = (v) => Pid.isPid(v) && v.node === Pid.LOCAL;
 
 function getNodeId() {
     return `otp-${Node.nodes++}`;
@@ -37,6 +39,9 @@ function getNodeHost() {
 
 export class Node {
     static nodes = 0;
+    static get Context() {
+        return Context;
+    }
     constructor(id = Symbol.for(`${getNodeId()}@${getNodeHost()}`)) {
         this._id = id;
         this._log = log.extend(this.name.toString());
@@ -66,15 +71,12 @@ export class Node {
         this._refCount = 0;
         this._registrations = new Map();
     }
-
     get name() {
         return this._id;
     }
-
     node() {
         return this.name;
     }
-
     nodes() {
         return Array.from(this._routers.values()).reduce((acc, router) => {
             this._log('nodes() : router : %o', router);
