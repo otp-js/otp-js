@@ -1,5 +1,5 @@
 import '@otpjs/test_utils';
-import { t, l } from '@otpjs/types';
+import { Pid, t, l } from '@otpjs/types';
 import { createServer } from 'http';
 import io from 'socket.io';
 import clientIO from 'socket.io-client';
@@ -120,9 +120,7 @@ describe('@otpjs/transports-socket.io', function () {
                     resolve(await ctx.receive());
                 });
             })
-        ).resolves.toMatchPattern(
-            t(DOWN, mref, 'process', otp.Pid.isPid, normal)
-        );
+        ).resolves.toMatchPattern(t(DOWN, mref, 'process', Pid.isPid, normal));
     });
 
     it('can be unregistered', async function () {

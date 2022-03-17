@@ -27,9 +27,9 @@ export class Ref extends String {
     }
     [inspect](depth, options, inspect) {
         if (depth < 0) {
-            return options.stylize('[Pid]', 'special');
+            return options.stylize('[Ref]', 'special');
         }
 
-        return `Pid<${options.stylize(`${this.node}.${this.process}`)}>`;
+        return options.stylize(`Ref<${this.node}.${this.ref}>`, 'special');
     }
 }

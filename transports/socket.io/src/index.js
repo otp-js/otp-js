@@ -230,10 +230,10 @@ export function register(node, socket, options = defaultOptions()) {
             const updated = Ref.for(routerId, ref);
             log(ctx, 'restore_remote_ref_with_name(%o) : %o', value, updated);
             return updated;
-        } else if (compare(['$pid', _, _])) {
-            const [, remote, process] = value;
+        } else if (compare(['$pid', _, _, _, _])) {
+            const [, remote, id, serial, creation] = value;
             const routerId = node.getRouterId(remote);
-            const updated = Pid.of(routerId, process);
+            const updated = Pid.of(routerId, id, serial, creation);
             log(ctx, 'restore_remote_pid_with_name(%o) : %o', value, updated);
             return updated;
         } else {
@@ -245,10 +245,10 @@ export function register(node, socket, options = defaultOptions()) {
         if (value instanceof Pid) {
             log(ctx, 'replace_unknown_pid_with_name(%o)', value);
             const name = node.getRouterName(value.node);
-            return ['$pid', name, value.process];
+            return ['$pid', name, value.id, value.serial, value.creation];
         } else if (value instanceof Ref) {
             log(ctx, 'replace_unknown_ref_with_name(%o)', value);
-            const name = node.getRouterName(value.node);
+            const name = node.getRouterName(Number(value.node));
             return ['$ref', name, value.ref];
         } else {
             return value;

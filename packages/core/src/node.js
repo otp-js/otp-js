@@ -64,7 +64,7 @@ export class Node {
             score: 0,
         };
         this._routers = new Map([[this.name, this._router]]);
-        this._routersById = new Map([['0', this._router]]);
+        this._routersById = new Map([[0, this._router]]);
         this._routersByPid = new Map([[this._system, this._router]]);
         this._bridges = new Map();
         this._routerCount = 1;
@@ -101,7 +101,7 @@ export class Node {
     });
     #linkLocal(ctx, pidB) {
         const pidA = ctx.self();
-        this._log('monitor(%o, %o) : local', pidA, pidB);
+        this._log('#linkLocal(%o, %o)', pidA, pidB);
         const watchee = this._processes.get(pidB.process);
         if (watchee) {
             ctx._link(watchee);
@@ -113,7 +113,7 @@ export class Node {
     }
     #linkRemote(ctx, pidB) {
         const pidA = ctx.self();
-        this._log('monitor(%o, %o) : remote', pidA, pidB);
+        this._log('#linkRemote(%o, %o)', pidA, pidB);
         const router = this._routersById.get(pidB.node);
         if (router) {
             ctx._link(pidB);
@@ -133,7 +133,7 @@ export class Node {
     });
     #unlinkLocal(ctx, pidB) {
         const pidA = ctx.self();
-        this._log('unlink(%o, %o) : local', pidA, pidB);
+        this._log('#unlinkLocal(%o, %o)', pidA, pidB);
         const watchee = this._processes.get(pidB.process);
         if (watchee) {
             ctx._unlink(watchee);
@@ -145,7 +145,7 @@ export class Node {
     }
     #unlinkRemote(ctx, pidB) {
         const pidA = ctx.self();
-        this._log('unlink(%o, %o) : remote', pidA, pidB);
+        this._log('#unlinkRemote(%o, %o)', pidA, pidB);
         const router = this._routers.get(node);
         if (router) {
             ctx._unlink(pidB);
@@ -208,9 +208,11 @@ export class Node {
         const [name, node] = watcheePid;
         ref = ref ?? this.ref();
         if (node === this.name) {
+            this._log('#monitorNameNodePair(localName: %o)', name);
             return this.monitor(watcherPid, name, ref);
         } else {
             const router = this._routers.get(node);
+            this._log('#monitorNameNodePair(router: %o)', router);
             if (router) {
                 this.deliver(router.pid, t(monitor, name, ref, watcherPid));
             } else {
@@ -385,7 +387,7 @@ export class Node {
 
             return id;
         } else {
-            const id = `${this._routerCount++}`;
+            const id = this._routerCount++;
             const router = {
                 pid,
                 id,
