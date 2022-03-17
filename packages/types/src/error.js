@@ -30,6 +30,10 @@ OTPError.prototype[Symbol.for('nodejs.util.inspect.custom')] = function (
     options,
     inspect
 ) {
+    if (typeof inspect !== 'function') {
+        inspect = require('util').inspect;
+    }
+
     const newOptions = {
         ...options,
         depth: options.depth === null ? null : options.depth - 1,
