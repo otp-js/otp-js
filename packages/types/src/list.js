@@ -232,6 +232,10 @@ List.prototype[inspect] = function inspect(
         return options.stylize('[List]', 'special');
     }
 
+    if (typeof inspect !== 'function') {
+        inspect = require('util').inspect;
+    }
+
     const newOptions = {
         ...options,
         drewPrefix: false,
