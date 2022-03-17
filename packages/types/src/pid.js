@@ -1,3 +1,4 @@
+import inspect from 'inspect-custom-symbol';
 export class Pid extends String {
     static LOCAL = '0';
     static REMOTE = 'r';
@@ -26,5 +27,13 @@ export class Pid extends String {
         } else {
             throw new OTPError(['invalid_pid', this.toString()]);
         }
+    }
+
+    [inspect](depth, options, inspect) {
+        if (depth < 0) {
+            return options.stylize('[Pid]', 'special');
+        }
+
+        return `Pid<${options.stylize(`${this.node}.${this.process}`)}>`;
     }
 }
