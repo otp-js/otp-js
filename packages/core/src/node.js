@@ -474,7 +474,7 @@ export class Node {
         return Ref.for(Pid.LOCAL, this._refCount++);
     }
     pid() {
-        return Pid.of(Pid.LOCAL, this._processesCount++);
+        return Pid.of(Pid.LOCAL, this._processesCount++, 0, 1);
     }
 
     makeContext() {
@@ -576,7 +576,7 @@ export class Node {
     }
 
     processInfo(pid) {
-        const ctx = this._processes.get(new Pid(pid).process);
+        const ctx = this._processes.get(pid.process);
         if (ctx) {
             return ctx._processInfo();
         } else {

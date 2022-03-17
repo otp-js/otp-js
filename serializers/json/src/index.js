@@ -38,7 +38,7 @@ function kvCompose(...funs) {
 
 const isEncodedSymbol = matching.compile(['$otp.symbol', _]);
 const isEncodedFunction = matching.compile(['$otp.function', _, _]);
-const isEncodedPid = matching.compile(['$otp.pid', _]);
+const isEncodedPid = matching.compile(['$otp.pid', _, _, _, _]);
 const isEncodedRef = matching.compile(['$otp.ref', _]);
 const isEncodedList = matching.compile(['$otp.list', _, _]);
 const isEncodedTuple = matching.compile(['$otp.tuple', _]);
@@ -54,7 +54,7 @@ function reviveOTP(key, value, reviver) {
             [Function].concat(value[1], [value[2]])
         ))();
     } else if (compare(isEncodedPid)) {
-        return new Pid(value[1]);
+        return new Pid(...value.slice[1]);
     } else if (compare(isEncodedRef)) {
         return new Ref(value[1]);
     } else if (compare(isEncodedList)) {
@@ -96,7 +96,7 @@ function replaceOTP(key, value) {
             parts[2].replace(/\s+/, ' '),
         ];
     } else if (compare(Pid.isPid)) {
-        return ['$otp.pid', value.toString()];
+        return ['$otp.pid', value.node, value.id, value.serial, value.creation];
     } else if (compare(Ref.isRef)) {
         return ['$otp.ref', value.toString()];
     } else if (list.isList(value) && value != list.nil) {
