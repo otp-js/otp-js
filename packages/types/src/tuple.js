@@ -136,6 +136,26 @@ Tuple.prototype.toJSON = function () {
     return ['$otp.tuple', Array.from(this)];
 };
 
+Tuple.prototype.toString = function () {
+    const prefix = `{`;
+    const postfix = ` }`;
+
+    let result = prefix;
+    let firstDone = false;
+    for (let i = 0; i < this.size; i++) {
+        if (firstDone) {
+            result += ', ';
+        } else {
+            result += ' ';
+        }
+        result += String(this.get(i));
+        firstDone = true;
+    }
+
+    result += postfix;
+    return result;
+};
+
 Tuple.prototype[Symbol.toStringTag] = function () {
     return 'Tuple';
 };

@@ -275,6 +275,34 @@ List.prototype[inspect] = function inspect(
 
     return result;
 };
+List.prototype.toString = function () {
+    const prefix = '[';
+    const postfix = ' ]';
+
+    let result = '';
+
+    result += prefix;
+
+    let node = this;
+    let firstDone = false;
+    let count = 0;
+    while (List.isList(node) && node != nil) {
+        if (firstDone) {
+            result += ',';
+        }
+        result += ` ${String(node.head)}`;
+        node = node.tail;
+        firstDone = true;
+    }
+
+    if (node != nil) {
+        result += ` | ${String(node)}`;
+    }
+
+    result += postfix;
+
+    return result;
+};
 
 List.prototype[Symbol.toStringTag] = function () {
     return 'List';
