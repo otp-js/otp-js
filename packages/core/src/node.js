@@ -202,6 +202,7 @@ export class Node {
                 t(DOWN, ref, 'process', watcheePid, 'noconnection')
             );
         }
+        return ref;
     }
     #monitorNameNodePair(watcherPid, watcheePid, ref) {
         const [name, node] = watcheePid;
