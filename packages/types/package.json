@@ -11,7 +11,8 @@
         "test": "__tests__"
     },
     "files": [
-        "lib"
+        "lib",
+        "devtools.js"
     ],
     "publishConfig": {
         "access": "public"
