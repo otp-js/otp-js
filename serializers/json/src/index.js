@@ -54,7 +54,7 @@ function reviveOTP(key, value, reviver) {
             [Function].concat(value[1], [value[2]])
         ))();
     } else if (compare(isEncodedPid)) {
-        return Pid.of(...value.slice[1]);
+        return Pid.of(...value.slice(1));
     } else if (compare(isEncodedRef)) {
         return new Ref(value[1]);
     } else if (compare(isEncodedList)) {
