@@ -272,6 +272,13 @@ describe('List', function () {
             expect(sliced).toMatchPattern(l(2, 3));
         });
     });
+    describe('delete', function () {
+        it('removes the first element which is strictly equal to the argument', function () {
+            expect(l(1, 2, 3).delete(1)).toMatchPattern(l(2, 3));
+            expect(l(1, 2, 3).delete(2)).toMatchPattern(l(1, 3));
+            expect(l(1, 2, 3).delete(3)).toMatchPattern(l(1, 2));
+        });
+    });
     describe('deleteIndex', function () {
         it('removes the Nth item of the list', function () {
             expect(l(1, 2, 3).deleteIndex(1)).toMatchPattern(l(1, 3));

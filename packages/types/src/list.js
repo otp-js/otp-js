@@ -199,6 +199,28 @@ List.prototype.deleteIndex = function (deleteIndex) {
     return node;
 };
 
+List.prototype.delete = function (value) {
+    let node = this;
+    let stack = nil;
+
+    while (List.isList(node) && node != nil) {
+        if (value === node.head) {
+            node = node.tail;
+            break;
+        } else {
+            stack = cons(node.head, stack);
+            node = node.tail;
+        }
+    }
+
+    while (List.isList(stack) && stack != nil) {
+        node = cons(stack.head, node);
+        stack = stack.tail;
+    }
+
+    return node;
+};
+
 List.prototype.nth = function (index) {
     let node = this;
     let current = 0;
