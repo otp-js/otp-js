@@ -17,7 +17,7 @@ export function ourFlags() {
         flags.NEW_FUN_TAGS +
         flags.PUBLISHED +
         flags.UTF8_ATOMS +
-        flags.DIST_HDR_ATOM_CACHE
+        flags.HANDSHAKE_23
     );
 }
 export function waitForChunk(ctx, stream) {
