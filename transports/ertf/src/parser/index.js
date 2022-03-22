@@ -43,15 +43,27 @@ export default function make(ctx) {
     return transformer;
 
     async function consume(buff, atomCache) {
-        const [header, buff2] = await parseDistributionHeader(buff);
-        const { atomCache: nextAtomCache } = header;
-        atomCache = [...atomCache, ...nextAtomCache].slice(-256);
-        log('consume(%o) : distributionHeader : %o', buff2, header);
-        const [controlMessage, buff3] = await parseTerm(buff2, atomCache);
-        log('consume(%o) : controlMessage : %o', buff3, controlMessage);
-        const [message, remainder] = await parseTerm(buff3, atomCache);
-        log('consume(%o) : message : %o', remainder, message);
-        transformer.push({ header, controlMessage, message });
-        return atomCache;
+        const type = buff.readUInt8(0);
+        if (type === 0x83) {
+            const [header, buff2] = await parseDistributionHeader(buff);
+            const { atomCache: nextAtomCache } = header;
+            atomCache = [...atomCache, ...nextAtomCache].slice(-256);
+            log('consume(%o) : distributionHeader : %o', buff2, header);
+            const [controlMessage, buff3] = await parseTerm(buff2, atomCache);
+            log('consume(%o) : controlMessage : %o', buff3, controlMessage);
+            const [message, remainder] = await parseTerm(buff3, atomCache);
+            log('consume(%o) : message : %o', remainder, message);
+            transformer.push({ header, controlMessage, message });
+            return atomCache;
+        } else if (type === 0x70) {
+            const header = {};
+            const [controlMessage, buff2] = await parseTerm(
+                buff.slice(1),
+                atomCache
+            );
+            const [message, buff3] = await parseTerm(buff2, atomCache);
+            transformer.push({ header, controlMessage, message });
+            return atomCache;
+        }
     }
 }
