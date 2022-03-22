@@ -1,7 +1,7 @@
-import { Symbols } from '@otpjs/core';
-import { Pid, Ref } from '@otpjs/types';
-import { compile, caseOf } from '@otpjs/matching';
+import * as otp from '@otpjs/core';
+import * as matching from '@otpjs/matching';
 import makeParser from './parser';
+import makeEncoder from './encoder';
 import * as net from 'net';
 import * as handshake from './handshake';
 import { makeLengthScanner } from './handshake/common';
@@ -9,6 +9,8 @@ import { makeLengthScanner } from './handshake/common';
 function log(ctx, ...formatters) {
     return ctx.log.extend('transports:ertf')(...formatters);
 }
+
+const { monitor, demonitor, link, unlink } = otp.Symbols;
 
 export async function register(node, socket, options) {
     const ctx = node.makeContext();
@@ -44,13 +46,17 @@ export async function connect(node, { host, port }, options) {
 }
 
 function _handleSocket(node, ctx, socket, lengthScanner, options) {
-    const { type } = options;
+    const { type, nodeInformation } = options;
+    let running = true;
 
-    log(ctx, '_handleSocket(%o)', ctx.self());
+    log(
+        ctx,
+        '_handleSocket(self: %o, nodeInformation: %o)',
+        ctx.self(),
+        nodeInformation
+    );
 
-    if (socket.connected) {
-        handleConnect();
-    }
+    handleConnect();
 
     const parser = makeParser(ctx);
     log(ctx, '_handleSocket(%o) : lengthScanner.on(data)', ctx.self());
@@ -70,71 +76,55 @@ function _handleSocket(node, ctx, socket, lengthScanner, options) {
         }
     });
 
+    const encoder = makeEncoder(ctx, node);
+    encoder.pipe(socket);
+
+    const forward = matching.clauses((route) => {
+        route(t(relay, Pid.isPid, _), _relayToPid);
+        route(t(relay, Pid.isPid, _, _), _relayToName);
+        route(t(link, _, _), _link);
+        route(t(unlink, _, _), _unlink);
+        route(t(monitor, _, _, _), _monitor);
+        route(t(demonitor, _, _, _), _demonitor);
+
+        function _relayToPid([, to, message]) {
+            const control = t(2, 0, to);
+            encoder.push({ control, message });
+        }
+
+        function _relayToPid([, from, to, message]) {
+            const control = t(6, from, 0, to);
+            encoder.push({ control, message });
+        }
+
+        function _link([, fromPid, toPid]) {
+            const control = t(1, fromPid, toPid);
+            encoder.push({ control });
+        }
+    });
+
     function recycle() {
         if (running) {
-            ctx.receive(...Object.values(receivers))
+            ctx.receive()
                 .then(forward)
                 .then(recycle)
                 .catch((err) => log(ctx, 'recycle() : error : %o', err));
         }
     }
 
-    function forward(op) {
-        log(ctx, 'forward(%o)', op);
-        const compare = caseOf(op);
-
-        if (compare(receivers.relay)) {
-            let [, to, message] = op;
-            log(ctx, 'forward(%o)', to);
-            to = serialize(to, replace);
-            message = serialize(message, replace);
-
-            log(
-                ctx,
-                'forward(%o) : socket.emit(otp-message, %o, %o)',
-                to,
-                to,
-                message
-            );
-            socket.emit('otp-message', to, message);
-        } else if (compare(receivers.monitor)) {
-            let [, pid, ref, watcher] = op;
-            log(ctx, 'monitor(%o, %o, %o)', pid, ref, watcher);
-            pid = serialize(pid, replace);
-            ref = serialize(ref, replace);
-            watcher = serialize(watcher, replace);
-
-            log(
-                ctx,
-                'monitor(%o, %o, %o) : socket.emit(otp-monitor)',
-                pid,
-                ref,
-                watcher
-            );
-            socket.emit('otp-monitor', pid, ref, watcher);
-        } else if (compare(receivers.discover)) {
-            let [, source, score, name, pid] = op;
-
-            source = serialize(source ?? node.name, replace);
-            score = serialize(score, replace);
-            name = serialize(name, replace);
-            pid = serialize(pid, replace);
-
-            log(
-                ctx,
-                'socket.emit(otp-discover, %o, %o)',
-                source,
-                score,
-                name,
-                pid
-            );
-            socket.emit('otp-discover', source, score, name, pid);
-        }
-    }
-
     function handleConnect() {
         try {
             running = true;
+            node.registerRouter(
+                node.name,
+                1,
+                nodeInformation.name,
+                ctx.self(),
+                {
+                    bridge: false,
+                    type,
+                }
+            );
             recycle();
         } catch (err) {
             log(ctx, 'handleConnect() : error : %o', err);
@@ -153,8 +143,6 @@ function _handleSocket(node, ctx, socket, lengthScanner, options) {
         score += TRANSPORT_COST;
 
         log(ctx, 'handleDiscover(%o, %o, %o, %o)', source, score, name, pid);
-
-        node.registerRouter(source, score, name, pid, { bridge: false, type });
     }
 
     function handleLost(source, score, name, pid = undefined) {
