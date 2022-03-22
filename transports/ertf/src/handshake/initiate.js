@@ -26,7 +26,7 @@ export default async function initiate(
     socket.pipe(lengthScanner, { end: false });
 
     try {
-        await new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             function cleanAndReject(err) {
                 socket.off('close', cleanAndReject);
                 socket.off('error', cleanAndReject);
@@ -36,7 +36,10 @@ export default async function initiate(
             function onConnect() {
                 socket.off('close', cleanAndReject);
                 socket.off('error', cleanAndReject);
-                initiateHandshakeV6().then(resolve, reject);
+                initiateHandshakeV6().then(
+                    () => resolve(nodeInformation),
+                    reject
+                );
             }
             socket.once('connect', onConnect);
             socket.once('close', reject);
@@ -94,13 +97,13 @@ export default async function initiate(
         log(ctx, 'continueHandshake()');
         const chunk = await waitForChunk(ctx, lengthScanner);
         log(ctx, 'continueHandshake() : chunk : %o', chunk);
-        assert(String.fromCharCode(chunk.readUInt8(2)) === 'N');
+
         const flags = chunk.readBigUInt64BE(3);
         const challenge = chunk.readUInt32BE(11);
         const creation = chunk.readUInt32BE(15);
         const nameLength = chunk.readUInt16BE(19);
         const name = chunk.slice(21);
-        nodeInformation.name = name.toString('utf8');
+        nodeInformation.name = Symbol.for(name.toString('utf8'));
         nodeInformation.creation = creation;
         nodeInformation.flags = flags;
 
