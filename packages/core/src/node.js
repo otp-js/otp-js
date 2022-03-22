@@ -536,25 +536,31 @@ export class Node {
             this.#deliverToLocalPid(...args)
         );
         route(Pid.isPid, _).to((...args) => this.#deliverToRemotePid(...args));
-        route(t(_, this.name), _).to(([, name], ...args) =>
+        route(
+            t(_, (v) => v === this.name),
+            _
+        ).to(([name, _node], ...args) =>
             this.#deliverToLocalName(name, ...args)
         );
-        route(t(_, _), _).to((...args) => this.#deliverToRemoteName(...args));
+        route(t(_, _), _).to((...args) => {
+            this._log('#deliver(args: %o)', args);
+            this.#deliverToRemoteName(...args);
+        });
         route(undefined, _).to(() => {
             throw new OTPError(badarg);
         });
         route(_, _).to((...args) => this.#deliverToLocalName(...args));
     });
-    #deliverToLocalPid(to, message) {
-        const ctx = this._processes.get(to.process);
-        if (ctx && !ctx.dead) {
-            ctx._deliver(message);
+    #deliverToLocalPid(ctx, to, message) {
+        const targetCtx = this._processes.get(to.process);
+        if (targetCtx && !targetCtx.dead) {
+            targetCtx._deliver(message);
             return ok;
         } else {
             return ok;
         }
     }
-    #deliverToRemotePid(to, message) {
+    #deliverToRemotePid(ctx, to, message) {
         this._log('deliver(%o) : PID : REMOTE', to, to.node);
         const router = this._routersById.get(to.node);
         if (router) {
@@ -563,10 +569,19 @@ export class Node {
             return ok;
         }
     }
-    #deliverToRemoteName([name, node], message) {
+    #deliverToRemoteName(ctx, [name, node], message) {
         const router = this._routers.get(node);
+        this._log(
+            'deliver(name: %o, node: %o, router: %o)',
+            name,
+            node,
+            router
+        );
         if (router) {
-            return this.#deliver(router.pid, t(relay, name, message));
+            return this.#deliver(
+                router.pid,
+                t(relay, ctx.self(), name, message)
+            );
         } else {
             return ok;
         }

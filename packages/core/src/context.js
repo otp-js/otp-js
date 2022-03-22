@@ -36,7 +36,7 @@ export class Context {
         this.#monitors = new Map();
         this.#flags = new Map();
 
-        this.#forward('deliver', 'send');
+        this.#forwardWithSelf('deliver', 'send');
         this.#forward('demonitor');
         this.#forward('ref');
         this.#forward('spawn');
