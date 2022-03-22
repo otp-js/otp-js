@@ -347,6 +347,8 @@ export function il(...items) {
     }
 }
 export const cons = List;
+export const car = (list) => list.head;
+export const cdr = (list) => list.tail;
 export const list = l;
 export const improperList = il;
 
