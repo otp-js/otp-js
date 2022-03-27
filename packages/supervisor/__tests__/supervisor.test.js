@@ -161,7 +161,7 @@ describe('@otp-js/supervisor', () => {
                         )
                     );
 
-                    node.exit(pid, kill);
+                    node.exit(node.system, pid, kill);
                 });
 
                 it('restarts the processes when they die', async function () {

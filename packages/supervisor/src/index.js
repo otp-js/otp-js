@@ -310,11 +310,11 @@ async function doOneForOneRestart(ctx, state, id, pid) {
 
 function getSpecById(ctx, id, specs) {
     log(ctx, 'getSpecsById(%o, %o)', id, specs);
-    return specs[id];
+    return specs.nth(id);
 }
 
 function updatePid(state, id, pid) {
-    state.children[id].pid = pid;
+    state.children.nth(id).pid = pid;
     return state;
 }
 
