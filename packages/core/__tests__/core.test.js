@@ -13,6 +13,8 @@ async function wait(ms) {
 
 const { ok, normal, error, DOWN } = core.Symbols;
 const { spread, _ } = matching.Symbols;
+const test = Symbol.for('test');
+const test_b = Symbol.for('test_b');
 
 describe('@otpjs/core.Node', () => {
     let node = null;
@@ -49,30 +51,30 @@ describe('@otpjs/core.Node', () => {
         await wait(100);
 
         expect(node.deliver).toBeInstanceOf(Function);
-        expect(() => node.deliver(proc, 1)).not.toThrow();
+        expect(() => node.deliver(proc, proc, 1)).not.toThrow();
     });
     it('can register contexts under names', async function () {
         expect(node.register).toBeInstanceOf(Function);
         const ctx = node.makeContext();
-        expect(() => node.register(ctx.self(), 'test')).not.toThrow();
+        expect(() => node.register(ctx.self(), test)).not.toThrow();
     });
     it('can look up processes by their names', async function () {
         expect(node.whereis).toBeInstanceOf(Function);
 
         const pid = node.spawn(async (ctx) => {
-            ctx.register('test');
+            ctx.register(test);
             await ctx.receive();
         });
         const ctx = node.makeContext();
 
-        expect(await node.whereis('test')).toBe(pid);
-        expect(await ctx.whereis('test')).toBe(pid);
-        expect(await node.whereis('test_b')).toBe(undefined);
+        expect(await node.whereis(test)).toBe(pid);
+        expect(await ctx.whereis(test)).toBe(pid);
+        expect(await node.whereis(test_b)).toBe(undefined);
     });
     it('only allows one process to register a name', async function () {
         const pidA = node.spawn(async (ctx) => {
             try {
-                ctx.register('test');
+                ctx.register(test);
                 await ctx.receive();
             } catch (err) {
                 log(ctx, 'register(test) : error : %o', err);
@@ -82,7 +84,7 @@ describe('@otpjs/core.Node', () => {
             node.spawn(async (ctx) => {
                 try {
                     log(ctx, 'register(test)');
-                    const result = ctx.register('test');
+                    const result = ctx.register(test);
                     resolve(result);
                 } catch (err) {
                     log(ctx, 'register(test) : error : %o', err);
@@ -92,39 +94,39 @@ describe('@otpjs/core.Node', () => {
         });
 
         await expect(result).rejects.toThrowTerm(core.Symbols.badarg);
-        node.deliver(pidA, 'stop');
+        node.deliver(pidA, pidA, 'stop');
     });
     it('can route messages to a name', async function () {
         const message = Math.floor(Math.random() * Number.MAX_VALUE);
         const result = await new Promise(async (resolve, reject) => {
             const pid = node.spawn(async (ctx) => {
-                ctx.register('test');
+                ctx.register(test);
                 const result = await ctx.receive();
                 resolve(result);
             });
 
             await wait(10);
 
-            expect(node.whereis('test')).toBe(pid);
-            expect(() => node.deliver('test', message)).not.toThrow();
+            expect(node.whereis(test)).toBe(pid);
+            expect(() => node.deliver(pid, test, message)).not.toThrow();
         });
 
         expect(result).toBe(message);
     });
     it('unregisters contexts when they die', async function () {
         const proc = node.spawn(async (ctx) => {
-            ctx.register('test');
+            ctx.register(test);
             const message = await ctx.receive();
         });
 
         await wait(10);
 
-        expect(node._registrations.has('test')).toBe(true);
-        node.deliver(proc, 'stop');
+        expect(node._registrations.has(test)).toBe(true);
+        node.deliver(proc, proc, 'stop');
 
         await wait(10);
 
-        expect(node._registrations.has('test')).toBe(false);
+        expect(node._registrations.has(test)).toBe(false);
     });
 
     describe('deliver', function () {
@@ -135,17 +137,17 @@ describe('@otpjs/core.Node', () => {
                 done();
             });
             expect(node.deliver).toBeInstanceOf(Function);
-            expect(() => node.deliver(proc, 1)).not.toThrow();
+            expect(() => node.deliver(proc, proc, 1)).not.toThrow();
         });
 
         it('accepts remote pids', async function () {
             proc = core.Pid.of(1, 0);
-            expect(() => node.deliver(proc, 1)).not.toThrow();
+            expect(() => node.deliver(proc, proc, 1)).not.toThrow();
         });
 
         it('tries to route remote messages', function () {
             proc = core.Pid.of(1, 0);
-            expect(() => node.deliver(proc, 'test')).not.toThrow();
+            expect(() => node.deliver(proc, proc, test)).not.toThrow();
         });
     });
     describe('monitor', function () {

@@ -8,25 +8,32 @@ const {
     DOWN,
     EXIT,
     badarg,
+    demonitor,
     discover,
+    error,
     link,
+    lost,
     monitor,
     normal,
     ok,
-    relay,
-    unlink,
-    temporary,
     permanent,
-    lost,
+    relay,
+    temporary,
+    unlink,
 } = Symbols;
-const { _ } = matching.Symbols;
+const { _, spread } = matching.Symbols;
 
 const log = debug('otpjs:core:node');
 
 const isPidFromLocalNode = (v) => Pid.isPid(v) && v.node === Pid.LOCAL;
+const monitors = new WeakMap();
 
 function getNodeId() {
     return `otp-${Node.nodes++}`;
+}
+
+function isAtom(atom) {
+    return typeof atom === 'symbol';
 }
 
 function getNodeHost() {
@@ -74,6 +81,9 @@ export class Node {
     get name() {
         return this._id;
     }
+    get systemPid() {
+        return this._system;
+    }
     node() {
         return this.name;
     }
@@ -87,173 +97,111 @@ export class Node {
             }
         }, []);
     }
-    exit(pid, reason) {
-        const message = t(EXIT, reason, Error().stack);
-        return this.deliver(pid, message);
+    exit(fromPid, toPid, reason) {
+        this.signal(fromPid, EXIT, toPid, reason);
     }
 
-    link = matching.clauses((route) => {
-        route(isPidFromLocalNode).to(this.#linkLocal);
-        route(Pid.isPid).to(this.#linkRemote);
-        route(_).to((ctx, pidB) => {
-            throw OTPError(t(badarg, pidB));
-        });
-    });
-    #linkLocal(ctx, pidB) {
-        const pidA = ctx.self();
-        this._log('#linkLocal(%o, %o)', pidA, pidB);
-        const watchee = this._processes.get(pidB.process);
-        if (watchee) {
-            ctx._link(watchee);
-            watchee._link(pidA);
-        } else {
-            this.deliver(pidA, t(EXIT, pidB, 'noproc', Error().stack));
-        }
-        return ok;
-    }
-    #linkRemote(ctx, pidB) {
-        const pidA = ctx.self();
-        this._log('#linkRemote(%o, %o)', pidA, pidB);
-        const router = this._routersById.get(pidB.node);
-        if (router) {
-            ctx._link(pidB);
-            this.deliver(router.pid, t(link, pidB, pidA));
-        } else {
-            this.deliver(pidA, t(EXIT, pidB, 'noconnection', Error().stack));
-        }
-        return ok;
+    getContext(pid) {
+        return this._processes.get(pid.process);
     }
 
-    unlink = matching.clauses((route) => {
-        route(isPidFromLocalNode).to(this.#unlinkLocal);
-        route(Pid.isPid).to(this.#unlinkRemote);
-        route(_).to(() => {
-            throw new OTPError(t(badarg, pidB));
-        });
-    });
-    #unlinkLocal(ctx, pidB) {
-        const pidA = ctx.self();
-        this._log('#unlinkLocal(%o, %o)', pidA, pidB);
-        const watchee = this._processes.get(pidB.process);
-        if (watchee) {
-            ctx._unlink(watchee);
-            watchee._unlink(pidA);
-        } else {
-            this.deliver(pidA, t(EXIT, pidB, 'noproc', Error().stack));
-        }
-        return ok;
-    }
-    #unlinkRemote(ctx, pidB) {
-        const pidA = ctx.self();
-        this._log('#unlinkRemote(%o, %o)', pidA, pidB);
-        const router = this._routers.get(node);
-        if (router) {
-            ctx._unlink(pidB);
-            this.deliver(router.pid, t(unlink, pidB, pidA));
-        } else {
-            this.deliver(pidA, t(EXIT, pidB, 'noconnection', Error().stack));
-        }
-        return ok;
-    }
-
-    monitor = matching.clauses((route) => {
-        route(Pid.isPid, isPidFromLocalNode).to(this.#monitorLocalPid);
-        route(Pid.isPid, isPidFromLocalNode, Ref.isRef).to(
-            this.#monitorLocalPid
+    signal = matching.clauses((route) => {
+        route(_, _, isAtom, spread).to((...args) =>
+            this.#signalLocalName(...args)
         );
-        route(Pid.isPid, Pid.isPid).to(this.#monitorRemotePid);
-        route(Pid.isPid, Pid.isPid, Ref.isRef).to(this.#monitorRemotePid);
-
-        route(Pid.isPid, undefined).to(this.#monitorTargetUndefined);
-        route(Pid.isPid, undefined, Ref.isRef).to(this.#monitorTargetUndefined);
-
-        route(Pid.isPid, t(_, _)).to(this.#monitorNameNodePair);
-        route(Pid.isPid, t(_, _), Ref.isRef).to(this.#monitorNameNodePair);
-
-        route(Pid.isPid, _).to(this.#monitorRegisteredName);
-        route(Pid.isPid, _, Ref.isRef).to(this.#monitorRegisteredName);
+        route(_, _, isPidFromLocalNode, spread).to((...args) =>
+            this.#signalLocal(...args)
+        );
+        route(_, _, Pid.isPid, spread).to((...args) =>
+            this.#signalRemote(...args)
+        );
+        route(_, _, t(_, _), spread).to((...args) =>
+            this.#signalRemoteName(...args)
+        );
+        return 'node.signal';
     });
-    #monitorLocalPid(watcherPid, watcheePid, ref) {
-        ref = ref ?? this.ref();
-        this._log('#monitorLocalPid(%o, %o)', watcherPid, watcheePid);
-        const watchee = this._processes.get(watcheePid.process);
-        if (watchee) {
-            this._log('#monitorLocalPid(watchee: %o, ref: %O)', watchee, ref);
-            watchee._monitor(ref, watcherPid);
-            this._monitors.set(ref, watchee);
+
+    #signalLocal(fromPid, signal, toPid, ...args) {
+        const toCtx = this.getContext(toPid);
+        if (toCtx) {
+            toCtx.signal(signal, fromPid, ...args);
+            return ok;
         } else {
-            this._log('#monitorLocalPid(DOWN: %o)', watcheePid);
-            this.deliver(
-                watcherPid,
-                t(DOWN, ref, 'process', watcheePid, 'noproc')
-            );
+            return [error, 'noproc'];
         }
-        return ref;
     }
-    #monitorRemotePid(watcherPid, watcheePid, ref) {
-        ref = ref ?? this.ref();
-        this._log('monitor(%o, %o) : remote', watcherPid, watcheePid);
-        const router = this._routersById.get(watcheePid.node);
+    #signalLocalName(fromPid, signal, toProc, ...args) {
+        const toPid = this.whereis(toProc);
+        if (toPid) {
+            this.#signalLocal(fromPid, signal, toPid, ...args);
+        } else {
+            this.signal(this.systemPid, EXIT, fromPid, badarg);
+        }
+    }
+
+    #signalRemote(fromPid, signal, toPid, ...args) {
+        const nodeId = toPid.node;
+        const router = this._routersById.get(nodeId);
+
         if (router) {
-            this.deliver(router.pid, t(monitor, watcheePid, ref, watcherPid));
-        } else {
-            this.deliver(
-                watcherPid,
-                t(DOWN, ref, 'process', watcheePid, 'noconnection')
+            this.signal(
+                fromPid,
+                relay,
+                router.pid,
+                t(relay, t(signal, fromPid, toPid, ...args))
             );
+            return ok;
+        } else {
+            return [error, 'noconnection'];
+        }
+    }
+    #signalRemoteName(fromPid, signal, nameNodePair, ...args) {
+        const [toProc, toNode] = nameNodePair;
+        const router = this._routers.get(toNode);
+
+        if (router) {
+            this.signal(
+                fromPid,
+                relay,
+                router.pid,
+                t(relay, t(signal, fromPid, toProc, ...args))
+            );
+            return ok;
+        } else {
+            return [error, 'noconnection'];
+        }
+    }
+
+    link(fromPid, toPid) {
+        this.signal(fromPid, link, toPid);
+        this.signal(toPid, link, fromPid);
+    }
+    unlink(fromPid, toPid) {
+        this.signal(fromPid, unlink, toPid);
+        this.signal(toPid, unlink, fromPid);
+    }
+
+    monitor(fromPid, toPid, ref) {
+        ref = ref ?? this.ref();
+        monitors.set(ref, toPid);
+        const result = this.signal(fromPid, monitor, toPid, ref);
+        if (matching.compare([error, _], result)) {
+            this.signal(toPid, DOWN, fromPid, ref);
         }
         return ref;
     }
-    #monitorNameNodePair(watcherPid, watcheePid, ref) {
-        const [name, node] = watcheePid;
-        ref = ref ?? this.ref();
-        if (node === this.name) {
-            this._log('#monitorNameNodePair(localName: %o)', name);
-            return this.monitor(watcherPid, name, ref);
+    demonitor(fromPid, ref) {
+        if (monitors.has(ref)) {
+            const toPid = monitors.get(ref);
+            this.signal(fromPid, demonitor, toPid, ref);
+            return ok;
         } else {
-            const router = this._routers.get(node);
-            this._log('#monitorNameNodePair(router: %o)', router);
-            if (router) {
-                this.deliver(router.pid, t(monitor, name, ref, watcherPid));
-            } else {
-                this.deliver(
-                    watcherPid,
-                    t(DOWN, ref, 'process', watcheePid, 'noconnection')
-                );
-            }
-            return ref;
+            return ok;
         }
-    }
-    #monitorTargetUndefined(watcherPid, watcheePid, ref) {
-        throw new OTPError(badarg);
-    }
-    #monitorRegisteredName(watcherPid, watcheePid, ref) {
-        watcheePid = this._registrations.get(watcheePid);
-        return this.monitor(watcherPid, watcheePid, ref);
-    }
-
-    demonitor = matching.clauses((route) => {
-        route(Ref.isRef).to(this.#demonitorByRef);
-        route(Pid.isPid).to(this.#demonitorByPid);
-    });
-    #demonitorByRef(ref) {
-        const watchee = this._monitors.get(ref);
-        if (watchee) {
-            watchee._demonitor(ref);
-            this._monitors.delete(ref);
-        }
-    }
-    #demonitorByPid(pid) {
-        const toRemove = [];
-        this._monitors.forEach((target, ref) => {
-            if (Pid.compare(target, pid) === 0) {
-                toRemove.push(ref);
-            }
-        });
-        toRemove.forEach((ref) => this.demonitor(ref));
     }
 
     async system(ctx) {
+        this._systemContext = ctx;
         let running = true;
         while (running) {
             const message = await ctx.receive();
@@ -262,6 +210,10 @@ export class Node {
     }
 
     register(pid, name) {
+        if (!isAtom(name)) {
+            throw OTPError(badarg);
+        }
+
         const proc = this._processes.get(pid.process);
         if (proc) {
             if (this._registrations.has(name)) {
@@ -277,7 +229,6 @@ export class Node {
                 this._log('register(%o, %o)', pid, name);
                 proc.death.finally(() => {
                     this.unregister(pid);
-                    this.demonitor(pid);
                     this._processes.delete(pid.process);
                 });
 
@@ -319,9 +270,14 @@ export class Node {
     updatePeers(source, score, name, pid, operation) {
         for (let [bridge, names] of this._bridges) {
             const router = this._routersByPid.get(bridge);
-            this.deliver(bridge, operation(source, score, name, pid));
+            this.deliver(
+                this.systemPid,
+                bridge,
+                operation(source, score, name, pid)
+            );
             for (let name of names) {
                 this.deliver(
+                    this.systemPid,
                     pid,
                     operation(router.source, router.score, name, bridge)
                 );
@@ -509,7 +465,7 @@ export class Node {
         const mref = this.monitor(monitoring, pid);
         this.doSpawn(ctx, fun);
 
-        return pid;
+        return t(pid, mref);
     }
     async doSpawn(ctx, fun) {
         this._finalizer.register(ctx, ctx.self());
@@ -517,79 +473,18 @@ export class Node {
             await fun(ctx);
             ctx.die(normal);
         } catch (err) {
-            ctx.die(err.message);
+            ctx.die(err.term ?? err.message);
         }
     }
 
-    deliver(to, message) {
-        try {
-            this.#deliver(to, message);
-            return ok;
-        } catch (err) {
-            this._log('deliver(%o) : error : %o', err);
-            return ok;
-        }
-    }
-
-    #deliver = matching.clauses((route) => {
-        route(isPidFromLocalNode, _).to((...args) =>
-            this.#deliverToLocalPid(...args)
-        );
-        route(Pid.isPid, _).to((...args) => this.#deliverToRemotePid(...args));
-        route(
-            t(_, (v) => v === this.name),
-            _
-        ).to(([name, _node], ...args) =>
-            this.#deliverToLocalName(name, ...args)
-        );
-        route(t(_, _), _).to((...args) => {
-            this._log('#deliver(args: %o)', args);
-            this.#deliverToRemoteName(...args);
-        });
-        route(undefined, _).to(() => {
-            throw new OTPError(badarg);
-        });
-        route(_, _).to((...args) => this.#deliverToLocalName(...args));
-    });
-    #deliverToLocalPid(ctx, to, message) {
-        const targetCtx = this._processes.get(to.process);
-        if (targetCtx && !targetCtx.dead) {
-            targetCtx._deliver(message);
-            return ok;
-        } else {
-            return ok;
-        }
-    }
-    #deliverToRemotePid(ctx, to, message) {
-        this._log('deliver(%o) : PID : REMOTE', to, to.node);
-        const router = this._routersById.get(to.node);
-        if (router) {
-            return this.#deliver(router.pid, t(relay, to, message));
-        } else {
-            return ok;
-        }
-    }
-    #deliverToRemoteName(ctx, [name, node], message) {
-        const router = this._routers.get(node);
+    deliver(fromPid, toProc, message) {
         this._log(
-            'deliver(name: %o, node: %o, router: %o)',
-            name,
-            node,
-            router
+            'deliver(fromPid: %o, toProc: %o, message: %o)',
+            fromPid,
+            toProc,
+            message
         );
-        if (router) {
-            return this.#deliver(
-                router.pid,
-                t(relay, ctx.self(), name, message)
-            );
-        } else {
-            return ok;
-        }
-    }
-    #deliverToLocalName(to, message) {
-        this._log('deliver(%o) : NAME : LOCAL : %O', to, this._registrations);
-        to = this._registrations.get(to);
-        return this.#deliver(to, message);
+        return this.signal(fromPid, relay, toProc, message);
     }
 
     processInfo(pid) {

@@ -4,8 +4,9 @@ import { MessageBox } from './message-box.js';
 import * as matching from '@otpjs/matching';
 import * as Symbols from './symbols';
 
-const { DOWN, EXIT, trap_exit } = Symbols;
-const { _ } = matching.Symbols;
+const { DOWN, EXIT, relay, link, unlink, monitor, demonitor, trap_exit } =
+    Symbols;
+const { _, spread } = matching.Symbols;
 
 const isExitMessage = matching.match(t(EXIT, _, _), t(EXIT, _, _, _));
 const processFlags = new Set([trap_exit]);
@@ -36,18 +37,18 @@ export class Context {
         this.#monitors = new Map();
         this.#flags = new Map();
 
-        this.#forwardWithSelf('deliver', 'send');
-        this.#forward('demonitor');
+        this.#forwardWithPid('deliver', 'send');
+        this.#forwardWithPid('demonitor');
         this.#forward('ref');
         this.#forward('spawn');
         this.#forward('whereis');
         this.#forward('node');
         this.#forward('nodes');
         this.#forward('processInfo');
-        this.#forwardWithSelf('spawnLink');
-        this.#forwardWithSelf('spawnMonitor');
-        this.#forwardWithSelf('link');
-        this.#forwardWithSelf('unlink');
+        this.#forwardWithPid('spawnLink');
+        this.#forwardWithPid('spawnMonitor');
+        this.#forwardWithPid('link');
+        this.#forwardWithPid('unlink');
         this.#forwardWithPid('monitor');
         this.#forwardWithPid('register');
         this.#forwardWithPid('unregister');
@@ -60,9 +61,14 @@ export class Context {
                         reason,
                         this.#lastMessage
                     );
-                    const err = OTPError(reason);
-                    Error.captureStackTrace(err, OTPError);
-                    resolve(err);
+
+                    if (reason instanceof OTPError) {
+                        resolve(reason);
+                    } else {
+                        const err = OTPError(reason);
+                        Error.captureStackTrace(err, OTPError);
+                        resolve(err);
+                    }
                 })
         );
         this._dead = false;
@@ -155,16 +161,20 @@ export class Context {
             return 'running';
         }
     }
-    #notifyLinks(error) {
+    #notifyLinks(reason) {
         const pid = this.self();
         for (let link of this.#links) {
-            this.send(link, t(EXIT, pid, error.term, error.stack));
+            this.#node.signal(pid, EXIT, link, reason);
         }
     }
-    #notifyMonitors(error) {
+    #notifyMonitors(reason) {
         const pid = this.self();
+        if (reason instanceof Error) {
+            reason = reason.term;
+        }
         for (let [ref, monitor] of this.#monitors) {
-            this.send(monitor, t(DOWN, ref, 'process', pid, error.term));
+            this._log('#notifyMonitors(ref: %o, monitor: %o)', ref, monitor);
+            this.#node.signal(pid, DOWN, monitor, ref, reason);
         }
     }
     _processInfo() {
@@ -201,21 +211,6 @@ export class Context {
             }
         };
     }
-    #forwardWithSelf(operation, name = operation) {
-        this[name] = (...args) => {
-            try {
-                return this.#node[operation](this, ...args);
-            } catch (err) {
-                this._log(
-                    'forwardWithSelf(%o, %o) : error : %o',
-                    operation,
-                    name,
-                    err
-                );
-                throw err;
-            }
-        };
-    }
     #forwardWithPid(operation, name = operation) {
         this[name] = (...args) => {
             try {
@@ -231,29 +226,80 @@ export class Context {
             }
         };
     }
+
+    signal = matching.clauses((route) => {
+        const self = this;
+        route(relay, spread).to(function signalRelay(
+            _relay,
+            _fromPid,
+            message
+        ) {
+            return self._deliver(message);
+        });
+        route(link, spread).to(function signalLink(_link, fromPid) {
+            self._link(fromPid);
+        });
+        route(unlink, spread).to(function signalUnlink(_unlink, fromPid) {
+            self._unlink(fromPid);
+        });
+        route(monitor, spread).to(function signalMonitor(
+            _monitor,
+            fromPid,
+            ref
+        ) {
+            self._monitor(ref, fromPid);
+        });
+        route(demonitor, spread).to(function signalDemonitor(
+            _demonitor,
+            _fromPid,
+            ref
+        ) {
+            self._demonitor(ref);
+        });
+        route(EXIT, spread).to(function signalEXIT(_exit, fromPid, reason) {
+            self._exit(fromPid, reason);
+        });
+        route(DOWN, spread).to(function signalDOWN(
+            _down,
+            fromPid,
+            ref,
+            reason
+        ) {
+            self._deliver(t(DOWN, ref, 'process', fromPid, reason));
+        });
+        return 'context.signal';
+    });
+
     _link(other) {
         this.#links.add(other);
     }
     _unlink(other) {
         this.#links.delete(other);
     }
+    _exit(fromPid, error) {
+        this._log(
+            '_exit(self: %o, dead: %o, fromPid: %o, error: %o)',
+            this.self(),
+            this._dead,
+            fromPid,
+            error
+        );
+        if (!this._dead) {
+            if (!this.processFlag(trap_exit)) {
+                this.die(error);
+            } else {
+                this._deliver(t(EXIT, fromPid, error.term, error.stack));
+            }
+        }
+    }
     _deliver(message) {
         this._log('_deliver() : message : %o', message);
         if (!this._dead) {
-            if (isExitMessage(message) && !this.processFlag(trap_exit)) {
-                this._log('_deliver(exitMessage: %o)', message);
-                if (message.length === 3) {
-                    this.die(message[message.length - 1]);
-                } else if (message.length === 4) {
-                    this.die(message[message.length - 2]);
-                }
-            } else {
-                try {
-                    this.#mb.push(message);
-                    this._log('_deliver(mb: %o)', this.#mb);
-                } catch (err) {
-                    this._log('_deliver(error: %o) : undeliverable', err);
-                }
+            try {
+                this.#mb.push(message);
+                this._log('_deliver(mb: %o)', this.#mb);
+            } catch (err) {
+                this._log('_deliver(error: %o) : undeliverable', err);
             }
         } else {
             this._log('_deliver() : DEAD');
