@@ -9,6 +9,7 @@ module.exports = {
         '@otpjs/serializer-(.*)': '<rootDir>/serializers/$1/src/index.js',
         '@otpjs/(.*)': '<rootDir>/packages/$1/src/index.js',
     },
+    setupFiles: ['./tools/unhandled.js'],
     setupFilesAfterEnv: ['./tools/regenerator.js'],
     moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
     collectCoverage: true,
