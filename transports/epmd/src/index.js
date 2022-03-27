@@ -1,6 +1,4 @@
 import { Symbols } from '@otpjs/core';
-import { Pid, Ref } from '@otpjs/types';
-import { compile, caseOf } from '@otpjs/matching';
 import * as net from 'net';
 import * as ertf from '@otpjs/transports-ertf';
 import epmd from '@otpjs/epmd-client';
@@ -16,9 +14,6 @@ const {
     temporary,
     lost,
 } = Symbols;
-
-const disconnect = Symbol.for('disconnect');
-const TRANSPORT_COST = 1;
 
 function log(ctx, ...args) {
     return ctx.log.extend('transports:epmd')(...args);
@@ -37,7 +32,6 @@ function defaultOptions() {
 
 export function register(node, options = defaultOptions()) {
     let ctx = node.makeContext();
-    let running = false;
 
     log(ctx, 'register(%o) : net.createServer()', node.name);
     const server = net.createServer((socket) =>
@@ -69,9 +63,6 @@ export function register(node, options = defaultOptions()) {
             });
             client.on('error', reject);
         });
-
-        const dump = await epmd.dumpEpmd(host, port);
-        console.log('dump : %o', dump);
     });
 
     return function destroy(reason = shutdown) {
@@ -83,38 +74,4 @@ export function register(node, options = defaultOptions()) {
             ctx.die(reason);
         }
     };
-
-    function revive(key, value) {
-        log(ctx, 'revive(%o)', value);
-        const compare = caseOf(value);
-        if (compare(['$ref', _, _])) {
-            const [, remote, ref] = value;
-            const routerId = node.getRouterId(remote);
-            const updated = Ref.for(routerId, ref);
-            log(ctx, 'restore_remote_ref_with_name(%o) : %o', value, updated);
-            return updated;
-        } else if (compare(['$pid', _, _])) {
-            const [, remote, process] = value;
-            const routerId = node.getRouterId(remote);
-            const updated = Pid.of(routerId, process);
-            log(ctx, 'restore_remote_pid_with_name(%o) : %o', value, updated);
-            return updated;
-        } else {
-            return value;
-        }
-    }
-
-    function replace(key, value) {
-        if (value instanceof Pid) {
-            log(ctx, 'replace_unknown_pid_with_name(%o)', value);
-            const name = node.getRouterName(value.node);
-            return ['$pid', name, value.process];
-        } else if (value instanceof Ref) {
-            log(ctx, 'replace_unknown_ref_with_name(%o)', value);
-            const name = node.getRouterName(value.node);
-            return ['$ref', name, value.ref];
-        } else {
-            return value;
-        }
-    }
 }

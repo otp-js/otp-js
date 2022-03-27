@@ -8,6 +8,7 @@ import { register as useSocketIO } from '../src';
 import * as otp from '@otpjs/core';
 
 const { DOWN, normal } = otp.Symbols;
+const test_name = Symbol.for('test');
 
 function log(ctx, ...args) {
     return ctx.log.extend('transports:socket.io:__tests__')(...args);
@@ -76,7 +77,7 @@ describe('@otpjs/transports-socket.io', function () {
             serverNode.spawn(async (ctx) => {
                 try {
                     log(ctx, 'spawned');
-                    ctx.register('test');
+                    ctx.register(test_name);
                     const message = await ctx.receive(500);
                     expect(message).toBe('test');
                     resolve();
@@ -88,14 +89,14 @@ describe('@otpjs/transports-socket.io', function () {
             await wait(100);
 
             pid = clientNode.spawn(async (ctx) => {
-                const target = t('test', serverNode.name);
+                const target = t(test_name, serverNode.name);
                 log(ctx, 'send(%o, test)', target);
                 ctx.send(target, 'test');
                 await wait(100);
             });
         });
 
-        clientNode.deliver(pid, 'die');
+        clientNode.deliver(clientNode.system, pid, 'die');
     });
     it('supports monitoring over the transport', async function () {
         useSocketIO(clientNode, clientSocket);
@@ -104,7 +105,7 @@ describe('@otpjs/transports-socket.io', function () {
         await wait(100);
 
         let pidA = serverNode.spawn(async (ctx) => {
-            ctx.register('test');
+            ctx.register(test_name);
             await ctx.receive();
             log(ctx, 'received : stoppping');
         });
@@ -115,8 +116,8 @@ describe('@otpjs/transports-socket.io', function () {
         await expect(
             new Promise((resolve, reject) => {
                 pidB = clientNode.spawn(async (ctx) => {
-                    mref = ctx.monitor(t('test', serverNode.name));
-                    ctx.send(t('test', serverNode.name), 'stop');
+                    mref = ctx.monitor(t(test_name, serverNode.name));
+                    ctx.send(t(test_name, serverNode.name), 'stop');
                     resolve(await ctx.receive());
                 });
             })
@@ -169,8 +170,8 @@ describe('@otpjs/transports-socket.io', function () {
 
         const payload = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         let resultA = new Promise((resolve, reject) => {
-            const pidA = clientNode.spawn(async (ctx) => {
-                ctx.register('test');
+            clientNode.spawn(async (ctx) => {
+                ctx.register(test_name);
                 const [message, from] = await ctx.receive();
                 ctx.send(from, 'received');
                 resolve(message);
@@ -179,8 +180,8 @@ describe('@otpjs/transports-socket.io', function () {
 
         await wait(100);
 
-        const pidB = clientNodeB.spawn(async (ctx) => {
-            ctx.send(t('test', clientNode.name), t(payload, ctx.self()));
+        clientNodeB.spawn(async (ctx) => {
+            ctx.send(t(test_name, clientNode.node()), t(payload, ctx.self()));
             await expect(ctx.receive()).resolves.toBe('received');
         });
 
