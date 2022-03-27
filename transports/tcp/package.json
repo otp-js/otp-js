@@ -28,5 +28,8 @@
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"
+    },
+    "dependencies": {
+        "@otpjs/serializer-ertf": "file:../../serializers/ertf"
     }
 }
