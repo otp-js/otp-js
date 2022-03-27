@@ -21,8 +21,20 @@ import { Node } from '@otpjs/core';
 import makeERTF from '@otpjs/serializer-ertf';
 
 const node = new Node();
-const ERTF = makeERTF();
+const ERTF = makeERTF(node);
 ```
+
+The options second `options` parameter provides customization of the behavior.
+
+##### Options
+
+###### `stringsAsBinaries` (default: `false`)
+
+When encoding/serializing, encode strings as binaries instead of lists.
+
+###### `binariesAsStrings` (default: `false`)
+
+When parsing/deserializing, convert binaries to UTF-8 strings.
 
 #### `serialize`/`encode`
 

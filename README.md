@@ -9,70 +9,42 @@ This is an endeavor to replicate the Open Telecom Platform in NodeJS. This
 implementation tries to bridge the gap between the two languages by implementing
 what is essentially the Erlang Standard Library: OTP.
 
-## Starting OTPJS
-
-For example, this script would print the string "Hello world"
-
-```javascript
-import { Node } from '@otpjs/core';
-const node = new Node();
-
-const pid = node.spawn(async (ctx) => {
-    const message = await ctx.receive();
-    console.log('Hello %s', message);
-});
-
-node.spawn(async (ctx) => {
-    ctx.send(pid, 'world');
-});
-```
-
 ## Conventions
 
 ### Symbols
 
-Symbols are used in places to replicate the behavior of atoms in Erlang. `@otpjs/core`
-provides its own serialize/deserialize functions for passing data over a text channel.
-These serialize/deserialize functions properly handle both `Symbol` types (as long as
-they are built with `Symbol.for(...)`), and the built-in `String` extensions `Pid`
-and `Ref`.
+We use ES6 symbols to effectively replicate the behavior of atoms in Erlang.
 
-The end result of serialization is a valid JSON string. Deserialization will restore
-available `Symbol`, `Pid`, and `Ref` elements.
-
-As with `JSON.stringify` and `JSON.parse`, these serialize/deserialize functions accept
-a `replacer` and `reviver` parameter respectively so that you can handle your own data
-serialization as well.
-
-```javascript
-import { serialize, deserialize, Symbols } from '@otpjs/core';
-const [ok, _] = Symbols;
-
-const tuple = [ok, 'test', 123, false];
-const json = serialize(tuple);
-
-console.log(json); // [{"$otp.symbol": "$otp.symbol.ok"}, "test", 123, false]
-
-const tupleB = deserialize(json);
-
-console.log(tupleB); // [Symbol($otp.symbol.ok), "test", 123, false]
-```
-
-Symbols are written using `snake_case` in `otp-js`.
+Distinguish atoms/symbols from other terms by using `snake_case`.
 
 ### Variables
 
-In order to distinguish variable names from atom or symbol names, we advise writing them with `camelCase`.
+ES6 and Erlang differ fundamentally with respect to mutability. We can mitigate
+the impact of these differences by adopting programming practices that eschew
+mutability. If we make shallow copies when modifying values instead of modifying
+a reference value, we can enjoy the benefits of immutability.
+
+Erlang takes immutability a step further, not allowing you to rebind a variable
+in a single scope. We can use `let` to accommodate such usage in ES6, however,
+we will still prefer `const` when it makes sense.
 
 ### Functions
 
-All public functions should be exported with names written in `camelCase`.
+Export functions with names written in `camelCase`.
 
-Internal functions should be prefixed by an underscore (e.g., `_privateMethod()`).
+Prefix internal versions of functions with an underscore (e.g., `_privateMethod()`).
 
 ### Pattern Matching
 
 We provide pattern matching functionality in [`@otpjs/matching`](/packages/matching).
+
+### Object-Oriented Programming
+
+OOP is orthoganal to the idioms expressed in these libraries, which makes it a potent
+tool when used appropriately. As such, blending of the idioms in this library with
+an object-oriented approach is actively encouraged, and future changes to behaviors
+may introduce object-oriented actors as an alternative to the pure functional API
+currently provided.
 
 ## Processes
 
@@ -81,144 +53,11 @@ We provide pattern matching functionality in [`@otpjs/matching`](/packages/match
 As in Erlang, every process has a unique identifier associated with it, as well
 as message queues.
 
-Process lifecycles are tracked through Promises. As long as you have an
-unresolved Promise in your context it will be considered to be alive. Once your
-promise chain ends, your context is considered to be dead! In this way, think of
-your context/promise-chain as an Erlang process.
-
-## Library
-
-### proc_lib
-
-A limited `proc_lib` implementation is defined.
-
-```sh
-npm i @otpjs/proc_lib
-```
-
-### gen_server
-
-A limited `gen_server` implementation is defined.
-
-#### Install
-
-```sh
-npm i @otpjs/gen_server
-```
-
-#### Usage
-
-```javascript
-import { Node, caseOf, Symbols } from '@otpjs/core';
-import * as gen_server from '@otpjs/gen_server';
-
-const { ok } = Symbols;
-const { reply } = gen_server.Symbols;
-
-const callbacks = {
-    init,
-    handleCall,
-    handleCast,
-    handleInfo,
-    terminate,
-};
-
-export function start(ctx) {
-    return gen_server.start(ctx, callbacks);
-}
-
-export function startLink(ctx) {
-    return gen_server.startLink(ctx, callbacks);
-}
-
-export function myRemoteFunction(ctx, pid, ...args) {
-    return gen_server.call(ctx, pid, 'my_remote_function', ...args);
-}
-
-function init(ctx) {
-    return [ok, Math.random()];
-}
-
-function handleCall(ctx, call, from, state) {
-    const nextState = Math.random();
-    const compare = caseOf(call);
-    return [reply, ok, nextState];
-}
-
-function handleCast(ctx, cast, state) {
-    const nextState = Math.random();
-    return [noreply, nextState];
-}
-
-function handleInfo(ctx, info, state) {
-    const nextState = Math.random();
-    return [noreply, nextState];
-}
-
-function terminate(ctx, reason, state) {
-    // Pre-death cleanup
-    return ok;
-}
-```
-
-### Advanced gen_server Usage
-
-To simplify usage of the `gen_server` module, we have implemented a generative
-interface for handling patterns and callbacks. See below:
-
-```javascript
-import * as otp from '@otpjs/core';
-import * as gen_server from '@otpjs/gen_server';
-
-const { ok, _ } = otp.Symbols;
-const { reply, noreply } = gen_server.Symbols;
-
-const get_state = Symbol.for('get_state');
-
-const callbacks = gen_server.callbacks((server) => {
-    server.onInit(_init);
-
-    server.onCall([get_state, _], _getState);
-    server.onCall(_, _handleCall);
-
-    server.onCast(_, _handleCast);
-
-    server.onInfo(_, _handleInfo);
-
-    server.onTerminate(_terminate);
-});
-
-async function _init(ctx, ...args) {
-    return [ok, { args }];
-}
-
-async function _getState(ctx, [, reset], _from, state) {
-    if (reset) {
-        return [reply, state, {}];
-    } else {
-        return [reply, state, state];
-    }
-}
-async function _handleCall(ctx, call, _from, state) {
-    // catch-all for calls
-    return [reply, ok, state];
-}
-
-async function _handleCast(ctx, cast, state) {
-    // catch-all for casts
-    return [noreply, state];
-}
-
-async function _handleInfo(ctx, info, state) {
-    // catch-all for info
-    return [noreply, state];
-}
-
-async function _terminate(ctx, reason, state) {
-    // tear-down
-    return ok;
-}
-```
+In ES6, we treat `Promise` chains as process threads with an accompanying
+`Context` object (typically written as `ctx`). As long as you continue returning
+promises, your `Context` remains alive and able to send and receive signals. Once
+your `Promise` resolves or rejects, your `Context` dies and can no longer send or
+receive signals.
 
 ### Roadmap
 
