@@ -1,6 +1,5 @@
 import debug from 'debug';
 import * as matching from '@otpjs/matching';
-import * as otpJSON from '@otpjs/serializer-json';
 import util from 'util';
 
 const log = debug('otpjs:test_utils');
