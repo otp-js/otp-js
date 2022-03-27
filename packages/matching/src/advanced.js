@@ -39,34 +39,42 @@ export function buildCase(builder) {
 export function clauses(builder) {
     let handlers = list.nil;
     const route = (...pattern) => {
-        const test = compile(pattern);
-        return {
-            to(handler) {
-                handlers = cons(tuple(pattern, test, handler), handlers);
-            },
-        };
+        try {
+            const test = compile(pattern);
+            return {
+                to(handler) {
+                    handlers = cons(tuple(pattern, test, handler), handlers);
+                },
+            };
+        } catch (err) {
+            log('route(pattern: %o) : error : %o', pattern, err);
+        }
     };
 
-    builder(route);
+    const name = builder(route) ?? 'route';
     handlers = handlers.reverse();
 
-    return function (...args) {
-        let subject = args;
-        if (args[0] instanceof Node.Context) {
-            subject = args.slice(1);
-        }
-        for (let [pattern, test, handler] of handlers) {
-            const result = test(subject);
-            log(
-                'clauses(pattern: %o, subject: %o, result: %o)',
-                pattern,
-                subject,
-                result
-            );
-            if (result) {
-                return handler.call(this, ...args);
+    return {
+        [name](...args) {
+            let subject = args;
+            if (args[0] instanceof Node.Context) {
+                subject = args.slice(1);
             }
-        }
-        throw OTPError(route_clause);
-    };
+            for (let [pattern, test, handler] of handlers) {
+                log(
+                    'clauses<%o>(subject: %o, pattern: %o)',
+                    name,
+                    subject,
+                    pattern
+                );
+                const result = test(subject);
+
+                if (result) {
+                    log('clauses<%o>(handler: %o)', name, handler);
+                    return handler.call(this, ...args);
+                }
+            }
+            throw OTPError(route_clause);
+        },
+    }[name];
 }
