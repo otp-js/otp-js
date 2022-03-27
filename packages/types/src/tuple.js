@@ -161,11 +161,11 @@ Tuple.prototype[Symbol.toStringTag] = function () {
 };
 
 Tuple.prototype.$$typeof = 'object';
-Tuple.create = function (arity) {
+Tuple.create = function create(arity) {
     return Tuple(...new Array(arity));
 };
 
-Tuple.isTuple = function (value) {
+Tuple.isTuple = function isTuple(value) {
     return value instanceof Tuple;
 };
 

@@ -55,7 +55,9 @@ Pid.prototype.toString = function () {
     return `Pid<${this.node}.${this.id}.${this.serial}>`;
 };
 
-Pid.isPid = (value) => value instanceof Pid;
+Pid.isPid = function isPid(value) {
+    return value instanceof Pid;
+};
 Pid.of = (node, id, serial, creation) => new Pid(node, id, serial, creation);
 Pid.compare = (a, b) => {
     if (a.node < b.node) return -1;
