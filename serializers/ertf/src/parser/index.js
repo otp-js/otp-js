@@ -3,7 +3,7 @@ import debug from 'debug';
 
 const log = debug('otpjs:transports:ertf:parser:term');
 
-export default function make(env) {
+export default function make(env, options) {
     const parsers = new Map([
         [97, parseSmallInt],
         [98, parseInt],
@@ -127,7 +127,11 @@ export default function make(env) {
     }
     function parseBinary(buff) {
         const length = buff.readUInt32BE(0);
-        return [buff.subarray(4, 4 + length), buff.subarray(4 + length)];
+        let result = buff.subarray(4, 4 + length);
+        if (options.binariesAsStrings) {
+            result = result.toString('utf8');
+        }
+        return [result, buff.subarray(4 + length)];
     }
     function parseSmallBigNum(buff) {
         let value = 0n;

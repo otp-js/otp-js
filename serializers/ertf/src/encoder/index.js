@@ -86,26 +86,35 @@ export default function make(env, options = {}) {
     }
     function encodeBigInt(term) {
         const bits = _ilog2(term);
-        const bytes = Math.ceil(bits / 8);
+        const bytes = bits / 8n + (bits % 8n > 0n ? 1n : 0n);
         const sign = term < 0n;
 
-        if (bytes < 256) {
-            let buff = Buffer.alloc(1 + 1 + 1 + bytes);
+        if (bytes <= 4) {
+            const number = Number(term);
+            return encodeInteger(number);
+        } else if (bytes < 256) {
+            let buff = Buffer.alloc(1 + 1 + 1 + Number(bytes));
             buff.writeUint8(110, 0);
-            buff.writeUInt8(bytes, 1);
+            buff.writeUInt8(Number(BigInt.asUintN(8, bytes)), 1);
             buff.writeUInt8(sign, 2);
             for (let i = 0, offset = 3; i < bytes; i++, offset++) {
-                const value = term >> ((bytes - i) * 8);
-                buff.writeUInt8(value, offset);
+                const mask = 0xffn;
+                const byteOffset = BigInt(i);
+                const bitOffset = byteOffset * 8n;
+                const value = (term >> bitOffset) & mask;
+                buff.writeUInt8(Number(value), offset);
             }
             return buff;
         } else {
             let buff = Buffer.alloc(1 + 4 + 1 + bytes);
             buff.writeUint8(111, 0);
-            buff.writeUInt32BE(bytes, 1);
+            buff.writeUInt32BE(Number(BigInt.asUintN(32, bytes)), 1);
             buff.writeUInt8(sign, 5);
             for (let i = 0, offset = 6; i < bytes; i++, offset++) {
-                const value = term >> BigInt((bytes - i) * 8);
+                const mask = 0xffn;
+                const byteOffset = BigInt(i);
+                const bitOffset = byteOffset * 8n;
+                const value = (term >> bitOffset) & mask;
                 buff.writeUInt8(value, offset);
             }
             return buff;
@@ -113,20 +122,23 @@ export default function make(env, options = {}) {
     }
     function encodeString(term) {
         const length = Buffer.byteLength(term, 'binary');
-        if (length >= 65535) {
-            //const length = Buffer.byteLength(term);
-            //const buff = Buffer.alloc(5 + length);
-            //buff.writeUInt8(109, 0);
-            //buff.writeUInt32BE(length, 1);
-            //buff.write(term, 5, 'utf8');
-            //return buff;
-            return encodeList(List.from(...term));
+        if (options.stringsAsBinaries) {
+            const length = Buffer.byteLength(term);
+            const buff = Buffer.alloc(5 + length);
+            buff.writeUInt8(109, 0);
+            buff.writeUInt32BE(length, 1);
+            buff.write(term, 5, 'utf8');
+            return buff;
         } else {
-            const encoded = Buffer.from(term, 'binary');
-            const header = Buffer.alloc(1 + 2);
-            header.writeUInt8(107, 0);
-            header.writeUInt16BE(length, 1);
-            return Buffer.concat([header, encoded]);
+            if (length >= 65535) {
+                return encodeList(List.from(...term));
+            } else {
+                const encoded = Buffer.from(term, 'binary');
+                const header = Buffer.alloc(1 + 2);
+                header.writeUInt8(107, 0);
+                header.writeUInt16BE(length, 1);
+                return Buffer.concat([header, encoded]);
+            }
         }
     }
     function encodePid(term) {
