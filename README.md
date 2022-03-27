@@ -5,10 +5,9 @@
 
 This project makes heavy use of ES6 features and as such requires NodeJS v16
 
-This is an endeavor to replicate the Open Telecom Platform in NodeJS. You should
-probably use _either_ NodeJS or Erlang, but this implementation tries to bridge
-the gap between the two languages by implementing what is essentially the Erlang
-Standard Library: OTP.
+This is an endeavor to replicate the Open Telecom Platform in NodeJS. This
+implementation tries to bridge the gap between the two languages by implementing
+what is essentially the Erlang Standard Library: OTP.
 
 ## Starting OTPJS
 
