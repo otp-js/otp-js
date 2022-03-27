@@ -237,13 +237,13 @@ function describeGenServer() {
                     );
                     const handleInfo = jest.fn((ctx, info, state) => {
                         expect(info).toMatchPattern(
-                            t(EXIT, Pid.isPid, { term: reason, [spread]: _ }, _)
+                            t(EXIT, Pid.isPid, reason, _)
                         );
                         return t(noreply, state);
                     });
                     const init = jest.fn(async (ctx) => {
                         ctx.processFlag(trap_exit, true);
-                        const [, pid] = ctx.spawnLink((ctx) => {
+                        const pid = ctx.spawnLink((ctx) => {
                             throw new OTPError(reason);
                         });
                         return t(ok, pid);
