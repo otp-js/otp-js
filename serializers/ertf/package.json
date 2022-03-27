@@ -1,6 +1,6 @@
 {
     "name": "@otpjs/serializer-ertf",
-    "version": "0.10.0",
+    "version": "0.10.1",
     "description": "Erlang External Term Format serializer for otpjs",
     "keywords": [
         "ertf",
