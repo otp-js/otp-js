@@ -67,7 +67,7 @@ function _handleSocket(node, ctx, socket, leadChunk, options) {
     const { nodeInformation } = options;
     const ERTF = makeERTF(node);
     let unlinks = 0;
-    const forward = matching.clauses((route) => {
+    const forward = matching.clauses(function routeForward(route) {
         route(t(relay, _, Pid.isPid, _)).to(_relayToPid);
         route(t(relay, _, isAtom, _)).to(_relayToName);
         route(t(link, _, _)).to(_link);
@@ -76,8 +76,6 @@ function _handleSocket(node, ctx, socket, leadChunk, options) {
         route(t(demonitor, _, _)).to(_demonitor);
         route(t(EXIT, _, _, _)).to(_EXIT);
         route(t(DOWN, _, _, _, _)).to(_DOWN);
-
-        return 'tcp.forward';
 
         function _relayToPid([, to, message]) {
             const control = t(2, l.nil, to);
@@ -113,7 +111,7 @@ function _handleSocket(node, ctx, socket, leadChunk, options) {
             encoder.write({ control });
         }
     });
-    const process = matching.clauses((route) => {
+    const process = matching.clauses(function routeProcess(route) {
         route(t(relay, _)).to(([, op]) => forward(op));
         return 'tcp.process';
     });

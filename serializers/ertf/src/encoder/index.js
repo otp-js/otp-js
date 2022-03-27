@@ -15,7 +15,7 @@ const isBigInt = (v) => typeof v === 'bigint';
 const isString = (v) => typeof v === 'string';
 
 export default function make(env, options = {}) {
-    const serializeTerm = matching.clauses((route) => {
+    const serializeTerm = matching.clauses(function serializeERTF(route) {
         route(isAtom).to(encodeAtom);
         route(isInteger).to(encodeInteger);
         route(isFloat).to(encodeFloat);

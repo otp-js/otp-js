@@ -50,8 +50,8 @@ export function clauses(builder) {
             log('route(pattern: %o) : error : %o', pattern, err);
         }
     };
-
-    const name = builder(route) ?? 'route';
+    builder(route);
+    const name = builder.name || 'route';
     handlers = handlers.reverse();
 
     return {

@@ -40,7 +40,7 @@ export function start(ctx, linking, name, init_it, options = {}) {
         throw new OTPError(t('already_started', pid));
     }
 }
-const doSpawn = match.clauses((route) => {
+const doSpawn = match.clauses(function routeSpawn(route) {
     route(link, _, _, _).to(doSpawnLink);
     route(link, _, _, _, _).to(doSpawnLink);
     route(monitor, _, _, _).to(doSpawnMonitor);
@@ -103,7 +103,7 @@ function initializer(name, initIt, options) {
     }
 }
 
-export const registerName = match.clauses((route) => {
+export const registerName = match.clauses(function routeRegisterName(route) {
     route(localName).to(registerLocalName);
     route(_).to(() => ok);
     function registerLocalName(ctx, name) {
@@ -130,7 +130,7 @@ export const unregisterName = match.clauses((route) => {
         return ok;
     }
 });
-const getName = match.clauses((route) => {
+const getName = match.clauses(function routeGetName(route) {
     route(t('local', _)).to(([, name]) => name);
     route(Pid.isPid).to((pid) => pid);
     route(_).to((name) => t(false, where(name)));
@@ -138,7 +138,7 @@ const getName = match.clauses((route) => {
 
 const callReplyPattern = (ref) => match.compile(t(ref, _));
 const downPattern = (mref, pid) => match.compile(t(DOWN, mref, _, pid, _));
-export const call = match.clauses((route) => {
+export const call = match.clauses(function routeCall(route) {
     route(Pid.isPid, _).to(doCall);
     route(Pid.isPid, _, _).to(doCall);
     route(_, _).to(doRemoteCall);
@@ -193,7 +193,7 @@ async function doCall(ctx, pid, message, timeout) {
     }
 }
 
-export const cast = match.clauses((route) => {
+export const cast = match.clauses(function routeCast(route) {
     route(Pid.isPid, _).to(doCast);
     route(_, _).to(doRemoteCast);
     function doCast(ctx, pid, message) {

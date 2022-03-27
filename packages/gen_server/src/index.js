@@ -124,7 +124,7 @@ async function enterLoop(ctx, callbacks, state) {
     }
 }
 
-const loop = matching.clauses((route) => {
+const loop = matching.clauses(function loop(route) {
     route(_, t($gen_call, t(Pid.isPid, Ref.isRef), _), _).to(call);
     route(_, t($gen_cast, _), _).to(cast);
     route(_, _, _).to(info);

@@ -39,7 +39,7 @@ export function register(node, socket, options = defaultOptions()) {
     let ctx;
     let running = false;
 
-    const process = matching.clauses((route) => {
+    const process = matching.clauses(function routeProcess(route) {
         route(t(relay, _, _, _)).to(relayMessage);
         route(t(link, _, _)).to(relayLink);
         route(t(unlink, _, _)).to(relayUnlink);
@@ -47,9 +47,8 @@ export function register(node, socket, options = defaultOptions()) {
         route(t(demonitor, _, _, _)).to(relayDemonitor);
         route(t(EXIT, _, _, _)).to(relayEXIT);
         route(t(DOWN, _, _, _, _)).to(relayDOWN);
-        return 'socket-io.process';
     });
-    const forward = matching.clauses((route) => {
+    const forward = matching.clauses(function routeForward(route) {
         route(t(relay, _)).to(([, op]) => process(op));
         route(t(discover, _, _, _, _)).to(relayDiscovery);
         return 'socket-io.process';
