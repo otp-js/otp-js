@@ -35,7 +35,9 @@
         "transports/*"
     ],
     "dependencies": {
+        "@otpjs/serializer-ertf": "file:serializers/ertf",
         "@otpjs/transports-epmd": "file:transports/epmd",
+        "@otpjs/transports-tcp": "file:transports/tcp",
         "core-js": "^3.19.0"
     }
 }

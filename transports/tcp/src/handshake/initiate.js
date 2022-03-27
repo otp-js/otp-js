@@ -9,21 +9,13 @@ function log(ctx, ...formatters) {
     return ctx.log.extend('transports:ertf:handshake:initiate')(...formatters);
 }
 
-export default async function initiate(
-    node,
-    ctx,
-    socket,
-    lengthScanner,
-    options
-) {
+export default async function initiate(node, ctx, socket, options) {
     const name = Symbol.keyFor(node.name);
     const { inCookie, outCookie } = options;
     const nodeInformation = {};
     const flags = ourFlags(node);
 
     log(ctx, 'connect() : ourFlags : %o', flags);
-
-    socket.pipe(lengthScanner, { end: false });
 
     try {
         return new Promise((resolve, reject) => {
@@ -37,7 +29,8 @@ export default async function initiate(
                 socket.off('close', cleanAndReject);
                 socket.off('error', cleanAndReject);
                 initiateHandshakeV6().then(
-                    () => resolve(nodeInformation),
+                    ([nodeInformation, chunk]) =>
+                        resolve([nodeInformation, chunk]),
                     reject
                 );
             }
@@ -68,21 +61,27 @@ export default async function initiate(
 
     async function awaitStatusResponse() {
         log(ctx, 'awaitStatusResponse()');
-        const chunk = await waitForChunk(ctx, lengthScanner);
+        const chunk = await waitForChunk(ctx, socket);
         log(ctx, 'awaitStatusResponse() : chunk : %o', chunk);
+        const length = chunk.readUInt16BE(0);
         assert(String.fromCharCode(chunk.readUInt8(2)) === 's');
-        const status = chunk.slice(3).toString('utf8');
+        log(
+            ctx,
+            'awaitStatusResponse(status: %o)',
+            chunk.subarray(3, 3 + length - 1)
+        );
+        const status = chunk.subarray(3, 3 + length - 1).toString('utf8');
 
         switch (status) {
             case 'ok':
             case 'ok_simultaneous':
-                return continueHandshake();
+                return continueHandshake(chunk.subarray(3 + length - 1));
             case 'nok':
             case 'not_allowed':
                 return discontinueHandshake();
             case 'alive':
                 await sendStatusMessage('true');
-                return continueHandshake();
+                return continueHandshake(chunk.subarray(3 + length - 1));
             default:
                 throw Error(`invalid handshake status: ${status}`);
         }
@@ -93,24 +92,38 @@ export default async function initiate(
         socket.destroy();
     }
 
-    async function continueHandshake() {
-        log(ctx, 'continueHandshake()');
-        const chunk = await waitForChunk(ctx, lengthScanner);
+    async function continueHandshake(chunk) {
         log(ctx, 'continueHandshake() : chunk : %o', chunk);
+        if (chunk.length >= 21) {
+            const nameLength = chunk.readUInt16BE(19);
+            if (chunk.length >= 21 + nameLength) {
+                const name = chunk.subarray(21, 21 + nameLength);
+                const flags = chunk.readBigUInt64BE(3);
+                const challenge = chunk.readUInt32BE(11);
+                const creation = chunk.readUInt32BE(15);
+                nodeInformation.name = Symbol.for(name.toString('utf8'));
+                nodeInformation.creation = creation;
+                nodeInformation.flags = flags;
 
-        const flags = chunk.readBigUInt64BE(3);
-        const challenge = chunk.readUInt32BE(11);
-        const creation = chunk.readUInt32BE(15);
-        const nameLength = chunk.readUInt16BE(19);
-        const name = chunk.slice(21);
-        nodeInformation.name = Symbol.for(name.toString('utf8'));
-        nodeInformation.creation = creation;
-        nodeInformation.flags = flags;
-
-        log(ctx, 'continueHandshake() : nodeInformation : %o', nodeInformation);
-        const answer = computeChallenge(challenge, outCookie);
-        const ourChallenge = await sendChallengeResponse(answer);
-        return receiveChallengeAcknowledgement(ourChallenge);
+                log(
+                    ctx,
+                    'continueHandshake() : nodeInformation : %o',
+                    nodeInformation
+                );
+                const answer = computeChallenge(challenge, outCookie);
+                const ourChallenge = await sendChallengeResponse(answer);
+                return receiveChallengeAcknowledgement(
+                    ourChallenge,
+                    chunk.subarray(21 + nameLength)
+                );
+            } else {
+                const nextChunk = await waitForChunk(ctx, socket);
+                return continueHandshake(Buffer.concat([chunk, nextChunk]));
+            }
+        } else {
+            const nextChunk = await waitForChunk(ctx, socket);
+            return continueHandshake(Buffer.concat([chunk, nextChunk]));
+        }
     }
 
     function validateAnswer(challenge, answer, cookie) {
@@ -132,15 +145,31 @@ export default async function initiate(
         return computeChallenge(challenge, outCookie);
     }
 
-    async function receiveChallengeAcknowledgement(challenge) {
-        log(ctx, 'receiveChallengeAcknowledgement()');
-        const chunk = await waitForChunk(ctx, lengthScanner);
-        log(ctx, 'receiveChallengeAcknowledgement() : chunk', chunk);
-        assert(String.fromCharCode(chunk.readUInt8(2)) === 'a');
-        const digest = chunk.slice(3);
-        assert(digest.length == 16);
-        assert(Buffer.compare(challenge, digest) === 0);
+    async function receiveChallengeAcknowledgement(challenge, chunk) {
+        if (chunk.length >= 2) {
+            const length = chunk.readUInt16BE(0);
+            if (chunk.length >= length + 2) {
+                log(ctx, 'receiveChallengeAcknowledgement()');
+                log(ctx, 'receiveChallengeAcknowledgement() : chunk', chunk);
+                assert(String.fromCharCode(chunk.readUInt8(2)) === 'a');
+                const digest = chunk.subarray(3, length + 2);
+                assert(digest.length == 16);
+                assert(Buffer.compare(challenge, digest) === 0);
 
-        return nodeInformation;
+                return [nodeInformation, chunk.subarray(length + 2)];
+            } else {
+                const nextChunk = await waitForChunk(ctx, socket);
+                return receiveChallengeAcknowledgement(
+                    challenge,
+                    Buffer.concat([chunk, nextChunk])
+                );
+            }
+        } else {
+            const nextChunk = await waitForChunk(ctx, socket);
+            return receiveChallengeAcknowledgement(
+                challenge,
+                Buffer.concat([chunk, nextChunk])
+            );
+        }
     }
 }

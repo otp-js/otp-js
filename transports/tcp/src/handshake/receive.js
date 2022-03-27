@@ -6,19 +6,12 @@ import {
 } from './common';
 import * as Flags from '../flags';
 
-export default async function receive(
-    node,
-    ctx,
-    socket,
-    lengthScanner,
-    options
-) {
+export default async function receive(node, ctx, socket, options) {
     const { inCookie, outCookie } = options;
     let challenge = null;
     let nodeInformation = null;
     const log = ctx.log.extend('transports:ertf:handshake:receive');
-    socket.pipe(lengthScanner, { end: false });
-    const chunk = await waitForChunk(ctx, lengthScanner);
+    const chunk = await waitForChunk(ctx, socket);
     log('_receiveHandshake() : chunk : %o', chunk);
 
     switch (String.fromCharCode(chunk.readUInt8(2))) {
@@ -105,7 +98,7 @@ export default async function receive(
 
     async function receiveChallengeResponse(sum) {
         log('receiveChallengeResponse(%o)', sum);
-        const chunk = await waitForChunk(ctx, lengthScanner);
+        const chunk = await waitForChunk(ctx, socket);
         log('receiveChallengeResponse(%o) : chunk : %o', sum, chunk);
         assert(String.fromCharCode(chunk.readUInt8(2)) === 'r');
         const challenge = chunk.readUInt32BE(3);
