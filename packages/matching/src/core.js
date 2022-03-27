@@ -116,58 +116,37 @@ function arrayComparator(pattern, comparisons, subComparisons = []) {
             throw new OTPError('invalid_match_pattern');
         } else {
             const length = spreadIndex;
-            log(
-                '%s(%o) : containsAtLeast(%o)',
-                arrayComparator.name,
-                pattern,
-                length
-            );
             comparisons.push(function containsAtLeast(message) {
+                log(
+                    '%s(%o) : containsAtLeast(%o)',
+                    arrayComparator.name,
+                    pattern,
+                    length
+                );
                 return message.length >= length;
             });
         }
     } else {
         const length = pattern.length;
-        log(
-            '%s(%o) : matchesLength(%o)',
-            arrayComparator.name,
-            pattern,
-            length
-        );
         comparisons.push(function matchesLength(message) {
+            log(
+                '%s(%o) : matchesLength(%o)',
+                arrayComparator.name,
+                pattern,
+                length
+            );
             return message.length === length;
         });
     }
 
-    log('%s(%o)', arrayComparator.name, pattern);
     for (let index = 0; index < pattern.length; index++) {
         const subPattern = pattern[index];
-        log(
-            '%s(%o) : compileSubPattern[%o](%o)',
-            arrayComparator.name,
-            pattern,
-            index,
-            subPattern
-        );
         if (subPattern === spread) {
-            log('%s(%o) : spread', arrayComparator.name, pattern);
             if (pattern.length === spreadIndex + 2) {
-                log(
-                    '%s(%o) : spreadPattern : %o',
-                    arrayComparator.name,
-                    pattern,
-                    spreadPattern
-                );
                 spreadPattern = pattern[index + 1];
             }
         } else if (spreadIndex < 0 || index < spreadIndex) {
             const subComparison = compile(subPattern);
-            log(
-                '%s(%o) : subComparisons.push(%o)',
-                arrayComparator.name,
-                pattern,
-                subComparison
-            );
             subComparisons.push(subComparison);
         }
     }
