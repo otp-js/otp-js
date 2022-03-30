@@ -22,10 +22,6 @@ Understanding the underscore symbol is important. Its usage in `otpjs` reflects
 the underscore's usage in Erlang. When provided in a pattern, the underscore matches
 against _any_ value.
 
-#### Type Support
-
-Basic Javascript types are supported, and additional support is added for the 
-types available in [`@otpjs/types`](../types).
 
 ```javascript
 import { compare } from '@otpjs/matching;
@@ -34,6 +30,11 @@ compare(_, undefined); // true;
 compare(_, BigInt(1000)); // true;
 compare(_, [1, 2, 3]); // true;
 ```
+
+#### Type Support
+
+Basic Javascript types are supported, and additional support is added for the 
+types available in [`@otpjs/types`](../types).
 
 #### API
 
