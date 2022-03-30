@@ -82,7 +82,7 @@ compare(pattern, [ok, 'fixed string', 1, {}]); // true
 ##### `caseOf(value)`
 
 ```javascript
-import { compile, Symbols } from '@otpjs/matching;
+import { compile, Symbols } from '@otpjs/matching';
 
 const { ok, _ } = Symbols;
 
