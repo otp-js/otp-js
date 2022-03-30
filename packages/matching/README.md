@@ -68,7 +68,7 @@ compiled([ok, 'fixed string', 1.1, {}]); // false
 ##### `compare(pattern, value)`
 
 ```javascript
-import { compare, Symbols } from '@otpjs/matching;
+import { compare, Symbols } from '@otpjs/matching';
 
 const { ok, _ } = Symbols;
 
