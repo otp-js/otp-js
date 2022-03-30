@@ -4,7 +4,7 @@
 
 ### Usage
 
-```
+```javascript
 import * as matching from '@otpjs/matching';
 ```
 
@@ -21,6 +21,11 @@ insane pattern matching power.
 Understanding the underscore symbol is important. Its usage in `otpjs` reflects
 the underscore's usage in Erlang. When provided in a pattern, the underscore matches
 against _any_ value.
+
+#### Type Support
+
+Basic Javascript types are supported, and additional support is added for the 
+types available in [`@otpjs/types`](../types).
 
 ```javascript
 import { compare } from '@otpjs/matching;
@@ -96,7 +101,7 @@ value. Supply a routing function which assembles patterns and what to do with th
 Once built, call one of the two provided methods whenever you need to make a decision
 based on a pattern.
 
-```
+```javascript
 import * as otp from '@otpjs/core';
 import * as matching from '@otpjs/matching';
 import {t, l} from '@otpjs/types';
