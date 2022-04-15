@@ -20,6 +20,10 @@ export class Context {
     #flags;
     #lastMessage;
 
+    get env() {
+        return this.#node;
+    }
+
     constructor(parent) {
         this.#pid = parent.pid();
         this.#node = parent;
