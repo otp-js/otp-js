@@ -123,7 +123,7 @@ describe('@otpjs/transports-socket.io', function () {
             })
         ).resolves.toMatchPattern(t(DOWN, mref, 'process', Pid.isPid, normal));
     });
-    it.only('supports demonitoring over the transport', async function () {
+    it('supports demonitoring over the transport', async function () {
         useSocketIO(clientNode, clientSocket);
         useSocketIO(serverNode, serverSocket);
 
