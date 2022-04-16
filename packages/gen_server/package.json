@@ -1,6 +1,6 @@
 {
   "name": "@otpjs/gen_server",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "description": "A gen_server implementation for @otp-js/core",
   "keywords": [
     "open",
@@ -46,7 +46,7 @@
   },
   "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e",
   "dependencies": {
-    "@otpjs/gen": "^0.11.1",
-    "@otpjs/proc_lib": "^0.11.1"
+    "@otpjs/gen": "^0.11.2",
+    "@otpjs/proc_lib": "^0.11.2"
   }
 }
