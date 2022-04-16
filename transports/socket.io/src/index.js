@@ -230,7 +230,7 @@ export function register(node, socket, options = defaultOptions()) {
             node.signal(fromPid, DOWN, toPid, ref, err.term ?? err.message);
         }
     }
-    function handleDemonitor(fromPid, toPid, ref) {
+    function handleDemonitor(toPid, ref, fromPid) {
         fromPid = deserialize(fromPid);
         toPid = deserialize(toPid);
         ref = deserialize(ref);

@@ -107,7 +107,7 @@ describe('@otpjs/transports-socket.io', function () {
         let pidA = serverNode.spawn(async (ctx) => {
             ctx.register(test_name);
             await ctx.receive();
-            log(ctx, 'received : stoppping');
+            log(ctx, 'received : stopping');
         });
 
         await wait(100);
@@ -122,6 +122,29 @@ describe('@otpjs/transports-socket.io', function () {
                 });
             })
         ).resolves.toMatchPattern(t(DOWN, mref, 'process', Pid.isPid, normal));
+    });
+    it.only('supports demonitoring over the transport', async function () {
+        useSocketIO(clientNode, clientSocket);
+        useSocketIO(serverNode, serverSocket);
+
+        await wait(100);
+
+        let pidA = serverNode.spawn(async (ctx) => {
+            ctx.register(test_name);
+            await ctx.receive();
+            log(ctx, 'received : stopping');
+        });
+
+        await wait(100);
+        const ctx = clientNode.makeContext();
+        const mref = ctx.monitor(t(test_name, serverNode.name));
+        expect(function () {
+            ctx.demonitor(mref);
+        }).not.toThrow();
+        await wait(100);
+
+        ctx.send(t(test_name, serverNode.name), 'die');
+        await expect(ctx.receive(100)).rejects.toThrow('timeout');
     });
 
     it('can be unregistered', async function () {
