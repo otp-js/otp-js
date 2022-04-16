@@ -310,9 +310,9 @@ export class Context {
         }
     }
     _monitor(ref, watcher) {
-        this.#monitors.set(ref, watcher);
+        this.#monitors.set(ref.toString(), watcher);
     }
     _demonitor(ref) {
-        this.#monitors.delete(ref);
+        this.#monitors.delete(ref.toString());
     }
 }
