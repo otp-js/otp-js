@@ -165,7 +165,6 @@ describe('@otp-js/supervisor', () => {
                 });
 
                 it('restarts the processes when they die', async function () {
-                    let response;
                     const [, pid] = await supervisor.startLink(ctx, callbacks);
                     log(ctx, 'spawned : %o', pid);
 
@@ -197,6 +196,7 @@ describe('@otp-js/supervisor', () => {
                         ctx,
                         pid
                     );
+                    log(ctx, 'nextChildren: %o', nextChildren);
                     expect(nextChildren).toMatchPattern(
                         l(
                             { id: 'adder', pid: Pid.isPid },
@@ -205,9 +205,230 @@ describe('@otp-js/supervisor', () => {
                     );
                 });
             });
+            describe('for a one_for_all strategy', function () {
+                let start;
+                beforeEach(function () {
+                    node = new Node();
+                    ctx = node.makeContext();
+                    ctx.processFlag(trap_exit, true);
+                    args = [];
+                    start = jest.fn(Adder.startLink);
+                    callbacks = {
+                        init: jest.fn(() => {
+                            return t(
+                                ok,
+                                t(
+                                    { strategy: one_for_all },
+                                    l(
+                                        {
+                                            id: 'a',
+                                            start: [start, [1, 2, 3]],
+                                            restart: transient,
+                                        },
+                                        {
+                                            id: 'b',
+                                            start: [start, [4, 5, 6]],
+                                            restart: transient,
+                                        },
+                                        {
+                                            id: 'c',
+                                            start: [start, [7, 8, 9]],
+                                            restart: transient,
+                                        }
+                                    )
+                                )
+                            );
+                        }),
+                    };
+                });
 
-            describe('for a one_for_all strategy', function () {});
-            describe('for a rest_for_one strategy', function () {});
+                it('spawns all processes after initializing', async function () {
+                    let response;
+                    expect(function () {
+                        response = supervisor.startLink(ctx, callbacks);
+                    }).not.toThrow();
+
+                    await expect(response).resolves.toMatchPattern(
+                        t(ok, Pid.isPid)
+                    );
+
+                    const [, pid] = await response;
+
+                    await expect(
+                        supervisor.countChildren(ctx, pid)
+                    ).resolves.toBe(3);
+                    expect(start).toHaveBeenCalled();
+                });
+                it('spawns the processes declared by the init function', async function () {
+                    const [, pid] = await supervisor.startLink(ctx, callbacks);
+                    const children = await supervisor.whichChildren(ctx, pid);
+
+                    expect(children).toMatchPattern(
+                        t(
+                            ok,
+                            l(
+                                { id: 'a', [spread]: _ },
+                                { id: 'b', [spread]: _ },
+                                { id: 'c', [spread]: _ }
+                            )
+                        )
+                    );
+                });
+                it('restarts all processes when one dies', async function () {
+                    const [, pid] = await supervisor.startLink(ctx, callbacks);
+                    const children = await supervisor.whichChildren(ctx, pid);
+                    const [, [{ pid: pidA1 }, { pid: pidB1 }, { pid: pidC1 }]] =
+                        children;
+
+                    await ctx.exit(pidA1, kill);
+                    await wait(100);
+
+                    const nextChildren = await supervisor.whichChildren(
+                        ctx,
+                        pid
+                    );
+                    const [, [{ pid: pidA2 }, { pid: pidB2 }, { pid: pidC2 }]] =
+                        nextChildren;
+
+                    expect(pidA1).not.toMatchPattern(pidA2);
+                    expect(pidA2).toMatchPattern(Pid.isPid);
+
+                    expect(pidB1).not.toMatchPattern(pidB2);
+                    expect(pidB2).toMatchPattern(Pid.isPid);
+
+                    expect(pidC1).not.toMatchPattern(pidC2);
+                    expect(pidC2).toMatchPattern(Pid.isPid);
+                });
+            });
+            describe('for a rest_for_one strategy', function () {
+                let start;
+                beforeEach(function () {
+                    node = new Node();
+                    ctx = node.makeContext();
+                    ctx.processFlag(trap_exit, true);
+                    args = [];
+                    start = jest.fn(Adder.startLink);
+                    callbacks = {
+                        init: jest.fn(() => {
+                            return t(
+                                ok,
+                                t(
+                                    { strategy: rest_for_one },
+                                    l(
+                                        {
+                                            id: 'a',
+                                            start: [start, [1, 2, 3]],
+                                            restart: transient,
+                                        },
+                                        {
+                                            id: 'b',
+                                            start: [start, [4, 5, 6]],
+                                            restart: transient,
+                                        },
+                                        {
+                                            id: 'c',
+                                            start: [start, [7, 8, 9]],
+                                            restart: transient,
+                                        },
+                                        {
+                                            id: 'd',
+                                            start: [start, [7, 8, 9]],
+                                            restart: transient,
+                                        },
+                                        {
+                                            id: 'e',
+                                            start: [start, [7, 8, 9]],
+                                            restart: transient,
+                                        }
+                                    )
+                                )
+                            );
+                        }),
+                    };
+                });
+
+                it('spawns all processes after initializing', async function () {
+                    let response;
+                    expect(function () {
+                        response = supervisor.startLink(ctx, callbacks);
+                    }).not.toThrow();
+
+                    await expect(response).resolves.toMatchPattern(
+                        t(ok, Pid.isPid)
+                    );
+
+                    const [, pid] = await response;
+
+                    await expect(
+                        supervisor.countChildren(ctx, pid)
+                    ).resolves.toBe(5);
+                    expect(start).toHaveBeenCalled();
+                });
+                it('spawns the processes declared by the init function', async function () {
+                    const [, pid] = await supervisor.startLink(ctx, callbacks);
+                    const children = await supervisor.whichChildren(ctx, pid);
+
+                    expect(children).toMatchPattern(
+                        t(
+                            ok,
+                            l(
+                                { id: 'a', [spread]: _ },
+                                { id: 'b', [spread]: _ },
+                                { id: 'c', [spread]: _ },
+                                { id: 'd', [spread]: _ },
+                                { id: 'e', [spread]: _ }
+                            )
+                        )
+                    );
+                });
+                it('restarts subsequent processes when one dies', async function () {
+                    const [, pid] = await supervisor.startLink(ctx, callbacks);
+                    const [, children] = await supervisor.whichChildren(
+                        ctx,
+                        pid
+                    );
+                    const [
+                        { pid: pidA1 },
+                        { pid: pidB1 },
+                        { pid: pidC1 },
+                        { pid: pidD1 },
+                        { pid: pidE1 },
+                    ] = children;
+
+                    await ctx.exit(pidC1, kill);
+                    await wait(100);
+
+                    const [, nextChildren] = await supervisor.whichChildren(
+                        ctx,
+                        pid
+                    );
+                    const [
+                        { pid: pidA2 },
+                        { pid: pidB2 },
+                        { pid: pidC2 },
+                        { pid: pidD2 },
+                        { pid: pidE2 },
+                    ] = nextChildren;
+
+                    log(ctx, 'CHILDREN: %O', children);
+                    log(ctx, 'NEXT_CHILDREN: %O', nextChildren);
+
+                    expect(pidA1).toMatchPattern(pidA2);
+                    expect(pidA2).toMatchPattern(Pid.isPid);
+
+                    expect(pidB1).toMatchPattern(pidB2);
+                    expect(pidB2).toMatchPattern(Pid.isPid);
+
+                    expect(pidC1).not.toMatchPattern(pidC2);
+                    expect(pidC2).toMatchPattern(Pid.isPid);
+
+                    expect(pidD1).not.toMatchPattern(pidD2);
+                    expect(pidD2).toMatchPattern(Pid.isPid);
+
+                    expect(pidE1).not.toMatchPattern(pidE2);
+                    expect(pidE2).toMatchPattern(Pid.isPid);
+                });
+            });
             describe('for a simple_one_for_one strategy', function () {
                 let start;
                 beforeEach(function () {

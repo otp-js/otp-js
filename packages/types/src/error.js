@@ -1,5 +1,3 @@
-import { tuple } from '@otpjs/types';
-
 export function OTPError(term, capture) {
     if (!capture) {
         capture = Object.create(OTPError.prototype);

@@ -7,6 +7,7 @@ export const discover = Symbol.for('discover');
 export const error = Symbol.for('error');
 export const exit = EXIT;
 export const kill = Symbol.for('kill');
+export const killed = Symbol.for('killed');
 export const link = Symbol.for('link');
 export const lost = Symbol.for('lost');
 export const monitor = Symbol.for('monitor');

@@ -1,5 +1,6 @@
 import inspect from 'inspect-custom-symbol';
 import debug from 'debug';
+import { t } from './tuple';
 
 const log = debug('otpjs:types:list');
 
@@ -40,6 +41,35 @@ List.prototype.length = function () {
         node = node.tail;
     }
     return c;
+};
+
+List.prototype.map = async function (operation) {
+    let node = this;
+    let copy = nil;
+
+    while (List.isList(node) && node != nil) {
+        copy = cons(await operation(car(node)), copy);
+        node = cdr(node);
+    }
+
+    return copy.reverse();
+};
+
+List.prototype.filter = async function (operation) {
+    let node = this;
+    let copy = nil;
+
+    while (List.isList(node) && node != nil) {
+        const item = car(node);
+
+        if (await operation(item)) {
+            copy = cons(item, copy);
+        }
+
+        node = cdr(node);
+    }
+
+    return copy.reverse();
 };
 
 List.prototype.push = function (value) {
@@ -174,6 +204,18 @@ List.prototype.slice = function (start = 0, end = Infinity) {
     return stack.reverse();
 };
 
+List.prototype.split = function (predicate) {
+    let after = this;
+    let before = l.nil;
+
+    while (List.isList(after) && after != l.nil && !predicate(car(after))) {
+        before = cons(car(after), before);
+        after = cdr(after);
+    }
+
+    return t(before.reverse(), after);
+};
+
 List.prototype.deleteIndex = function (deleteIndex) {
     let node = this;
     let stack = nil;
@@ -219,6 +261,17 @@ List.prototype.delete = function (value) {
     }
 
     return node;
+};
+
+List.prototype.append = function (tail) {
+    let copy = this.reverse();
+
+    while (List.isList(copy) && copy != nil) {
+        tail = cons(car(copy), tail);
+        copy = cdr(copy);
+    }
+
+    return tail;
 };
 
 List.prototype.nth = function (index) {

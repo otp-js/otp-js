@@ -8,6 +8,7 @@ export class Ref extends String {
         return string instanceof Ref;
     }
     static for = (node, ref) => new Ref(`Ref<${node}.${ref}>`);
+    static from = (string) => new Ref(string);
     static compare = (a, b) =>
         (a ?? '').toString().localeCompare((b ?? '').toString());
 

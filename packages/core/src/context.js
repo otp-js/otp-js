@@ -1,11 +1,23 @@
 import debug from 'debug';
-import { Pid, OTPError, t } from '@otpjs/types';
+import { Pid, OTPError, t, Ref } from '@otpjs/types';
 import { MessageBox } from './message-box.js';
 import * as matching from '@otpjs/matching';
 import * as Symbols from './symbols';
 
-const { DOWN, EXIT, relay, link, unlink, monitor, demonitor, trap_exit } =
-    Symbols;
+const {
+    ok,
+    DOWN,
+    EXIT,
+    error,
+    relay,
+    kill,
+    killed,
+    link,
+    unlink,
+    monitor,
+    demonitor,
+    trap_exit,
+} = Symbols;
 const { _, spread } = matching.Symbols;
 
 const isExitMessage = matching.match(t(EXIT, _, _), t(EXIT, _, _, _));
@@ -19,6 +31,7 @@ export class Context {
     #monitors;
     #flags;
     #lastMessage;
+    #dead;
 
     get env() {
         return this.#node;
@@ -75,7 +88,7 @@ export class Context {
                     }
                 })
         );
-        this._dead = false;
+        this.#dead = false;
 
         this.death.then((reason) => this.destroy(reason));
     }
@@ -90,15 +103,14 @@ export class Context {
         }
     }
     destroy(reason) {
-        this._dead = true;
+        this._log('destroy(self: %o, reason: %o)', this.self(), reason);
+        this.#dead = true;
         this.#notifyMonitors(reason);
         this.#notifyLinks(reason);
 
         const inbox = this.#mb;
 
         this.#mb = null;
-        this.#pid = null;
-        this.#node = null;
         this.#links = null;
 
         inbox.clear(reason);
@@ -151,13 +163,13 @@ export class Context {
             reason = pid;
             pid = this.#pid;
         }
-        return this.#node.exit(pid, reason);
+        return this.#node.exit(this.#pid, pid, reason);
     }
     get dead() {
-        return this._dead;
+        return this.#dead;
     }
     get #status() {
-        if (this._dead) {
+        if (this.#dead) {
             return 'exiting';
         } else if (this.#mb.pending > 0) {
             return 'waiting';
@@ -177,12 +189,13 @@ export class Context {
             reason = reason.term;
         }
         for (let [ref, monitor] of this.#monitors) {
+            ref = Ref.from(ref);
             this._log('#notifyMonitors(ref: %o, monitor: %o)', ref, monitor);
             this.#node.signal(pid, DOWN, monitor, ref, reason);
         }
     }
     _processInfo() {
-        if (this._dead) {
+        if (this.#dead) {
             return {
                 status: this.#status,
                 links: [],
@@ -231,7 +244,15 @@ export class Context {
         };
     }
 
-    signal = matching.clauses((route) => {
+    signal(...args) {
+        try {
+            return this.#signal(...args);
+        } catch (err) {
+            return t(error, err);
+        }
+    }
+
+    #signal = matching.clauses((route) => {
         const self = this;
         route(relay, spread).to(function signalRelay(
             _relay,
@@ -241,27 +262,27 @@ export class Context {
             return self._deliver(message);
         });
         route(link, spread).to(function signalLink(_link, fromPid) {
-            self._link(fromPid);
+            return self._link(fromPid);
         });
         route(unlink, spread).to(function signalUnlink(_unlink, fromPid) {
-            self._unlink(fromPid);
+            return self._unlink(fromPid);
         });
         route(monitor, spread).to(function signalMonitor(
             _monitor,
             fromPid,
             ref
         ) {
-            self._monitor(ref, fromPid);
+            return self._monitor(ref, fromPid);
         });
         route(demonitor, spread).to(function signalDemonitor(
             _demonitor,
             _fromPid,
             ref
         ) {
-            self._demonitor(ref);
+            return self._demonitor(ref);
         });
         route(EXIT, spread).to(function signalEXIT(_exit, fromPid, reason) {
-            self._exit(fromPid, reason);
+            return self._exit(fromPid, reason);
         });
         route(DOWN, spread).to(function signalDOWN(
             _down,
@@ -269,7 +290,7 @@ export class Context {
             ref,
             reason
         ) {
-            self._deliver(t(DOWN, ref, 'process', fromPid, reason));
+            return self._deliver(t(DOWN, ref, 'process', fromPid, reason));
         });
         return 'context.signal';
     });
@@ -278,27 +299,36 @@ export class Context {
         this.#links.add(other);
     }
     _unlink(other) {
-        this.#links.delete(other);
+        if (!this.#dead) this.#links.delete(other);
     }
     _exit(fromPid, error) {
+        const errorIs = matching.caseOf(error);
         this._log(
             '_exit(self: %o, dead: %o, fromPid: %o, error: %o)',
             this.self(),
-            this._dead,
+            this.#dead,
             fromPid,
             error
         );
-        if (!this._dead) {
-            if (!this.processFlag(trap_exit)) {
-                this.die(error);
+        if (!this.#dead) {
+            const trappingExits = this.processFlag(trap_exit);
+            if (!trappingExits || errorIs(kill)) {
+                this._log(
+                    '_exit(self: %o) : this.die(error: %o)',
+                    this.self(),
+                    error
+                );
+                this.die(killed);
             } else {
-                this._deliver(t(EXIT, fromPid, error.term, error.stack));
+                const notice = t(EXIT, fromPid, error.term, error.stack);
+                this._log('_exit(self: %o, notice: %o)', this.self(), notice);
+                this._deliver(notice);
             }
         }
     }
     _deliver(message) {
         this._log('_deliver() : message : %o', message);
-        if (!this._dead) {
+        if (!this.#dead) {
             try {
                 this.#mb.push(message);
                 this._log('_deliver(mb: %o)', this.#mb);
@@ -308,9 +338,37 @@ export class Context {
         } else {
             this._log('_deliver() : DEAD');
         }
+
+        return ok;
     }
     _monitor(ref, watcher) {
-        this.#monitors.set(ref.toString(), watcher);
+        if (!this.#dead) {
+            this._log(
+                '_monitor(self: %o, ref: %o, watcher: %o)',
+                this.self(),
+                ref,
+                watcher
+            );
+            this.#monitors.set(ref.toString(), watcher);
+        } else {
+            this._log(
+                '_monitor(self: %o, ref: %o, watcher: %o, error: noproc)',
+                this.self(),
+                ref,
+                watcher
+            );
+            try {
+                this.#node.signal(this.self(), DOWN, watcher, ref, 'noproc');
+            } catch (err) {
+                this._log(
+                    '_monitor(self: %o, ref: %o, error: %o)',
+                    this.self(),
+                    ref,
+                    err
+                );
+            }
+        }
+        return ok;
     }
     _demonitor(ref) {
         this.#monitors.delete(ref.toString());

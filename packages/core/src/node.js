@@ -1,5 +1,5 @@
 import debug from 'debug';
-import { Pid, Ref, OTPError, t } from '@otpjs/types';
+import { Pid, Ref, OTPError, t, l, cons } from '@otpjs/types';
 import * as Symbols from './symbols';
 import * as matching from '@otpjs/matching';
 import { Context } from './context';
@@ -88,14 +88,16 @@ export class Node {
         return this.name;
     }
     nodes() {
-        return Array.from(this._routers.values()).reduce((acc, router) => {
-            this._log('nodes() : router : %o', router);
-            if (router.pid) {
-                return [...acc, router.name];
-            } else {
-                return acc;
-            }
-        }, []);
+        return Array.from(this._routers.values())
+            .reduce((acc, router) => {
+                this._log('nodes() : router : %o', router);
+                if (router.pid) {
+                    return cons(router.name, acc);
+                } else {
+                    return acc;
+                }
+            }, l.nil)
+            .reverse();
     }
     exit(fromPid, toPid, reason) {
         this.signal(fromPid, EXIT, toPid, reason);
@@ -105,7 +107,7 @@ export class Node {
         return this._processes.get(pid.process);
     }
 
-    signal = matching.clauses((route) => {
+    #signal = matching.clauses((route) => {
         route(_, _, isAtom, spread).to((...args) =>
             this.#signalLocalName(...args)
         );
@@ -118,16 +120,30 @@ export class Node {
         route(_, _, t(_, _), spread).to((...args) =>
             this.#signalRemoteName(...args)
         );
+
         return 'node.signal';
     });
 
+    signal(...args) {
+        try {
+            return this.#signal(...args);
+        } catch (err) {
+            return t(error, err);
+        }
+    }
+
     #signalLocal(fromPid, signal, toPid, ...args) {
         const toCtx = this.getContext(toPid);
+        this._log(
+            '#signalLocal(fromPid: %o, signal: %o, toPid: %o)',
+            fromPid,
+            signal,
+            toPid
+        );
         if (toCtx) {
-            toCtx.signal(signal, fromPid, ...args);
-            return ok;
+            return toCtx.signal(signal, fromPid, ...args);
         } else {
-            return [error, 'noproc'];
+            return t(error, 'noproc');
         }
     }
     #signalLocalName(fromPid, signal, toProc, ...args) {
@@ -152,7 +168,7 @@ export class Node {
             );
             return ok;
         } else {
-            return [error, 'noconnection'];
+            return t(error, 'noconnection');
         }
     }
     #signalRemoteName(fromPid, signal, nameNodePair, ...args) {
@@ -168,7 +184,7 @@ export class Node {
             );
             return ok;
         } else {
-            return [error, 'noconnection'];
+            return t(error, 'noconnection');
         }
     }
 
@@ -184,12 +200,10 @@ export class Node {
     monitor(fromPid, toPid, ref) {
         ref = ref ?? this.ref();
         monitors.set(ref, toPid);
-        const result = this.signal(fromPid, monitor, toPid, ref);
-        if (matching.compare([error, _], result)) {
-            this.signal(toPid, DOWN, fromPid, ref);
-        }
+        this.signal(fromPid, monitor, toPid, ref);
         return ref;
     }
+
     demonitor(fromPid, ref) {
         if (monitors.has(ref)) {
             const toPid = monitors.get(ref);
