@@ -46,10 +46,7 @@ Pid.prototype[inspect] = function (depth, options, inspect) {
         return options.stylize('[Pid]', 'node');
     }
 
-    return options.stylize(
-        `Pid<${this.node}.${this.id}.${this.serial}>`,
-        'special'
-    );
+    return options.stylize(this.toString(), 'special');
 };
 Pid.prototype.toString = function () {
     return `Pid<${this.node}.${this.id}.${this.serial}>`;

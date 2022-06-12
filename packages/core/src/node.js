@@ -443,7 +443,7 @@ export class Node {
     }
 
     ref() {
-        return Ref.for(Pid.LOCAL, this._refCount++);
+        return Ref.for(Ref.LOCAL, this._refCount++, 0, 1);
     }
     pid() {
         return Pid.of(Pid.LOCAL, this._processesCount++, 0, 1);

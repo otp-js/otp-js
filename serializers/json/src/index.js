@@ -11,7 +11,7 @@ export function make(env) {
     const isEncodedSymbol = matching.compile(['$otp.symbol', _]);
     const isEncodedFunction = matching.compile(['$otp.function', _, _]);
     const isEncodedPid = matching.compile(['$otp.pid', _, _, _, _]);
-    const isEncodedRef = matching.compile(['$otp.ref', _]);
+    const isEncodedRef = matching.compile(['$otp.ref', _, _, _, _]);
     const isEncodedList = matching.compile(['$otp.list', _, _]);
     const isEncodedTuple = matching.compile(['$otp.tuple', _]);
     const isEncodedNil = matching.compile('$otp.list.nil');
@@ -60,7 +60,9 @@ export function make(env) {
             const nodeId = env.getRouterId(node);
             return Pid.of(nodeId, serial, id, creation);
         } else if (compare(isEncodedRef)) {
-            return new Ref(value[1]);
+            const [node, serial, id, creation] = value.slice(1);
+            const nodeId = env.getRouterId(node);
+            return new Ref(nodeId, serial, id, creation);
         } else if (compare(isEncodedList)) {
             return improperList(...value[1], value[2]);
         } else if (compare(isEncodedTuple)) {
@@ -99,7 +101,8 @@ export function make(env) {
             const node = env.getRouterName(value.node);
             return ['$otp.pid', node, value.id, value.serial, value.creation];
         } else if (compare(Ref.isRef)) {
-            return ['$otp.ref', value.toString()];
+            const node = env.getRouterName(value.node);
+            return ['$otp.ref', node, value.id, value.serial, value.creation];
         } else if (list.isList(value) && value != list.nil) {
             let result = [];
             let node = value;
