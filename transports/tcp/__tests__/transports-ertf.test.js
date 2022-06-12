@@ -2,6 +2,6 @@
 
 const transportsErtf = require('..');
 
-describe('@otpjs/transports-ertf', () => {
-    it('needs tests');
+describe.skip('@otpjs/transports-ertf', () => {
+    it.todo('needs tests');
 });

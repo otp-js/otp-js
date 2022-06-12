@@ -2,6 +2,6 @@
 
 const serializerErtf = require('..');
 
-describe('@otpjs/serializer-ertf', () => {
-    it('needs tests');
+describe.skip('@otpjs/serializer-ertf', () => {
+    it.todo('needs tests');
 });

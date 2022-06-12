@@ -2,6 +2,6 @@
 
 const global = require('..');
 
-describe('@otpjs/global', () => {
-    it('needs tests');
+describe.skip('@otpjs/global', () => {
+    it.todo('needs tests');
 });

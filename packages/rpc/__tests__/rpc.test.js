@@ -2,6 +2,6 @@
 
 const rpc = require('..');
 
-describe('@otpjs/rpc', () => {
-    it('needs tests');
+describe.skip('@otpjs/rpc', () => {
+    it.todo('needs tests');
 });

@@ -3,7 +3,7 @@ import * as gen_server from '@otpjs/gen_server';
 import * as matching from '@otpjs/matching';
 import { t } from '@otpjs/types';
 
-const { ok, _ } = otp.Symbols;
+const { ok, _, error } = otp.Symbols;
 const { reply, noreply } = gen_server.Symbols;
 const global_name_server = Symbol.for('global_name_server');
 const registrar = Symbol.for('registrar');

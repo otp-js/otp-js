@@ -2,6 +2,6 @@
 
 const serializerJson = require('..');
 
-describe('@otpjs/serializer-json', () => {
-    it('needs tests');
+describe.skip('@otpjs/serializer-json', () => {
+    it.todo('needs tests');
 });
