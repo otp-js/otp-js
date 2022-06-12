@@ -97,7 +97,7 @@ if (typeof window !== 'undefined') {
     window.devtoolsFormatters.push({
         header: (obj) => {
             if (Ref.isRef(obj)) {
-                return ['div', { style: 'color: saffron;' }, obj.toString()];
+                return ['div', { style: 'color: goldenrod;' }, obj.toString()];
             }
         },
         hasBody: () => false,
