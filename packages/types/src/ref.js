@@ -89,17 +89,3 @@ Ref.prototype[inspect] = function (depth, options, inspect) {
 
     return options.stylize(this.toString(), 'special');
 };
-
-if (typeof window !== 'undefined') {
-    if (window.devtoolsFormatters === undefined) {
-        window.devtoolsFormatters = [];
-    }
-    window.devtoolsFormatters.push({
-        header: (obj) => {
-            if (Ref.isRef(obj)) {
-                return ['div', { style: 'color: goldenrod;' }, obj.toString()];
-            }
-        },
-        hasBody: () => false,
-    });
-}

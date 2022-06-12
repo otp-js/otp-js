@@ -7,7 +7,7 @@ if (window.devtoolsFormatters === undefined) {
 window.devtoolsFormatters.push({
     header: (obj) => {
         if (Ref.isRef(obj)) {
-            return ['div', { style: 'color: darkgoldenrod;' }, obj.toString()];
+            return ['div', { style: 'color: goldenrod;' }, obj.toString()];
         }
     },
     hasBody: () => false,
@@ -35,7 +35,7 @@ window.devtoolsFormatters.push({
 window.devtoolsFormatters.push({
     header: (obj) => {
         if (Pid.isPid(obj)) {
-            return ['div', { style: 'color: teal;' }, obj.toString()];
+            return ['div', { style: 'color: turquoise;' }, obj.toString()];
         }
     },
     hasBody: () => false,

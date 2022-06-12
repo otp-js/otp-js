@@ -67,17 +67,3 @@ Pid.compare = (a, b) => {
     else if (a.creation > b.creation) return 1;
     else return 0;
 };
-
-if (typeof window !== 'undefined') {
-    if (window.devtoolsFormatters === undefined) {
-        window.devtoolsFormatters = [];
-    }
-    window.devtoolsFormatters.push({
-        header: (obj) => {
-            if (Pid.isPid(obj)) {
-                return ['div', { style: 'color: teal;' }, obj.toString()];
-            }
-        },
-        hasBody: () => false,
-    });
-}
