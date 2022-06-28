@@ -30,6 +30,8 @@ export function compare(pattern, value) {
 export function compile(pattern) {
     if (typeof pattern === 'function') {
         return pattern;
+    } else if (pattern instanceof RegExp) {
+        return pattern.test.bind(pattern);
     } else {
         if (patterns.has(pattern)) {
             const compiledPattern = patterns.get(pattern);

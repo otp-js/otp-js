@@ -130,6 +130,13 @@ describe('@otpjs/core/matching/compile', function () {
                 });
             });
         });
+        describe('such as regular expressions', function () {
+            const compiled = compile(/^test_regex$/);
+            it('matches compatible strings', function () {
+                expect(compiled('test_regex')).toBe(true);
+                expect(compiled('test_regex_2')).toBe(false);
+            });
+        });
         describe('such as functions', function () {
             it('passes them through as comparators', function () {
                 const compiled = compile(function (message) {
