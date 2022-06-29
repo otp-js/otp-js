@@ -173,18 +173,23 @@ export class Node {
     }
     #signalRemoteName(fromPid, signal, nameNodePair, ...args) {
         const [toProc, toNode] = nameNodePair;
-        const router = this._routers.get(toNode);
 
-        if (router) {
-            this.signal(
-                fromPid,
-                relay,
-                router.pid,
-                t(relay, t(signal, fromPid, toProc, ...args))
-            );
-            return ok;
+        if (toNode === this.name) {
+            return this.#signalLocalName(fromPid, signal, toProc, ...args);
         } else {
-            return t(error, 'noconnection');
+            const router = this._routers.get(toNode);
+
+            if (router) {
+                this.signal(
+                    fromPid,
+                    relay,
+                    router.pid,
+                    t(relay, t(signal, fromPid, toProc, ...args))
+                );
+                return ok;
+            } else {
+                return t(error, 'noconnection');
+            }
         }
     }
 

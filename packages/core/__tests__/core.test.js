@@ -130,6 +130,7 @@ describe('@otpjs/core.Node', () => {
     });
 
     describe('deliver', function () {
+        const procName = Symbol.for('process');
         it('can deliver local messages', function (done) {
             proc = node.spawn(async (ctx) => {
                 const message = await ctx.receive();
@@ -148,6 +149,40 @@ describe('@otpjs/core.Node', () => {
         it('tries to route remote messages', function () {
             proc = core.Pid.of(1, 0);
             expect(() => node.deliver(proc, proc, test)).not.toThrow();
+
+            expect(() =>
+                node.deliver(proc, t(procName, node.name), test)
+            ).not.toThrow();
+        });
+
+        it('can deliver to registered processes', async function () {
+            let done;
+            let promise = new Promise((resolve) => (done = resolve));
+            const pid = node.spawn(async (ctx) => {
+                await ctx.register(procName);
+                const message = await ctx.receive();
+                expect(message).toBe(1);
+                done(true);
+            });
+            expect(() => node.deliver(pid, procName, 1)).not.toThrow();
+            await expect(promise).resolves.toBe(true);
+        });
+
+        it('can deliver to name/node pairs', async function () {
+            let done;
+            let promise = new Promise((resolve) => (done = resolve));
+
+            const pid = node.spawn(async (ctx) => {
+                await ctx.register(procName);
+                const message = await ctx.receive();
+                expect(message).toBe(1);
+                done(true);
+            });
+            expect(() =>
+                node.deliver(pid, t(procName, node.name), 1)
+            ).not.toThrow();
+
+            await expect(promise).resolves.toBe(true);
         });
     });
     describe('monitor', function () {
