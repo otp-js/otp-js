@@ -148,7 +148,7 @@ Tuple.prototype.toString = function () {
         } else {
             result += ' ';
         }
-        result += String(this.get(i));
+        result += safeString(this.get(i));
         firstDone = true;
     }
 
@@ -168,6 +168,14 @@ Tuple.create = function create(arity) {
 Tuple.isTuple = function isTuple(value) {
     return value instanceof Tuple;
 };
+
+function safeString(value) {
+    if (typeof value === 'symbol') {
+        return value.toString();
+    } else {
+        return String(value);
+    }
+}
 
 export const t = Tuple;
 export const tuple = Tuple;

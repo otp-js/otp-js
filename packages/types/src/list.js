@@ -365,7 +365,7 @@ List.prototype.toString = function () {
         if (firstDone) {
             result += ',';
         }
-        result += ` ${String(node.head)}`;
+        result += ` ${safeString(node.head)}`;
         node = node.tail;
         firstDone = true;
     }
@@ -378,6 +378,14 @@ List.prototype.toString = function () {
 
     return result;
 };
+
+function safeString(value) {
+    if (typeof value === 'symbol') {
+        return value.toString();
+    } else {
+        return String(value);
+    }
+}
 
 List.prototype[Symbol.toStringTag] = function () {
     return 'List';
