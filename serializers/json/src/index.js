@@ -4,7 +4,7 @@ import * as matching from '@otpjs/matching';
 const { _ } = matching.Symbols;
 
 export function make(env) {
-    const log = env._log.extend('serializer:json');
+    const log = env.logger('serializer:json');
     const isSymbol = (v) => typeof v === 'symbol';
     const isNil = (v) => v === list.nil;
     const isFunction = (v) => typeof v === 'function';
