@@ -121,12 +121,12 @@ describe('@otpjs/core.Node', () => {
 
         await wait(10);
 
-        expect(node._registrations.has(test)).toBe(true);
+        expect(node.whereis(test)).not.toBeUndefined();
         node.deliver(proc, proc, 'stop');
 
         await wait(10);
 
-        expect(node._registrations.has(test)).toBe(false);
+        expect(node.whereis(test)).toBeUndefined();
     });
 
     describe('deliver', function () {

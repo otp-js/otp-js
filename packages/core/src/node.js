@@ -49,48 +49,63 @@ export class Node {
     static get Context() {
         return Context;
     }
+
+    #id;
+    #log;
+    #finalizer;
+    #processes;
+    #processesCount;
+    #system;
+    #router;
+    #routers;
+    #routersById;
+    #routersByPid;
+    #bridges;
+    #routerCount;
+    #refCount;
+    #registrations;
+
     constructor(id = Symbol.for(`${getNodeId()}@${getNodeHost()}`)) {
-        this._id = id;
-        this._log = log.extend(this.name.toString());
-        this._finalizer = new FinalizationRegistry((pid) => {
+        this.#id = id;
+        this.#log = log.extend(this.name.toString());
+        this.#finalizer = new FinalizationRegistry((pid) => {
             log('finalize(%o)', pid);
-            this._processes.delete(pid.process);
+            this.#processes.delete(pid.process);
             this.unregister(pid);
         });
-        this._monitors = new Map();
-        this._processes = new Map();
-        this._processesCount = 0;
+        this.#processes = new Map();
+        this.#processesCount = 0;
 
-        this._system = this.spawn((ctx) => this.system(ctx));
+        this.#system = this.spawn((ctx) => this.system(ctx));
 
-        this._router = {
+        this.#router = {
             id: 0,
-            pid: this._system,
+            pid: this.#system,
             name: this.name,
             source: null,
             score: 0,
         };
-        this._routers = new Map([[this.name, this._router]]);
-        this._routersById = new Map([[0, this._router]]);
-        this._routersByPid = new Map([[this._system, this._router]]);
-        this._bridges = new Map();
-        this._routerCount = 1;
-        this._refCount = 0;
-        this._registrations = new Map();
+        this.#routers = new Map([[this.name, this.#router]]);
+        this.#routersById = new Map([[0, this.#router]]);
+        this.#routersByPid = new Map([[this.#system, this.#router]]);
+        this.#bridges = new Map();
+        this.#routerCount = 1;
+        this.#refCount = 0;
+        this.#registrations = new Map();
     }
     get name() {
-        return this._id;
+        return this.#id;
     }
     get systemPid() {
-        return this._system;
+        return this.#system;
     }
     node() {
         return this.name;
     }
     nodes() {
-        return Array.from(this._routers.values())
+        return Array.from(this.#routers.values())
             .reduce((acc, router) => {
-                this._log('nodes() : router : %o', router);
+                this.#log('nodes() : router : %o', router);
                 if (router.pid) {
                     return cons(router.name, acc);
                 } else {
@@ -104,7 +119,7 @@ export class Node {
     }
 
     getContext(pid) {
-        return this._processes.get(pid.process);
+        return this.#processes.get(pid.process);
     }
 
     #signal = matching.clauses((route) => {
@@ -134,7 +149,7 @@ export class Node {
 
     #signalLocal(fromPid, signal, toPid, ...args) {
         const toCtx = this.getContext(toPid);
-        this._log(
+        this.#log(
             '#signalLocal(fromPid: %o, signal: %o, toPid: %o)',
             fromPid,
             signal,
@@ -157,7 +172,7 @@ export class Node {
 
     #signalRemote(fromPid, signal, toPid, ...args) {
         const nodeId = toPid.node;
-        const router = this._routersById.get(nodeId);
+        const router = this.#routersById.get(nodeId);
 
         if (router) {
             this.signal(
@@ -177,7 +192,7 @@ export class Node {
         if (toNode === this.name) {
             return this.#signalLocalName(fromPid, signal, toProc, ...args);
         } else {
-            const router = this._routers.get(toNode);
+            const router = this.#routers.get(toNode);
 
             if (router) {
                 this.signal(
@@ -224,7 +239,7 @@ export class Node {
         let running = true;
         while (running) {
             const message = await ctx.receive();
-            this._log('system(%o)', message);
+            this.#log('system(%o)', message);
         }
     }
 
@@ -233,62 +248,62 @@ export class Node {
             throw OTPError(badarg);
         }
 
-        const proc = this._processes.get(pid.process);
+        const proc = this.#processes.get(pid.process);
         if (proc) {
-            if (this._registrations.has(name)) {
-                this._log(
+            if (this.#registrations.has(name)) {
+                this.#log(
                     'register(%o, %o) : registration.has(name)',
                     pid,
                     name
                 );
                 throw new OTPError(badarg);
             } else {
-                this._registrations.set(name, pid);
+                this.#registrations.set(name, pid);
 
-                this._log('register(%o, %o)', pid, name);
+                this.#log('register(%o, %o)', pid, name);
                 proc.death.finally(() => {
                     this.unregister(pid);
-                    this._processes.delete(pid.process);
+                    this.#processes.delete(pid.process);
                 });
 
                 return ok;
             }
         } else {
-            this._log('register(%o, %o) : proc === undefined', pid, name);
+            this.#log('register(%o, %o) : proc === undefined', pid, name);
             throw new OTPError(badarg);
         }
     }
     unregister(pid, name = undefined) {
         if (name === undefined) {
             const toUnregister = [];
-            this._registrations.forEach((registered, name) => {
+            this.#registrations.forEach((registered, name) => {
                 if (Pid.compare(pid, registered) === 0) {
                     toUnregister.push(name);
                 }
             });
-            toUnregister.forEach((name) => this._registrations.delete(name));
+            toUnregister.forEach((name) => this.#registrations.delete(name));
             return ok;
         } else if (
-            this._registrations.has(name) &&
-            this._registrations.get(name) === pid
+            this.#registrations.has(name) &&
+            this.#registrations.get(name) === pid
         ) {
-            this._registrations.delete(name);
+            this.#registrations.delete(name);
             return ok;
         } else {
             return ok;
         }
     }
     whereis(name) {
-        if (this._registrations.has(name)) {
-            return this._registrations.get(name);
+        if (this.#registrations.has(name)) {
+            return this.#registrations.get(name);
         } else {
             return undefined;
         }
     }
 
     updatePeers(source, score, name, pid, operation) {
-        for (let [bridge, names] of this._bridges) {
-            const router = this._routersByPid.get(bridge);
+        for (let [bridge, names] of this.#bridges) {
+            const router = this.#routersByPid.get(bridge);
             this.deliver(
                 this.systemPid,
                 bridge,
@@ -304,33 +319,33 @@ export class Node {
         }
     }
     saveBridge(name, pid) {
-        let existing = this._bridges.has(pid) ? this._bridges.get(pid) : [];
+        let existing = this.#bridges.has(pid) ? this.#bridges.get(pid) : [];
         let index = existing.indexOf(name);
 
         if (index >= 0) {
-            this._bridges.set(pid, [
+            this.#bridges.set(pid, [
                 ...existing.slice(0, index),
                 name,
                 ...existing.slice(index + 1),
             ]);
         } else {
-            this._bridges.set(pid, [...existing, name]);
+            this.#bridges.set(pid, [...existing, name]);
         }
     }
     registerRouter(source, score, name, pid, options = {}) {
-        this._log(
+        this.#log(
             'registerRouter(%o, %o, %o, %o) : this._routers : %o',
             source,
             score,
             name,
             pid,
-            this._routers
+            this.#routers
         );
-        if (this._routers.has(name)) {
-            const router = this._routers.get(name);
+        if (this.#routers.has(name)) {
+            const router = this.#routers.get(name);
             const { source: oldSource, pid: oldPid, id } = router;
 
-            this._log(
+            this.#log(
                 'registerRouter(%o, %o, %o, %o) : oldPid : %o',
                 source,
                 score,
@@ -351,9 +366,9 @@ export class Node {
                     score,
                     type: options.type ?? temporary,
                 };
-                this._routers.set(name, nextRouter);
-                this._routersById.set(id, nextRouter);
-                this._routersByPid.set(pid, nextRouter);
+                this.#routers.set(name, nextRouter);
+                this.#routersById.set(id, nextRouter);
+                this.#routersByPid.set(pid, nextRouter);
                 if (options.bridge) {
                     this.updatePeers(source, score, name, pid, _discover);
                     this.saveBridge(name, pid);
@@ -362,7 +377,7 @@ export class Node {
 
             return id;
         } else {
-            const id = this._routerCount++;
+            const id = this.#routerCount++;
             const router = {
                 pid,
                 id,
@@ -371,9 +386,9 @@ export class Node {
                 score,
                 type: options.type ?? temporary,
             };
-            this._routers.set(name, router);
-            this._routersById.set(id, router);
-            this._routersByPid.set(pid, router);
+            this.#routers.set(name, router);
+            this.#routersById.set(id, router);
+            this.#routersByPid.set(pid, router);
 
             if (options.bridge) {
                 this.updatePeers(source, score, name, pid, _discover);
@@ -388,28 +403,28 @@ export class Node {
         }
     }
     unregisterRouter(pid) {
-        this._log('unregisterRouter(%o)', pid);
-        if (this._routersByPid.has(pid)) {
-            const router = this._routersByPid.get(pid);
+        this.#log('unregisterRouter(%o)', pid);
+        if (this.#routersByPid.has(pid)) {
+            const router = this.#routersByPid.get(pid);
             const { id, name, type } = router;
 
             if (type === permanent) {
-                this._routers.set(name, { ...router, pid: null });
-                this._routersById.set(id, { ...router, pid: null });
+                this.#routers.set(name, { ...router, pid: null });
+                this.#routersById.set(id, { ...router, pid: null });
             } else {
-                this._routers.delete(name);
-                this._routersById.delete(id);
+                this.#routers.delete(name);
+                this.#routersById.delete(id);
             }
-            this._routersByPid.delete(pid);
+            this.#routersByPid.delete(pid);
 
-            if (this._bridges.has(pid)) {
-                const names = this._bridges.get(pid);
-                this._bridges.delete(pid);
+            if (this.#bridges.has(pid)) {
+                const names = this.#bridges.get(pid);
+                this.#bridges.delete(pid);
 
-                this._log('unregisterRouter(%o) : names : %o', pid, names);
+                this.#log('unregisterRouter(%o) : names : %o', pid, names);
                 for (let name of names) {
-                    if (this._routers.has(name)) {
-                        const { source, score, pid } = this._routers.get(name);
+                    if (this.#routers.has(name)) {
+                        const { source, score, pid } = this.#routers.get(name);
                         this.unregisterRouter(pid);
                         this.updatePeers(source, score, name, pid, _lost);
                     }
@@ -424,12 +439,12 @@ export class Node {
         }
     }
     getRouterName(id) {
-        this._log(
+        this.#log(
             'getRouterName(%o) : this._routersById : %o',
             id,
-            this._routersById
+            this.#routersById
         );
-        const router = this._routersById.get(id);
+        const router = this.#routersById.get(id);
 
         if (router) {
             return router.name;
@@ -438,7 +453,7 @@ export class Node {
         }
     }
     getRouterId(name) {
-        const router = this._routers.get(name);
+        const router = this.#routers.get(name);
 
         if (router) {
             return router.id;
@@ -448,16 +463,16 @@ export class Node {
     }
 
     ref() {
-        return Ref.for(Ref.LOCAL, this._refCount++, 0, 1);
+        return Ref.for(Ref.LOCAL, this.#refCount++, 0, 1);
     }
     pid() {
-        return Pid.of(Pid.LOCAL, this._processesCount++, 0, 1);
+        return Pid.of(Pid.LOCAL, this.#processesCount++, 0, 1);
     }
 
     makeContext() {
         const ctx = new Node.Context(this);
-        this._processes.set(ctx.self().process, ctx);
-        this._log('makeContext() : pid : %o', ctx.self());
+        this.#processes.set(ctx.self().process, ctx);
+        this.#log('makeContext() : pid : %o', ctx.self());
         return ctx;
     }
     spawn(fun) {
@@ -487,7 +502,7 @@ export class Node {
         return t(pid, mref);
     }
     async doSpawn(ctx, fun) {
-        this._finalizer.register(ctx, ctx.self());
+        this.#finalizer.register(ctx, ctx.self());
         try {
             await fun(ctx);
             ctx.die(normal);
@@ -497,7 +512,7 @@ export class Node {
     }
 
     deliver(fromPid, toProc, message) {
-        this._log(
+        this.#log(
             'deliver(fromPid: %o, toProc: %o, message: %o)',
             fromPid,
             toProc,
@@ -507,11 +522,15 @@ export class Node {
     }
 
     processInfo(pid) {
-        const ctx = this._processes.get(pid.process);
+        const ctx = this.#processes.get(pid.process);
         if (ctx) {
             return ctx._processInfo();
         } else {
             return undefined;
         }
+    }
+
+    logger(...formatters) {
+        return this.#log.extend(...formatters);
     }
 }
