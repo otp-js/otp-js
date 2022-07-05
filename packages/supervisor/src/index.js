@@ -148,6 +148,8 @@ async function _startChild(ctx, [, specOrArgs], from, state) {
             };
             return _handleStartResult(t(ok, result.pid, nextState), state);
         } else {
+            log(ctx, '_startChild(simple_one_for_one, result: %o)', result);
+            return _handleStartResult(result, state);
         }
     }
 }
