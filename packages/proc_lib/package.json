@@ -1,6 +1,6 @@
 {
   "name": "@otpjs/proc_lib",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "An implementation of the proc_lib functionality of Erlang",
   "keywords": [
     "erlang",
@@ -40,7 +40,7 @@
     "url": "https://github.com/otp-js/otp-js/issues"
   },
   "dependencies": {
-    "@otpjs/core": "^0.13.0"
+    "@otpjs/core": "^0.13.1"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.15.6",
