@@ -34,6 +34,7 @@ export class MessageBox extends Array {
         }
     }
     push(message) {
+        this.#log('push(message: %o)', message);
         if (this.#resolvers.length > 0) {
             let index = 0;
             for (let [_resolve, _reject, predicates] of this.#resolvers) {
@@ -70,16 +71,13 @@ export class MessageBox extends Array {
             predicates.push(() => true);
         }
 
-        this.#log('pop() : predicates : %o', predicates);
-        this.#log('pop() : timeout : %o', timeout);
-
         return new Promise((innerResolve, innerReject) => {
             const resolve = (result) => {
-                this.#log('pop() : resolved : %o', result);
+                this.#log('pop(resolved: %o)', result);
                 innerResolve(result);
             };
             const reject = (reason) => {
-                this.#log('pop() : rejected : %o', reason);
+                this.#log('pop(rejected: %o)', reason);
                 innerReject(reason);
             };
             if (this.length > 0) {
@@ -91,7 +89,7 @@ export class MessageBox extends Array {
                             if (predicate(message)) {
                                 return resolve([
                                     ok,
-                                    this._consume(index),
+                                    this.#consume(index),
                                     predicate,
                                 ]);
                             }
@@ -101,14 +99,14 @@ export class MessageBox extends Array {
                     }
                 }
 
-                this._defer(resolve, reject, predicates, timeout);
+                this.#defer(resolve, reject, predicates, timeout);
             } else {
-                this._defer(resolve, reject, predicates, timeout);
+                this.#defer(resolve, reject, predicates, timeout);
             }
         });
     }
 
-    _defer(resolve, reject, predicate, timeout) {
+    #defer(resolve, reject, predicate, timeout) {
         let timer = null;
         let record = null;
 
@@ -139,10 +137,9 @@ export class MessageBox extends Array {
             record = [resolve, reject, predicate];
         }
 
-        this.#log('_defer() : record : %o', record);
         this.#resolvers.push(record);
     }
-    _consume(index) {
+    #consume(index) {
         const [message] = this.splice(index, 1);
         return message;
     }

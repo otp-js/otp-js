@@ -25,7 +25,7 @@ const { _, spread } = matching.Symbols;
 
 const log = debug('otpjs:core:node');
 
-const isPidFromLocalNode = (v) => Pid.isPid(v) && v.node === Pid.LOCAL;
+const isLocalPid = (v) => Pid.isPid(v) && v.node === Pid.LOCAL;
 const monitors = new WeakMap();
 
 function getNodeId() {
@@ -50,26 +50,27 @@ export class Node {
         return Context;
     }
 
+    #bridges;
+    #finalizer;
     #id;
     #log;
-    #finalizer;
     #processes;
     #processesCount;
-    #system;
+    #refCount;
+    #registrations;
     #router;
+    #routerCount;
     #routers;
     #routersById;
     #routersByPid;
-    #bridges;
-    #routerCount;
-    #refCount;
-    #registrations;
+    #system;
+    #systemContext;
 
     constructor(id = Symbol.for(`${getNodeId()}@${getNodeHost()}`)) {
         this.#id = id;
         this.#log = log.extend(this.name.toString());
         this.#finalizer = new FinalizationRegistry((pid) => {
-            log('finalize(%o)', pid);
+            log('finalize(pid: %o)', pid);
             this.#processes.delete(pid.process);
             this.unregister(pid);
         });
@@ -105,7 +106,7 @@ export class Node {
     nodes() {
         return Array.from(this.#routers.values())
             .reduce((acc, router) => {
-                this.#log('nodes() : router : %o', router);
+                this.#log('nodes(router: %o)', router);
                 if (router.pid) {
                     return cons(router.name, acc);
                 } else {
@@ -119,25 +120,21 @@ export class Node {
     }
 
     getContext(pid) {
-        return this.#processes.get(pid.process);
+        const ref = this.#processes.get(pid.process);
+
+        if (ref) {
+            return ref.deref();
+        } else {
+            return undefined;
+        }
     }
 
     #signal = matching.clauses((route) => {
-        route(_, _, isAtom, spread).to((...args) =>
-            this.#signalLocalName(...args)
-        );
-        route(_, _, isPidFromLocalNode, spread).to((...args) =>
-            this.#signalLocal(...args)
-        );
-        route(_, _, Pid.isPid, spread).to((...args) =>
-            this.#signalRemote(...args)
-        );
-        route(_, _, t(_, _), spread).to((...args) =>
-            this.#signalRemoteName(...args)
-        );
-
-        return 'node.signal';
-    });
+        route(_, _, isAtom, spread).to(this.#signalLocalName.bind(this));
+        route(_, _, isLocalPid, spread).to(this.#signalLocal.bind(this));
+        route(_, _, Pid.isPid, spread).to(this.#signalRemote.bind(this));
+        route(_, _, t(_, _), spread).to(this.#signalRemoteName.bind(this));
+    }, 'node.signal');
 
     signal(...args) {
         try {
@@ -235,11 +232,11 @@ export class Node {
     }
 
     async system(ctx) {
-        this._systemContext = ctx;
+        this.#systemContext = ctx;
         let running = true;
         while (running) {
             const message = await ctx.receive();
-            this.#log('system(%o)', message);
+            this.#log('system(message: %o)', message);
         }
     }
 
@@ -334,23 +331,21 @@ export class Node {
     }
     registerRouter(source, score, name, pid, options = {}) {
         this.#log(
-            'registerRouter(%o, %o, %o, %o) : this._routers : %o',
+            'registerRouter(source: %o, score: %o, name: %o, pid: %o)',
             source,
             score,
             name,
-            pid,
-            this.#routers
+            pid
         );
         if (this.#routers.has(name)) {
             const router = this.#routers.get(name);
             const { source: oldSource, pid: oldPid, id } = router;
 
             this.#log(
-                'registerRouter(%o, %o, %o, %o) : oldPid : %o',
+                'registerRouter(source: %o, score: %o, name: %o, oldPid: %o)',
                 source,
                 score,
                 name,
-                pid,
                 oldPid
             );
             if (
@@ -421,7 +416,7 @@ export class Node {
                 const names = this.#bridges.get(pid);
                 this.#bridges.delete(pid);
 
-                this.#log('unregisterRouter(%o) : names : %o', pid, names);
+                this.#log('unregisterRouter(pid: %o, names: %o)', pid, names);
                 for (let name of names) {
                     if (this.#routers.has(name)) {
                         const { source, score, pid } = this.#routers.get(name);
@@ -439,11 +434,7 @@ export class Node {
         }
     }
     getRouterName(id) {
-        this.#log(
-            'getRouterName(%o) : this._routersById : %o',
-            id,
-            this.#routersById
-        );
+        this.#log('getRouterName(id: %o)', id);
         const router = this.#routersById.get(id);
 
         if (router) {
@@ -530,7 +521,7 @@ export class Node {
         }
     }
 
-    logger(...formatters) {
-        return this.#log.extend(...formatters);
+    logger(...segments) {
+        return this.#log.extend(...segments);
     }
 }

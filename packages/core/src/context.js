@@ -47,7 +47,7 @@ export class Context {
         this.#pid = parent.pid();
         this.#node = parent;
 
-        this.#logger = parent.logger();
+        this.#logger = parent.logger(this.self().toString().toLowerCase());
         this.#log = this.logger('context');
 
         this.#mb = new MessageBox(this.logger('message-box'));
@@ -272,7 +272,7 @@ export class Context {
             this.#deliver(t(DOWN, ref, 'process', fromPid, reason))
         );
         return 'context.signal';
-    });
+    }, 'context.signal');
 
     #link(other) {
         this.#links.add(other);

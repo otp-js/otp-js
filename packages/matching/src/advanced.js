@@ -36,7 +36,7 @@ export function buildCase(builder) {
         },
     };
 }
-export function clauses(builder) {
+export function clauses(builder, name) {
     let handlers = list.nil;
     const route = (...pattern) => {
         try {
@@ -47,11 +47,11 @@ export function clauses(builder) {
                 },
             };
         } catch (err) {
-            log('route(pattern: %o) : error : %o', pattern, err);
+            log('route(pattern: %o, error: %o)', pattern, err);
         }
     };
     builder(route);
-    const name = builder.name || 'route';
+    name ||= builder.name || 'route';
     handlers = handlers.reverse();
 
     return {
@@ -61,16 +61,11 @@ export function clauses(builder) {
                 subject = args.slice(1);
             }
             for (let [pattern, test, handler] of handlers) {
-                log(
-                    'clauses<%o>(subject: %o, pattern: %o)',
-                    name,
-                    subject,
-                    pattern
-                );
+                log('clauses(name: %o, pattern: %o)', name, pattern);
                 const result = test(subject);
 
                 if (result) {
-                    log('clauses<%o>(handler: %o)', name, handler);
+                    log('clauses(name: %o, handler: %o)', name, handler);
                     return handler.call(this, ...args);
                 }
             }
