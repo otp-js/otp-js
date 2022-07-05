@@ -245,28 +245,33 @@ export class Node {
             throw OTPError(badarg);
         }
 
-        const proc = this.#processes.get(pid.process);
-        if (proc) {
-            if (this.#registrations.has(name)) {
-                this.#log(
-                    'register(%o, %o) : registration.has(name)',
-                    pid,
-                    name
-                );
-                throw new OTPError(badarg);
+        const ref = this.#processes.get(pid.process);
+        if (ref) {
+            const proc = ref.deref();
+            if (proc) {
+                if (this.#registrations.has(name)) {
+                    this.#log(
+                        'register(pid: %o, name: %o, error: %o)',
+                        pid,
+                        name,
+                        badarg
+                    );
+                    throw new OTPError(badarg);
+                } else {
+                    this.#registrations.set(name, pid);
+                    this.#log('register(pid: %o, name: %o)', pid, name);
+                    proc.death.finally(() => {
+                        this.unregister(pid);
+                    });
+
+                    return ok;
+                }
             } else {
-                this.#registrations.set(name, pid);
-
-                this.#log('register(%o, %o)', pid, name);
-                proc.death.finally(() => {
-                    this.unregister(pid);
-                    this.#processes.delete(pid.process);
-                });
-
-                return ok;
+                this.#log('register(%o, %o) : proc === undefined', pid, name);
+                throw new OTPError(badarg);
             }
         } else {
-            this.#log('register(%o, %o) : proc === undefined', pid, name);
+            this.#log('register(%o, %o) : ref === undefined', pid, name);
             throw new OTPError(badarg);
         }
     }
@@ -462,8 +467,9 @@ export class Node {
 
     makeContext() {
         const ctx = new Node.Context(this);
-        this.#processes.set(ctx.self().process, ctx);
-        this.#log('makeContext() : pid : %o', ctx.self());
+        const pid = ctx.self();
+        this.#processes.set(pid.process, new WeakRef(ctx));
+        this.#log('makeContext(pid: %o)', ctx.self());
         return ctx;
     }
     spawn(fun) {
@@ -513,9 +519,14 @@ export class Node {
     }
 
     processInfo(pid) {
-        const ctx = this.#processes.get(pid.process);
-        if (ctx) {
-            return ctx._processInfo();
+        const ref = this.#processes.get(pid.process);
+        if (ref) {
+            const ctx = ref.deref();
+            if (ctx) {
+                return ctx._processInfo();
+            } else {
+                return undefined;
+            }
         } else {
             return undefined;
         }
