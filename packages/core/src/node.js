@@ -53,6 +53,7 @@ export class Node {
     #bridges;
     #finalizer;
     #id;
+    #living;
     #log;
     #processes;
     #processesCount;
@@ -68,6 +69,7 @@ export class Node {
 
     constructor(id = Symbol.for(`${getNodeId()}@${getNodeHost()}`)) {
         this.#id = id;
+        this.#living = new Set();
         this.#log = log.extend(this.name.toString());
         this.#finalizer = new FinalizationRegistry((pid) => {
             log('finalize(pid: %o)', pid);
@@ -492,6 +494,8 @@ export class Node {
         const ctx = new Node.Context(this);
         const pid = ctx.self();
         this.#processes.set(pid.process, new WeakRef(ctx));
+        this.#living.add(ctx);
+        ctx.death.finally(() => this.#living.delete(ctx));
         this.#log('makeContext(pid: %o)', ctx.self());
         return ctx;
     }
