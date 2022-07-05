@@ -186,10 +186,7 @@ describe('@otp-js/supervisor', () => {
 
                     for (let child of children) {
                         const { pid } = child;
-                        expect(node.processInfo(pid)).toMatchPattern({
-                            dead: true,
-                            [spread]: _,
-                        });
+                        expect(node.processInfo(pid)).toBeUndefined();
                     }
 
                     const [, nextChildren] = await supervisor.whichChildren(

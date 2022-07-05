@@ -217,7 +217,30 @@ export class Node {
     monitor(fromPid, toPid, ref) {
         ref = ref ?? this.ref();
         monitors.set(ref, toPid);
-        this.signal(fromPid, monitor, toPid, ref);
+        const response = this.signal(fromPid, monitor, toPid, ref);
+        const compare = matching.caseOf(response);
+
+        if (compare(t(error, _))) {
+            try {
+                const [, reason] = response;
+                this.#log(
+                    '_monitor(toPid: %o, ref: %o, fromPid: %o, error: %o)',
+                    toPid,
+                    ref,
+                    fromPid,
+                    reason
+                );
+                this.signal(toPid, DOWN, fromPid, ref, reason);
+            } catch (err) {
+                this.#log(
+                    '_monitor(self: %o, ref: %o, error: %o)',
+                    this.self(),
+                    ref,
+                    err
+                );
+            }
+        }
+
         return ref;
     }
 

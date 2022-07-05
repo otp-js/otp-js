@@ -197,13 +197,7 @@ export class Context {
     }
     _processInfo() {
         if (this.#dead) {
-            return {
-                status: this.#status,
-                links: [],
-                messageQueueLength: 0,
-                messages: [],
-                monitors: [],
-            };
+            return undefined;
         } else {
             return {
                 status: this.#status,
@@ -329,25 +323,10 @@ export class Context {
                 watcher
             );
             this.#monitors.set(ref.toString(), watcher);
+            return ok;
         } else {
-            this.#log(
-                '_monitor(self: %o, ref: %o, watcher: %o, error: noproc)',
-                this.self(),
-                ref,
-                watcher
-            );
-            try {
-                this.#node.signal(this.self(), DOWN, watcher, ref, 'noproc');
-            } catch (err) {
-                this.#log(
-                    '_monitor(self: %o, ref: %o, error: %o)',
-                    this.self(),
-                    ref,
-                    err
-                );
-            }
+            return t(error, 'noproc');
         }
-        return ok;
     }
     #demonitor(ref) {
         this.#monitors.delete(ref.toString());
