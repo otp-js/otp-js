@@ -331,6 +331,15 @@ export class Context {
     #demonitor(ref) {
         this.#monitors.delete(ref.toString());
     }
+
+    get log() {
+        return this.#log;
+    }
+
+    set log(logger) {
+        this.#log = logger;
+    }
+
     logger(...segments) {
         return this.#logger.extend(...segments);
     }
