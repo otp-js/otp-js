@@ -14,6 +14,7 @@ const {
     link,
     lost,
     monitor,
+    nodedown,
     normal,
     ok,
     permanent,
@@ -55,6 +56,7 @@ export class Node {
     #id;
     #living;
     #log;
+    #monitors;
     #processes;
     #processesCount;
     #refCount;
@@ -78,6 +80,7 @@ export class Node {
         });
         this.#processes = new Map();
         this.#processesCount = 0;
+        this.#monitors = new Map();
 
         this.#system = this.spawn((ctx) => this.system(ctx));
 
@@ -102,8 +105,13 @@ export class Node {
     get systemPid() {
         return this.#system;
     }
-    node() {
-        return this.name;
+    node(pid) {
+        if (pid) {
+            const router = this.#routersById.get(pid.node);
+            return router.name;
+        } else {
+            return this.name;
+        }
     }
     nodes() {
         return Array.from(this.#routers.values())
@@ -128,6 +136,20 @@ export class Node {
             return ref.deref();
         } else {
             return undefined;
+        }
+    }
+
+    monitorNode(monitor, node) {
+        const exists = this.#routers.has(node);
+
+        if (exists) {
+            const monitors = this.#monitors.get(node) ?? [];
+            monitors.push(monitor);
+            this.#monitors.set(node, monitors);
+        } else {
+            // TODO: attempt connecting to `node`?
+            // For now, just trigger the `{nodedown, Node}` signal
+            this.deliver(this.system, monitor, t(nodedown, node));
         }
     }
 
@@ -283,8 +305,8 @@ export class Node {
                     );
                     throw new OTPError(badarg);
                 } else {
-                    this.#registrations.set(name, pid);
                     this.#log('register(pid: %o, name: %o)', pid, name);
+                    this.#registrations.set(name, pid);
                     proc.death.finally(() => {
                         this.unregister(pid);
                     });
@@ -308,12 +330,17 @@ export class Node {
                     toUnregister.push(name);
                 }
             });
-            toUnregister.forEach((name) => this.#registrations.delete(name));
+            toUnregister.forEach((name) => this.unregister(pid, name));
             return ok;
         } else if (
             this.#registrations.has(name) &&
             this.#registrations.get(name) === pid
         ) {
+            const monitors = this.#monitors.get(name) ?? [];
+            for (let monitor of monitors) {
+                this.deliver(this.system, monitor, t(nodedown, name));
+            }
+            this.#monitors.delete(name);
             this.#registrations.delete(name);
             return ok;
         } else {

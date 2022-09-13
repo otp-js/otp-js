@@ -68,26 +68,27 @@ export class Context {
         this.#forwardWithPid('link');
         this.#forwardWithPid('unlink');
         this.#forwardWithPid('monitor');
+        this.#forwardWithPid('monitorNode');
         this.#forwardWithPid('register');
         this.#forwardWithPid('unregister');
 
         this.death = new Promise(
             (resolve) =>
-                (this.die = (reason) => {
-                    this.#log(
-                        'die(%o) : lastMessage : %o',
-                        reason,
-                        this.#lastMessage
-                    );
+            (this.die = (reason) => {
+                this.#log(
+                    'die(%o) : lastMessage : %o',
+                    reason,
+                    this.#lastMessage
+                );
 
-                    if (reason instanceof OTPError) {
-                        resolve(reason);
-                    } else {
-                        const err = OTPError(reason);
-                        Error.captureStackTrace(err, OTPError);
-                        resolve(err);
-                    }
-                })
+                if (reason instanceof OTPError) {
+                    resolve(reason);
+                } else {
+                    const err = OTPError(reason);
+                    Error.captureStackTrace(err, OTPError);
+                    resolve(err);
+                }
+            })
         );
         this.#dead = false;
 
