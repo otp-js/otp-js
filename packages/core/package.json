@@ -40,6 +40,7 @@
     },
     "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e",
     "dependencies": {
+        "@babel/runtime": "^7.19.0",
         "@otpjs/matching": "file:../matching",
         "@otpjs/test_utils": "file:../test_utils",
         "@otpjs/types": "file:../types",

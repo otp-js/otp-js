@@ -38,6 +38,7 @@
     "url": "https://github.com/otp-js/otp-js/issues"
   },
   "dependencies": {
+    "@babel/runtime": "^7.19.0",
     "@otpjs/core": "^0.13.4"
   },
   "peerDependencies": {
