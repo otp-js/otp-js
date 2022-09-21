@@ -506,7 +506,8 @@ export class Node {
         if (router) {
             return router.id;
         } else {
-            throw new OTPError(t('unrecognized_router_name', name));
+            this.registerRouter(this.name, Infinity, name, null, { type: permanent });
+            return this.getRouterId(name);
         }
     }
 
