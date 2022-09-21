@@ -45,16 +45,16 @@ export function make(env) {
         if (compare(isEncodedSymbol)) {
             return Symbol.for(value[1]);
         } else if (compare(isEncodedFunction)) {
-            log(
-                'new (Function.bind.apply(Function, [Function].concat(value[1]: %o, [value[2]]: %o)))()',
-                value[1],
-                value[2],
-                Error().stack
-            );
-            return new (Function.bind.apply(
+            const fun = new (Function.bind.apply(
                 Function,
                 [Function].concat(value[1], [value[2]])
             ))();
+            log(
+                'reviveOTP(key: %o, fun: %o)',
+                key,
+                fun
+            );
+            return fun;
         } else if (compare(isEncodedPid)) {
             const [node, serial, id, creation] = value.slice(1);
             const nodeId = env.getRouterId(node);
