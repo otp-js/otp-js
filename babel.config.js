@@ -16,6 +16,6 @@ module.exports = function (api) {
                 },
             ],
         ],
-        plugins: ['@babel/transform-runtime'],
+        plugins: ['@babel/plugin-transform-runtime'],
     };
 };
