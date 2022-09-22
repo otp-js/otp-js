@@ -85,8 +85,9 @@ export function register(node, socket, options = defaultOptions()) {
     function destroy(reason = shutdown) {
         try {
             socket.disconnect();
+            handleDisconnect();
         } catch (err) {
-            log(ctx, 'destroy(%o) : error : %o', reason, err);
+            log(ctx, 'destroy(reason: %o, error: %o)', reason, err);
         } finally {
             ctx.die(reason);
             socket.off('otp-message', handleMessage);
