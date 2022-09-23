@@ -25,7 +25,9 @@ jobs:
                   npm ci
                   npm run build --if-present
             - name: Test
-              run: npm test
+              run: jest --coverage
+            - name: Report Coverage
+              run: cat ./coverage/lcov.info | npx coveralls
             - name: Release
               env:
                   NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
