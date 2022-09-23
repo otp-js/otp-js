@@ -23,7 +23,7 @@ jobs:
         needs: setup
         runs-on: ubuntu-latest
         steps:
-            - run: npm ci
+            - run: npm install
             - run: npm run build --if-present
     test:
         needs: build
