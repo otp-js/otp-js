@@ -1,6 +1,6 @@
 # Open Telecom Platform on JS
 
-[![Build Status](https://app.travis-ci.com/otp-js/otp-js.svg?branch=main)](https://app.travis-ci.com/github/otp-js/otp-js)
+[![Build Status](https://github.com/otp-js/otp-js/actions/workflows/build.yml/badge.svg)](https://github.com/otp-js/otp-js/actions/workflows/build.yml)
 [![Coverage Status](https://coveralls.io/repos/github/otp-js/otp-js/badge.svg?branch=main)](https://coveralls.io/github/otp-js/otp-js?branch=main)
 
 This project makes heavy use of ES6 features and as such requires NodeJS v16
