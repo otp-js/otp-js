@@ -26,12 +26,12 @@ jobs:
             - run: npm install
             - run: npm run build --if-present
     test:
-        needs: build
+        needs: [setup, build]
         runs-on: ubuntu-latest
         steps:
             - run: npm test
     release:
-        needs: test
+        needs: [setup, build, test]
         runs-on: ubuntu-latest
         steps:
             - run: npx semantic-release
