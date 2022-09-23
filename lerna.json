@@ -1,8 +1,5 @@
 {
-    "packages": [
-        "packages/*",
-        "serializers/*",
-        "transports/*"
-    ],
+    "packages": ["packages/*", "serializers/*", "transports/*"],
+    "useWorkspaces": true,
     "version": "0.14.0"
 }
