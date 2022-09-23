@@ -1,3 +1,10 @@
+## 0.14.2 (2022-09-23)
+
+
+### Bug Fixes
+
+* **core:** move nodedown notice to proper place 6884a9f
+
 ## 0.14.1 (2022-09-23)
 
 
