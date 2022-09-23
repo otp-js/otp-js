@@ -336,11 +336,6 @@ export class Node {
             this.#registrations.has(name) &&
             this.#registrations.get(name) === pid
         ) {
-            const monitors = this.#monitors.get(name) ?? [];
-            for (let monitor of monitors) {
-                this.deliver(this.system, monitor, t(nodedown, name));
-            }
-            this.#monitors.delete(name);
             this.#registrations.delete(name);
             return ok;
         } else {
@@ -459,6 +454,12 @@ export class Node {
         if (this.#routersByPid.has(pid)) {
             const router = this.#routersByPid.get(pid);
             const { id, name, type } = router;
+
+            const monitors = this.#monitors.get(name) ?? [];
+            for (let monitor of monitors) {
+                this.deliver(this.system, monitor, t(nodedown, name));
+            }
+            this.#monitors.delete(name);
 
             if (type === permanent) {
                 this.#routers.set(name, { ...router, pid: null });
