@@ -401,6 +401,7 @@ export class Node {
                 oldPid
             );
             if (
+                oldPid === null ||
                 Pid.compare(pid, oldPid) != 0 && // Make sure it's not an echo of the current router
                 (score < router.score || // Ensure it provides better connectivity
                     oldPid === null) // ...unless the last router died
