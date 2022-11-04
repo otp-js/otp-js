@@ -1,3 +1,10 @@
+## 0.15.1 (2022-11-04)
+
+
+### Bug Fixes
+
+* **core:** check oldPid for null first 3cb4a50
+
 # 0.15.0 (2022-10-08)
 
 
