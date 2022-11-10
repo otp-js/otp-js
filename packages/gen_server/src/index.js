@@ -356,11 +356,13 @@ async function tryTerminate(ctx, callbacks, reason, state) {
             return ok;
         }
     } catch (err) {
-        if (err instanceof Error) {
+        if (err instanceof OTPError) {
+            return t(EXIT, err.name, err.term, err.stack);
+        } else if (err instanceof Error) {
             log(ctx, 'tryTerminate(reason: %o, error: %o)', reason, err);
             return t(EXIT, err.name, err.message, err.stack);
         } else {
-            return t(ok, err);
+            return err;
         }
     }
 }
