@@ -222,6 +222,7 @@ export function register(node, socket, options = defaultOptions()) {
         // drain the messagebox
         try {
             ctx.drain(disconnect);
+            ctx.exit(disconnect);
         } catch (err) {
             log(ctx, 'drain() : error : %o', err);
         }
