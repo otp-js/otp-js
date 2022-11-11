@@ -93,7 +93,7 @@ export class Node {
         };
         this.#routers = new Map([[this.name, this.#router]]);
         this.#routersById = new Map([[0, this.#router]]);
-        this.#routersByPid = new Map([[this.#system, this.#router]]);
+        this.#routersByPid = new Map([[this.#system.toString(), this.#router]]);
         this.#bridges = new Map();
         this.#routerCount = 1;
         this.#refCount = 0;
@@ -352,7 +352,6 @@ export class Node {
 
     updatePeers(source, score, name, type, pid, operation) {
         for (let [bridge, names] of this.#bridges) {
-            const router = this.#routersByPid.get(bridge);
             this.deliver(
                 this.systemPid,
                 bridge,
@@ -362,7 +361,7 @@ export class Node {
                 this.deliver(
                     this.systemPid,
                     pid,
-                    operation(router.source, router.score, name, router.type, bridge)
+                    operation(source, score, name, type, bridge)
                 );
             }
         }
@@ -402,9 +401,9 @@ export class Node {
             );
             if (
                 oldPid === null ||
-                Pid.compare(pid, oldPid) != 0 && // Make sure it's not an echo of the current router
-                (score < router.score || // Ensure it provides better connectivity
-                    oldPid === null) // ...unless the last router died
+                (Pid.compare(pid, oldPid) != 0 && // Make sure it's not an echo of the current router
+                    (score < router.score || // Ensure it provides better connectivity
+                        oldPid === null)) // ...unless the last router died
             ) {
                 const nextRouter = {
                     source,
@@ -416,9 +415,16 @@ export class Node {
                 };
                 this.#routers.set(name, nextRouter);
                 this.#routersById.set(id, nextRouter);
-                this.#routersByPid.set(pid, nextRouter);
+                this.#routersByPid.set(pid.toString(), nextRouter);
                 if (options.bridge) {
-                    this.updatePeers(source, score, name, nextRouter.type, pid, _discover);
+                    this.updatePeers(
+                        source,
+                        score,
+                        name,
+                        nextRouter.type,
+                        pid,
+                        _discover
+                    );
                     this.saveBridge(name, pid);
                 }
             }
@@ -436,10 +442,17 @@ export class Node {
             };
             this.#routers.set(name, router);
             this.#routersById.set(id, router);
-            this.#routersByPid.set(pid, router);
+            this.#routersByPid.set(pid.toString(), router);
 
             if (options.bridge) {
-                this.updatePeers(source, score, name, router.type, pid, _discover);
+                this.updatePeers(
+                    source,
+                    score,
+                    name,
+                    router.type,
+                    pid,
+                    _discover
+                );
                 this.saveBridge(name, pid);
             }
 
@@ -451,10 +464,17 @@ export class Node {
         }
     }
     unregisterRouter(pid) {
-        this.#log('unregisterRouter(%o)', pid);
-        if (this.#routersByPid.has(pid)) {
-            const router = this.#routersByPid.get(pid);
+        this.#log(
+            'unregisterRouter(pid: %o, routers: %o)',
+            pid,
+            Array.from(this.#routersByPid.keys())
+        );
+
+        if (this.#routersByPid.has(pid.toString())) {
+            const router = this.#routersByPid.get(pid.toString());
             const { id, name, type } = router;
+
+            this.#log('unregisterRouter(pid: %o, router: %o)', pid, router);
 
             const monitors = this.#monitors.get(name) ?? [];
             for (let monitor of monitors) {
@@ -462,28 +482,51 @@ export class Node {
             }
             this.#monitors.delete(name);
 
+            if (this.#bridges.has(pid)) {
+                const names = this.#bridges.get(pid);
+                this.#bridges.delete(pid);
+
+                for (let name of names) {
+                    this.#log(
+                        'unregisterRouter(pid: %o, bridged: %o, router: %o)',
+                        pid,
+                        name,
+                        this.#routers.get(name)
+                    );
+                    if (this.#routers.has(name)) {
+                        const { pid } = this.#routers.get(name);
+                        this.unregisterRouter(pid);
+                    }
+                }
+            }
+
             if (type === permanent) {
                 this.#routers.set(name, { ...router, pid: null });
                 this.#routersById.set(id, { ...router, pid: null });
             } else {
                 this.#routers.delete(name);
-                this.#routersById.delete(id);
             }
-            this.#routersByPid.delete(pid);
-        }
+            this.#routersByPid.delete(pid.toString());
 
-        if (this.#bridges.has(pid)) {
-            const names = this.#bridges.get(pid);
-            this.#bridges.delete(pid);
-
-            this.#log('unregisterRouter(pid: %o, names: %o)', pid, names);
-            for (let name of names) {
-                if (this.#routers.has(name)) {
-                    const { source, score, type, pid } = this.#routers.get(name);
-                    this.unregisterRouter(pid);
-                    this.updatePeers(source, score, name, type, pid, _lost);
+            for (let router of this.#routers.values()) {
+                this.#log(
+                    'unregisterRouter(router.source: %o, name: %o)',
+                    router.source,
+                    name
+                );
+                if (router.source === name && router.pid) {
+                    this.unregisterRouter(router.pid);
                 }
             }
+
+            this.updatePeers(
+                router.source,
+                router.score,
+                router.name,
+                router.type,
+                pid,
+                _lost
+            );
         }
 
         return ok;
@@ -508,7 +551,9 @@ export class Node {
         if (router) {
             return router.id;
         } else {
-            this.registerRouter(this.name, Infinity, name, null, { type: permanent });
+            this.registerRouter(this.name, Infinity, name, null, {
+                type: permanent,
+            });
             return this.getRouterId(name);
         }
     }
