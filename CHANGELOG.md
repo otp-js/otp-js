@@ -1,3 +1,12 @@
+## 0.15.6 (2022-11-11)
+
+
+### Bug Fixes
+
+* **core:** also clean up bridged nodes 4fe7500
+* **transports-socket.io:** fix contain checks a1aa4f7
+* **types:** Pid.fromString to convert back 6f8884d
+
 ## 0.15.5 (2022-11-11)
 
 
