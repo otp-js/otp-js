@@ -1,53 +1,44 @@
 {
-  "name": "@otpjs/transports-socket.io",
-  "version": "0.15.3",
-  "description": "A transport for communicating with OTP nodes over socket.io",
-  "keywords": [
-    "otp",
-    "open",
-    "telecom",
-    "platform",
-    "erlang",
-    "javascript"
-  ],
-  "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
-  "homepage": "https://otpjs.dev",
-  "license": "MIT",
-  "main": "lib/index.js",
-  "directories": {
-    "lib": "lib",
-    "test": "__tests__"
-  },
-  "files": [
-    "lib"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/otp-js/otp-js.git"
-  },
-  "scripts": {
-    "build": "babel src --out-dir lib",
-    "watch": "babel src --out-dir lib --watch",
-    "prepublish": "npm run build",
-    "test": "jest --coverage --verbose"
-  },
-  "bugs": {
-    "url": "https://github.com/otp-js/otp-js/issues"
-  },
-  "dependencies": {
-    "@babel/runtime": "^7.19.0",
-    "@otpjs/core": "^0.15.3"
-  },
-  "peerDependencies": {
-    "socket.io": "^3.1.0||^4.0.0",
-    "socket.io-client": "^3.0.0||^4.0.0"
-  },
-  "devDependencies": {
-    "@babel/preset-env": "^7.15.6",
-    "babel-plugin-source-map-support": "^2.1.3"
-  },
-  "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e"
+    "name": "@otpjs/transports-socket.io",
+    "version": "0.15.3",
+    "description": "A transport for communicating with OTP nodes over socket.io",
+    "keywords": ["otp", "open", "telecom", "platform", "erlang", "javascript"],
+    "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
+    "homepage": "https://otpjs.dev",
+    "license": "MIT",
+    "main": "lib/index.js",
+    "directories": {
+        "lib": "lib",
+        "test": "__tests__"
+    },
+    "files": ["lib"],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/otp-js/otp-js.git"
+    },
+    "scripts": {
+        "build": "babel src --out-dir lib",
+        "watch": "babel src --out-dir lib --watch",
+        "prepublish": "npm run build",
+        "test": "jest --coverage --verbose"
+    },
+    "bugs": {
+        "url": "https://github.com/otp-js/otp-js/issues"
+    },
+    "dependencies": {
+        "@babel/runtime": "^7.19.0",
+        "@otpjs/core": "file:../../packages/core"
+    },
+    "peerDependencies": {
+        "socket.io": "^3.1.0||^4.0.0",
+        "socket.io-client": "^3.0.0||^4.0.0"
+    },
+    "devDependencies": {
+        "@babel/preset-env": "^7.15.6",
+        "babel-plugin-source-map-support": "^2.1.3"
+    },
+    "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e"
 }
