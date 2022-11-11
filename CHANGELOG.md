@@ -1,3 +1,10 @@
+## 0.15.2 (2022-11-11)
+
+
+### Bug Fixes
+
+* **transport-socket.io:** relaying lost messages 8b6de9e
+
 ## 0.15.1 (2022-11-04)
 
 
