@@ -202,16 +202,18 @@ export function register(node, socket, options = defaultOptions()) {
 
         if (Pid.isPid(theirType)) {
             pid = type;
-            theirType = type
+            theirType = type;
         } else {
-            pid = deserialize(pid) ?? ctx.self();
+            pid = pid ? deserialize(pid) ?? ctx.self() : ctx.self();
         }
 
-        node.registerRouter(source, score, name, pid, { bridge, type: theirType });
+        node.registerRouter(source, score, name, pid, {
+            bridge,
+            type: theirType,
+        });
 
         // Apply "transportation cost" to score to account for indirect connections
         score += TRANSPORT_COST;
-
     }
     function handleDisconnect() {
         running = false;
