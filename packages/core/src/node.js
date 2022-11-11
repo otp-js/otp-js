@@ -470,18 +470,18 @@ export class Node {
                 this.#routersById.delete(id);
             }
             this.#routersByPid.delete(pid);
+        }
 
-            if (this.#bridges.has(pid)) {
-                const names = this.#bridges.get(pid);
-                this.#bridges.delete(pid);
+        if (this.#bridges.has(pid)) {
+            const names = this.#bridges.get(pid);
+            this.#bridges.delete(pid);
 
-                this.#log('unregisterRouter(pid: %o, names: %o)', pid, names);
-                for (let name of names) {
-                    if (this.#routers.has(name)) {
-                        const { source, score, pid } = this.#routers.get(name);
-                        this.unregisterRouter(pid);
-                        this.updatePeers(source, score, name, pid, _lost);
-                    }
+            this.#log('unregisterRouter(pid: %o, names: %o)', pid, names);
+            for (let name of names) {
+                if (this.#routers.has(name)) {
+                    const { source, score, pid } = this.#routers.get(name);
+                    this.unregisterRouter(pid);
+                    this.updatePeers(source, score, name, pid, _lost);
                 }
             }
         }
