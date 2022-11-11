@@ -170,6 +170,7 @@ export function register(node, socket, options = defaultOptions()) {
         pid = serialize(pid);
         socket.emit('otp-discover', source, score, name, type, pid);
     }
+
     function relayLost([, pid]) {
         pid = serialize(pid);
         socket.emit('otp-lost', pid);
@@ -177,6 +178,7 @@ export function register(node, socket, options = defaultOptions()) {
 
     function handleConnect() {
         ctx = node.makeContext();
+        ctx.log = ctx.logger('transports:socket.io');
         ctx.processFlag(trap_exit, true);
 
         socket.emit(
@@ -184,6 +186,7 @@ export function register(node, socket, options = defaultOptions()) {
             serialize(null),
             serialize(0),
             serialize(node.name),
+            serialize(type),
             serialize(null)
         );
 
