@@ -352,32 +352,35 @@ export class Node {
 
     updatePeers(source, score, name, type, pid, operation) {
         for (let [bridge, names] of this.#bridges) {
-            this.deliver(
-                this.systemPid,
+            bridge = Pid.fromString(bridge);
+            const message = operation(source, score, name, type, pid);
+            this.#log(
+                'updatePeers(bridge: %o, names: %o, message: %o)',
                 bridge,
-                operation(source, score, name, type, pid)
+                names,
+                message
             );
+            this.deliver(this.systemPid, bridge, message);
             for (let name of names) {
-                this.deliver(
-                    this.systemPid,
-                    pid,
-                    operation(source, score, name, type, bridge)
+                const message = operation(source, score, name, type, bridge);
+                this.#log(
+                    'updatePeers(bridge: %o, names: %o, message: %o)',
+                    bridge,
+                    names,
+                    message
                 );
+                this.deliver(this.systemPid, pid, message);
             }
         }
     }
     saveBridge(name, pid) {
-        let existing = this.#bridges.has(pid) ? this.#bridges.get(pid) : [];
+        let existing = this.#bridges.has(pid.toString())
+            ? this.#bridges.get(pid.toString())
+            : [];
         let index = existing.indexOf(name);
 
-        if (index >= 0) {
-            this.#bridges.set(pid, [
-                ...existing.slice(0, index),
-                name,
-                ...existing.slice(index + 1),
-            ]);
-        } else {
-            this.#bridges.set(pid, [...existing, name]);
+        if (index < 0) {
+            this.#bridges.set(pid.toString(), [...existing, name]);
         }
     }
     registerRouter(source, score, name, pid, options = {}) {
@@ -470,6 +473,24 @@ export class Node {
             Array.from(this.#routersByPid.keys())
         );
 
+        if (this.#bridges.has(pid.toString())) {
+            const names = this.#bridges.get(pid.toString());
+            this.#bridges.delete(pid.toString());
+
+            for (let name of names) {
+                this.#log(
+                    'unregisterRouter(pid: %o, bridged: %o, router: %o)',
+                    pid,
+                    name,
+                    this.#routers.get(name)
+                );
+                if (this.#routers.has(name)) {
+                    const { pid } = this.#routers.get(name);
+                    this.unregisterRouter(pid);
+                }
+            }
+        }
+
         if (this.#routersByPid.has(pid.toString())) {
             const router = this.#routersByPid.get(pid.toString());
             const { id, name, type } = router;
@@ -482,28 +503,11 @@ export class Node {
             }
             this.#monitors.delete(name);
 
-            if (this.#bridges.has(pid)) {
-                const names = this.#bridges.get(pid);
-                this.#bridges.delete(pid);
-
-                for (let name of names) {
-                    this.#log(
-                        'unregisterRouter(pid: %o, bridged: %o, router: %o)',
-                        pid,
-                        name,
-                        this.#routers.get(name)
-                    );
-                    if (this.#routers.has(name)) {
-                        const { pid } = this.#routers.get(name);
-                        this.unregisterRouter(pid);
-                    }
-                }
-            }
-
             if (type === permanent) {
                 this.#routers.set(name, { ...router, pid: null });
                 this.#routersById.set(id, { ...router, pid: null });
             } else {
+                this.#routersById.set(id, { ...router, pid: null });
                 this.#routers.delete(name);
             }
             this.#routersByPid.delete(pid.toString());
@@ -552,7 +556,7 @@ export class Node {
             return router.id;
         } else {
             this.registerRouter(this.name, Infinity, name, null, {
-                type: permanent,
+                type: temporary,
             });
             return this.getRouterId(name);
         }
