@@ -1,3 +1,13 @@
+## 0.15.5 (2022-11-11)
+
+
+### Bug Fixes
+
+* **core:** routersByPid must use string key c2176ac
+* **transports-socket.io:** explicit exit on dc c082978
+* **transports-socket.io:** fix cost calculation aada6c5
+* **transports-socket.io:** type on initial discover e41ee91
+
 ## 0.15.4 (2022-11-11)
 
 
