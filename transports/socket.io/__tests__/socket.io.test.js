@@ -63,8 +63,8 @@ describe('@otpjs/transports-socket.io', function () {
 
         await wait(100);
 
-        expect(serverNode.nodes()).toContain(clientNode.name);
-        expect(clientNode.nodes()).toContain(serverNode.name);
+        expect(Array.from(serverNode.nodes())).toContain(clientNode.name);
+        expect(Array.from(clientNode.nodes())).toContain(serverNode.name);
     });
     it('can route to named remote processes', async function () {
         useSocketIO(clientNode, clientSocket);
@@ -153,16 +153,16 @@ describe('@otpjs/transports-socket.io', function () {
 
         await wait(100);
 
-        expect(serverNode.nodes()).toContain(clientNode.name);
-        expect(clientNode.nodes()).toContain(serverNode.name);
+        expect(Array.from(serverNode.nodes())).toContain(clientNode.name);
+        expect(Array.from(clientNode.nodes())).toContain(serverNode.name);
 
         destroyClient();
         destroyServer();
 
         await wait(100);
 
-        expect(serverNode.nodes()).not.toContain(clientNode.name);
-        expect(clientNode.nodes()).not.toContain(serverNode.name);
+        expect(Array.from(serverNode.nodes())).not.toContain(clientNode.name);
+        expect(Array.from(clientNode.nodes())).not.toContain(serverNode.name);
     });
 
     describe('when bridged over another node', function () {
