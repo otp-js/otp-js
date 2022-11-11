@@ -207,13 +207,13 @@ export function register(node, socket, options = defaultOptions()) {
             pid = pid ? deserialize(pid) ?? ctx.self() : ctx.self();
         }
 
+        // Apply "transportation cost" to score to account for indirect connections
+        score += TRANSPORT_COST;
+
         node.registerRouter(source, score, name, pid, {
             bridge,
             type: theirType,
         });
-
-        // Apply "transportation cost" to score to account for indirect connections
-        score += TRANSPORT_COST;
     }
     function handleDisconnect() {
         running = false;
