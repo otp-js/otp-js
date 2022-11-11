@@ -56,6 +56,13 @@ Pid.isPid = function isPid(value) {
     return value instanceof Pid;
 };
 Pid.of = (node, id, serial, creation) => new Pid(node, id, serial, creation);
+Pid.fromString = function fromString(string) {
+    const [_match, node, id, serial] = string.match(
+        /^Pid<(\d+)\.(\d+)\.(\d+)>$/
+    );
+    const pid = Pid.of(Number(node), Number(id), Number(serial));
+    return pid;
+};
 Pid.compare = (a, b) => {
     if (a.node < b.node) return -1;
     else if (a.node > b.node) return 1;
