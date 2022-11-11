@@ -51,7 +51,8 @@ export function register(node, socket, options = defaultOptions()) {
     const forward = matching.clauses(function routeForward(route) {
         route(t(relay, _)).to(([, op]) => process(op));
         route(t(lost, _)).to(relayLost);
-        route(t(discover, _, _, _, _)).to(relayDiscovery);
+        route(t(discover, _, _, _, _)).to(relayDiscoveryNoType);
+        route(t(discover, _, _, _, _, _)).to(relayDiscovery);
         return 'socket-io.process';
     });
 
@@ -154,12 +155,20 @@ export function register(node, socket, options = defaultOptions()) {
         reason = serialize(reason);
         socket.emit('otp-DOWN', fromPid, toPid, ref, reason);
     }
-    function relayDiscovery([, source, score, name, pid]) {
+    function relayDiscoveryNoType([, source, score, name, pid]) {
         source = serialize(source ?? node.name);
         score = serialize(score);
         name = serialize(name);
         pid = serialize(pid);
         socket.emit('otp-discover', source, score, name, pid);
+    }
+    function relayDiscovery([, source, score, name, type, pid]) {
+        source = serialize(source ?? node.name);
+        score = serialize(score);
+        name = serialize(name);
+        type = serialize(type);
+        pid = serialize(pid);
+        socket.emit('otp-discover', source, score, name, type, pid);
     }
     function relayLost([, pid]) {
         pid = serialize(pid);
@@ -185,16 +194,24 @@ export function register(node, socket, options = defaultOptions()) {
         pid = deserialize(pid);
         node.unregisterRouter(pid);
     }
-    function handleDiscover(source, score, name, pid = undefined) {
+    function handleDiscover(source, score, name, theirType, pid = undefined) {
         source = deserialize(source) ?? node.name;
-        name = deserialize(name);
-        pid = deserialize(pid) ?? ctx.self();
         score = deserialize(score);
+        name = deserialize(name);
+        theirType = deserialize(theirType);
+
+        if (Pid.isPid(theirType)) {
+            pid = type;
+            theirType = type
+        } else {
+            pid = deserialize(pid) ?? ctx.self();
+        }
+
+        node.registerRouter(source, score, name, pid, { bridge, type: theirType });
 
         // Apply "transportation cost" to score to account for indirect connections
         score += TRANSPORT_COST;
 
-        node.registerRouter(source, score, name, pid, { bridge, type });
     }
     function handleDisconnect() {
         running = false;

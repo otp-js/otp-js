@@ -350,19 +350,19 @@ export class Node {
         }
     }
 
-    updatePeers(source, score, name, pid, operation) {
+    updatePeers(source, score, name, type, pid, operation) {
         for (let [bridge, names] of this.#bridges) {
             const router = this.#routersByPid.get(bridge);
             this.deliver(
                 this.systemPid,
                 bridge,
-                operation(source, score, name, pid)
+                operation(source, score, name, type, pid)
             );
             for (let name of names) {
                 this.deliver(
                     this.systemPid,
                     pid,
-                    operation(router.source, router.score, name, bridge)
+                    operation(router.source, router.score, name, router.type, bridge)
                 );
             }
         }
@@ -418,7 +418,7 @@ export class Node {
                 this.#routersById.set(id, nextRouter);
                 this.#routersByPid.set(pid, nextRouter);
                 if (options.bridge) {
-                    this.updatePeers(source, score, name, pid, _discover);
+                    this.updatePeers(source, score, name, nextRouter.type, pid, _discover);
                     this.saveBridge(name, pid);
                 }
             }
@@ -439,15 +439,15 @@ export class Node {
             this.#routersByPid.set(pid, router);
 
             if (options.bridge) {
-                this.updatePeers(source, score, name, pid, _discover);
+                this.updatePeers(source, score, name, router.type, pid, _discover);
                 this.saveBridge(name, pid);
             }
 
             return id;
         }
 
-        function _discover(source, score, name, pid) {
-            return t(discover, source, score, name, pid);
+        function _discover(source, score, name, type, pid) {
+            return t(discover, source, score, name, type, pid);
         }
     }
     unregisterRouter(pid) {
@@ -479,16 +479,16 @@ export class Node {
             this.#log('unregisterRouter(pid: %o, names: %o)', pid, names);
             for (let name of names) {
                 if (this.#routers.has(name)) {
-                    const { source, score, pid } = this.#routers.get(name);
+                    const { source, score, type, pid } = this.#routers.get(name);
                     this.unregisterRouter(pid);
-                    this.updatePeers(source, score, name, pid, _lost);
+                    this.updatePeers(source, score, name, type, pid, _lost);
                 }
             }
         }
 
         return ok;
 
-        function _lost(_source, _score, _name, pid) {
+        function _lost(_source, _score, _name, _type, pid) {
             return t(lost, pid);
         }
     }
