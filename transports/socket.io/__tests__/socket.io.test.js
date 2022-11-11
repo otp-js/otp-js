@@ -231,7 +231,7 @@ describe('@otpjs/transports-socket.io', function () {
             await expect(resultA).resolves.toBe(payload);
         });
 
-        it.only("gets removed from others' node lists", async function () {
+        it("gets removed from others' node lists", async function () {
             const ctxA = clientNode.makeContext();
             const ctxB = clientNodeB.makeContext();
 
