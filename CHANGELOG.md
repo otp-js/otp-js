@@ -1,3 +1,11 @@
+## 0.15.4 (2022-11-11)
+
+
+### Bug Fixes
+
+* **node:** extend discover to include type 95dc773
+* **transports-socket.io:** safe unwrapping of pid b5e2031
+
 ## 0.15.3 (2022-11-11)
 
 
