@@ -231,26 +231,85 @@ describe('@otpjs/transports-socket.io', function () {
             await expect(resultA).resolves.toBe(payload);
         });
 
-        it("gets removed from others' node lists", async function () {
-            const ctxA = clientNode.makeContext();
-            const ctxB = clientNodeB.makeContext();
+        describe('when disconnected', function () {
+            it("gets removed from others' node lists", async function () {
+                const ctxA = clientNode.makeContext();
+                const ctxB = clientNodeB.makeContext();
 
-            expect(ctxA.nodes()).toContain(ctxB.node());
-            expect(ctxB.nodes()).toContain(ctxA.node());
+                expect(Array.from(ctxA.nodes())).toContain(ctxB.node());
+                expect(Array.from(ctxB.nodes())).toContain(ctxA.node());
 
-            destroyClientB();
-            destroyClientB = null;
+                destroyClientB();
+                destroyClientB = null;
 
-            await wait(500);
+                await wait(500);
 
-            log(ctxA, 'testA(nodes: %o)', ctxA.nodes());
-            log(ctxB, 'testB(nodes: %o)', ctxB.nodes());
+                log(ctxA, 'testA(nodes: %o)', Array.from(ctxA.nodes()));
+                log(ctxB, 'testB(nodes: %o)', Array.from(ctxB.nodes()));
 
-            expect(ctxA.nodes()).not.toContain(ctxB.node());
-            expect(ctxB.nodes()).not.toContain(ctxA.node());
+                expect(Array.from(ctxA.nodes())).not.toContain(ctxB.node());
+                expect(Array.from(ctxB.nodes())).not.toContain(ctxA.node());
 
-            ctxA.exit(kill);
-            ctxB.exit(kill);
+                ctxA.exit(kill);
+                ctxB.exit(kill);
+            });
+
+            it.only('is not discovered by new nodes', async function () {
+                const port = server.address().port;
+                const clientNodeC = new otp.Node();
+
+                const ctxA = clientNode.makeContext();
+                const ctxB = clientNodeB.makeContext();
+                const ctxC = clientNodeC.makeContext();
+
+                await wait(500);
+
+                expect(Array.from(ctxA.nodes())).toContain(ctxB.node());
+                expect(Array.from(ctxB.nodes())).toContain(ctxA.node());
+                expect(Array.from(ctxC.nodes())).not.toContain(ctxB.node());
+                expect(Array.from(ctxC.nodes())).not.toContain(ctxA.node());
+
+                destroyClientB();
+                destroyClientB = null;
+
+                await wait(500);
+
+                log(ctxA, 'testA(nodes: %o)', Array.from(ctxA.nodes()));
+                log(ctxB, 'testB(nodes: %o)', Array.from(ctxB.nodes()));
+
+                expect(Array.from(ctxA.nodes())).not.toContain(ctxB.node());
+                expect(Array.from(ctxB.nodes())).not.toContain(ctxA.node());
+                expect(Array.from(ctxC.nodes())).not.toContain(ctxB.node());
+                expect(Array.from(ctxC.nodes())).not.toContain(ctxA.node());
+
+                const clientSocketC = clientIO(`http://localhost:${port}`);
+                const loadServerSocket = new Promise((resolve, reject) => {
+                    serverManager.once('connection', resolve);
+                });
+                const serverSocketC = await loadServerSocket;
+
+                const destroyClientC = useSocketIO(clientNodeC, clientSocketC, {
+                    bridge: true,
+                });
+                const destroyServerC = useSocketIO(serverNode, serverSocketC, {
+                    bridge: true,
+                });
+
+                await wait(500);
+                expect(Array.from(ctxA.nodes())).not.toContain(ctxB.node());
+                expect(Array.from(ctxA.nodes())).toContain(ctxC.node());
+                expect(Array.from(ctxB.nodes())).not.toContain(ctxA.node());
+                expect(Array.from(ctxB.nodes())).not.toContain(ctxC.node());
+                expect(Array.from(ctxC.nodes())).not.toContain(ctxB.node());
+                expect(Array.from(ctxC.nodes())).toContain(ctxA.node());
+
+                ctxA.exit(kill);
+                ctxB.exit(kill);
+                ctxC.exit(kill);
+
+                destroyServerC();
+                destroyClientC();
+            });
         });
     });
 });
