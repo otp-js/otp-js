@@ -1,6 +1,6 @@
 {
   "name": "@otpjs/gen",
-  "version": "0.15.1",
+  "version": "0.15.3",
   "description": "The gen module for otpjs",
   "keywords": [
     "open",
@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.19.0",
-    "@otpjs/proc_lib": "^0.15.1"
+    "@otpjs/proc_lib": "^0.15.3"
   },
   "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e"
 }
