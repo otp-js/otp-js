@@ -50,6 +50,7 @@ export function register(node, socket, options = defaultOptions()) {
     });
     const forward = matching.clauses(function routeForward(route) {
         route(t(relay, _)).to(([, op]) => process(op));
+        route(t(lost, _)).to(relayLost);
         route(t(discover, _, _, _, _)).to(relayDiscovery);
         return 'socket-io.process';
     });
@@ -62,9 +63,9 @@ export function register(node, socket, options = defaultOptions()) {
     socket.on('otp-monitor', handleMonitor);
     socket.on('otp-demonitor', handleDemonitor);
     socket.on('otp-discover', handleDiscover);
+    socket.on('otp-lost', handleLost);
     socket.on('otp-EXIT', handleEXIT);
     socket.on('otp-DOWN', handleDOWN);
-    //socket.on('otp-lost', handleLost);
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
 
@@ -160,6 +161,10 @@ export function register(node, socket, options = defaultOptions()) {
         pid = serialize(pid);
         socket.emit('otp-discover', source, score, name, pid);
     }
+    function relayLost([, pid]) {
+        pid = serialize(pid);
+        socket.emit('otp-lost', pid);
+    }
 
     function handleConnect() {
         ctx = node.makeContext();
@@ -175,6 +180,10 @@ export function register(node, socket, options = defaultOptions()) {
 
         running = true;
         recycle();
+    }
+    function handleLost(pid) {
+        pid = deserialize(pid);
+        node.unregisterRouter(pid);
     }
     function handleDiscover(source, score, name, pid = undefined) {
         source = deserialize(source) ?? node.name;
