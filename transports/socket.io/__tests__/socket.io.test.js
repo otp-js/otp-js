@@ -7,7 +7,7 @@ import clientIO from 'socket.io-client';
 import { register as useSocketIO } from '../src';
 import * as otp from '@otpjs/core';
 
-const { DOWN, normal } = otp.Symbols;
+const { DOWN, kill, normal } = otp.Symbols;
 const test_name = Symbol.for('test');
 
 function log(ctx, ...args) {
@@ -165,56 +165,92 @@ describe('@otpjs/transports-socket.io', function () {
         expect(clientNode.nodes()).not.toContain(serverNode.name);
     });
 
-    it('can be bridged over another node', async function () {
-        const loadServerSocket = new Promise((resolve, reject) => {
-            serverManager.once('connection', resolve);
-        });
+    describe('when bridged over another node', function () {
+        let clientNodeB, clientSocketB, serverSocketB;
+        let destroyClientA, destroyServerA, destroyClientB, destroyServerB;
 
-        const clientNodeB = new otp.Node();
-        const port = server.address().port;
-        const clientSocketB = clientIO(`http://localhost:${port}`);
-        const serverSocketB = await loadServerSocket;
-
-        const destroyClientA = useSocketIO(clientNode, clientSocket, {
-            bridge: true,
-        });
-        const destroyServerA = useSocketIO(serverNode, serverSocket, {
-            bridge: true,
-        });
-
-        const destroyClientB = useSocketIO(clientNodeB, clientSocketB, {
-            bridge: true,
-        });
-        const destroyServerB = useSocketIO(serverNode, serverSocketB, {
-            bridge: true,
-        });
-
-        await wait(100);
-
-        const payload = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-        let resultA = new Promise((resolve, reject) => {
-            clientNode.spawn(async (ctx) => {
-                ctx.register(test_name);
-                const [message, from] = await ctx.receive();
-                ctx.send(from, 'received');
-                resolve(message);
+        beforeEach(async function () {
+            const loadServerSocket = new Promise((resolve, reject) => {
+                serverManager.once('connection', resolve);
             });
+
+            clientNodeB = new otp.Node();
+            const port = server.address().port;
+            clientSocketB = clientIO(`http://localhost:${port}`);
+            serverSocketB = await loadServerSocket;
+
+            destroyClientA = useSocketIO(clientNode, clientSocket, {
+                bridge: true,
+            });
+            destroyServerA = useSocketIO(serverNode, serverSocket, {
+                bridge: true,
+            });
+
+            destroyClientB = useSocketIO(clientNodeB, clientSocketB, {
+                bridge: true,
+            });
+            destroyServerB = useSocketIO(serverNode, serverSocketB, {
+                bridge: true,
+            });
+
+            await wait(100);
         });
 
-        await wait(100);
+        afterEach(function () {
+            if (clientSocketB.connected) {
+                clientSocketB.disconnect();
+            }
 
-        clientNodeB.spawn(async (ctx) => {
-            ctx.send(t(test_name, clientNode.node()), t(payload, ctx.self()));
-            await expect(ctx.receive()).resolves.toBe('received');
+            destroyClientA?.();
+            destroyServerA?.();
+            destroyClientB?.();
+            destroyServerB?.();
         });
 
-        await expect(resultA).resolves.toBe(payload);
+        it('can route messages', async function () {
+            const payload = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+            let resultA = new Promise((resolve, reject) => {
+                clientNode.spawn(async (ctx) => {
+                    ctx.register(test_name);
+                    const [message, from] = await ctx.receive();
+                    ctx.send(from, 'received');
+                    resolve(message);
+                });
+            });
 
-        clientSocketB.disconnect();
+            await wait(100);
 
-        destroyClientA();
-        destroyServerA();
-        destroyClientB();
-        destroyServerB();
+            clientNodeB.spawn(async (ctx) => {
+                ctx.send(
+                    t(test_name, clientNode.node()),
+                    t(payload, ctx.self())
+                );
+                await expect(ctx.receive()).resolves.toBe('received');
+            });
+
+            await expect(resultA).resolves.toBe(payload);
+        });
+
+        it.only("gets removed from others' node lists", async function () {
+            const ctxA = clientNode.makeContext();
+            const ctxB = clientNodeB.makeContext();
+
+            expect(ctxA.nodes()).toContain(ctxB.node());
+            expect(ctxB.nodes()).toContain(ctxA.node());
+
+            destroyClientB();
+            destroyClientB = null;
+
+            await wait(500);
+
+            log(ctxA, 'testA(nodes: %o)', ctxA.nodes());
+            log(ctxB, 'testB(nodes: %o)', ctxB.nodes());
+
+            expect(ctxA.nodes()).not.toContain(ctxB.node());
+            expect(ctxB.nodes()).not.toContain(ctxA.node());
+
+            ctxA.exit(kill);
+            ctxB.exit(kill);
+        });
     });
 });
