@@ -403,7 +403,7 @@ export class Node {
                 oldPid
             );
             if (
-                oldPid === null ||
+                (oldPid === null && pid !== null) ||
                 (Pid.compare(pid, oldPid) != 0 && // Make sure it's not an echo of the current router
                     (score < router.score || // Ensure it provides better connectivity
                         oldPid === null)) // ...unless the last router died
@@ -443,20 +443,23 @@ export class Node {
                 score,
                 type: options.type ?? temporary,
             };
+
             this.#routers.set(name, router);
             this.#routersById.set(id, router);
-            this.#routersByPid.set(pid.toString(), router);
 
-            if (options.bridge) {
-                this.updatePeers(
-                    source,
-                    score,
-                    name,
-                    router.type,
-                    pid,
-                    _discover
-                );
-                this.saveBridge(name, pid);
+            if (pid) {
+                this.#routersByPid.set(pid.toString(), router);
+                if (options.bridge) {
+                    this.updatePeers(
+                        source,
+                        score,
+                        name,
+                        router.type,
+                        pid,
+                        _discover
+                    );
+                    this.saveBridge(name, pid);
+                }
             }
 
             return id;
