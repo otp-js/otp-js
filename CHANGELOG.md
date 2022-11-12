@@ -1,3 +1,10 @@
+## 0.15.7 (2022-11-12)
+
+
+### Bug Fixes
+
+* **core:** safe discovery handling for null pid a554f8d
+
 ## 0.15.6 (2022-11-11)
 
 
