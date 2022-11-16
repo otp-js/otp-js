@@ -1,3 +1,10 @@
+# 0.16.0 (2022-11-16)
+
+
+### Features
+
+* **serializer-json:** optional stringify 164ec59
+
 ## 0.15.7 (2022-11-12)
 
 
