@@ -3,7 +3,7 @@ import * as matching from '@otpjs/matching';
 
 const { _ } = matching.Symbols;
 
-export function make(env) {
+export function make(env, options = {}) {
     const log = env.logger('serializer:json');
     const isSymbol = (v) => typeof v === 'symbol';
     const isNil = (v) => v === list.nil;
@@ -16,31 +16,43 @@ export function make(env) {
     const isEncodedTuple = matching.compile(['$otp.tuple', _]);
     const isEncodedNil = matching.compile('$otp.list.nil');
 
+    const useJSON  = 'useJSON' in options ? options.useJSON : true;
+
     return { serialize, deserialize };
 
-    function deserialize(string, reviver = undefined) {
+    function deserialize(stringOrObject, reviver = undefined) {
         if (reviver) {
             reviver = kvCompose(
-                (key, value) => reviveOTP(key, value, reviver),
+                reviveOTP,
                 reviver
             );
         } else {
             reviver = reviveOTP;
         }
-        return JSON.parse(string, reviver);
+
+        if (useJSON) {
+            return JSON.parse(stringOrObject, reviver);
+        } else {
+            return reviver('', stringOrObject);
+        }
     }
     function serialize(data, replacer = undefined) {
         if (replacer) {
             replacer = kvCompose(
-                (key, value) => replaceOTP(key, value, replacer),
+                replaceOTP,
                 replacer
             );
         } else {
             replacer = replaceOTP;
         }
-        return JSON.stringify(data, replacer);
+
+        if (useJSON) {
+            return JSON.stringify(data, replacer);
+        } else {
+            return replacer('', data);
+        }
     }
-    function reviveOTP(key, value, reviver) {
+    function reviveOTP(key, value) {
         const compare = matching.caseOf(value);
         if (compare(isEncodedSymbol)) {
             return Symbol.for(value[1]);
