@@ -20,6 +20,8 @@ module.exports = {
     ],
     rootDir: __dirname,
     testEnvironment: 'node',
+    testPathIgnorePatterns: ['dnp/'],
+    coveragePathIgnorePatterns: ['dnp/'],
     coverageReporters: [
         'json',
         'text',
