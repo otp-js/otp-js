@@ -209,7 +209,9 @@ export function make(env, options = {}) {
     }
     function replaceOTP(key, value) {
         const compare = matching.caseOf(value);
-        if (compare(isSymbol)) {
+        if (compare(isNil)) {
+            return '$otp.list.nil';
+        } else if (compare(isSymbol)) {
             const key = Symbol.keyFor(value);
             if (key) {
                 return ['$otp.symbol', key];
@@ -262,13 +264,11 @@ export function make(env, options = {}) {
             let tail = node;
 
             return ['$otp.list', result, replaceOTP('', tail) ?? tail];
-        } else if (compare(isNil)) {
-            return '$otp.list.nil';
         } else if (compare(tuple.isTuple)) {
             return [
                 '$otp.tuple',
-                Array.from(value).map((value, index) =>
-                    replaceOTP(index, value) ?? value
+                Array.from(value).map(
+                    (value, index) => replaceOTP(index, value) ?? value
                 ),
             ];
         } else {
