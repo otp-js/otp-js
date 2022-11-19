@@ -58,7 +58,13 @@ export function make(env, options = {}) {
                         }
                     } else if (typeof current === 'object') {
                         if (isNull(current)) {
-                            accept(currentKey, original, original);
+                            accept(
+                                currentKey,
+                                original,
+                                original,
+                                push,
+                                moveNext
+                            );
                         } else if (isEmpty(current)) {
                             accept(currentKey, original, acc, push, moveNext);
                         } else {

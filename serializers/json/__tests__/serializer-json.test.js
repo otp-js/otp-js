@@ -55,7 +55,7 @@ describe('@otpjs/serializer-json', () => {
             });
             describe('otp types', function () {
                 describe('tuples', function () {
-                    it.only('transforms all elements', function () {
+                    it('transforms all elements', function () {
                         const encodedTuple = [
                             '$otp.tuple',
                             [
