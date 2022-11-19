@@ -1,3 +1,11 @@
+## 0.17.3 (2022-11-19)
+
+
+### Bug Fixes
+
+* **serializer-json:** better descent control 17b1ec5
+* **serializer-json:** null case, not passing ops d8aa2d6
+
 ## 0.17.2 (2022-11-19)
 
 
