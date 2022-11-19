@@ -1,3 +1,18 @@
+# 0.17.0 (2022-11-19)
+
+
+### Bug Fixes
+
+* **gen_server:** better error handling 7e584b7
+* **transport-socket.io:** clobbered fixes 1217390
+
+
+### Features
+
+* **serializer-json:** optional stringify d854a74
+* **transports-socket.io:** array buffer support 63203e4
+* **transports-socket.io:** leverage no-stringify acbc13a
+
 # 0.16.0 (2022-11-16)
 
 
