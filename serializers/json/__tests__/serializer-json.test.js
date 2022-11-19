@@ -51,6 +51,31 @@ describe('@otpjs/serializer-json', () => {
                         });
                     });
                 }
+
+                describe('of type symbol', function () {
+                    describe('with a key', function () {
+                        it("doesn't fail", function () {
+                            expect(function () {
+                                serialize(Symbol.for('ok'));
+                            }).not.toThrow();
+                        });
+                        it('can encode', function () {
+                            expect(serialize(Symbol.for('ok'))).toBe(
+                                '["$otp.symbol","ok"]'
+                            );
+                        });
+                    });
+                    describe('without a key', function () {
+                        it("doesn't fail", function () {
+                            expect(function () {
+                                serialize(Symbol());
+                            }).not.toThrow();
+                        });
+                        it('cannot encode', function () {
+                            expect(serialize(Symbol())).toBe(undefined);
+                        });
+                    });
+                });
             });
             describe('otp types', function () {
                 describe('tuples', function () {
@@ -154,6 +179,23 @@ describe('@otpjs/serializer-json', () => {
                         });
                     });
                 }
+
+                describe('of type symbol', function () {
+                    it("doesn't fail", function () {
+                        expect(function () {
+                            deserialize('["$otp.symbol","ok"]');
+                        }).not.toThrow();
+                    });
+                    it('can decode', function () {
+                        expect(
+                            deserialize('["$otp.symbol","ok"]')
+                        ).toMatchPattern(ok);
+                    });
+                    it('has a key', function () {
+                        const symbol = deserialize('["$otp.symbol","ok"]');
+                        expect(Symbol.keyFor(symbol)).not.toBe(undefined);
+                    });
+                });
             });
             describe('arrays', function () {
                 it("doesn't fail", function () {
@@ -226,6 +268,33 @@ describe('@otpjs/serializer-json', () => {
                         });
                     });
                 }
+
+                describe('of type symbol', function () {
+                    describe('with a key', function () {
+                        it("doesn't fail", function () {
+                            expect(function () {
+                                serialize(Symbol.for('ok'));
+                            }).not.toThrow();
+                        });
+                        it('can encode', function () {
+                            expect(serialize(Symbol.for('ok'))).toMatchPattern([
+                                '$otp.symbol',
+                                'ok',
+                            ]);
+                        });
+                    });
+                    describe('without a key', function () {
+                        it("doesn't fail", function () {
+                            expect(function () {
+                                serialize(Symbol());
+                            }).not.toThrow();
+                        });
+                        it('cannot encode', function () {
+                            const symbol = Symbol();
+                            expect(serialize(symbol)).toBe(symbol);
+                        });
+                    });
+                });
             });
             describe('otp types', function () {
                 describe('tuples', function () {
