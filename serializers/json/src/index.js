@@ -57,10 +57,10 @@ export function make(env, options = {}) {
                             accept(currentKey, original, acc);
                         }
                     } else if (typeof current === 'object') {
-                        if (isEmpty(current)) {
-                            accept(currentKey, original, acc);
-                        } else if (isNull(current)) {
+                        if (isNull(current)) {
                             accept(currentKey, original, original);
+                        } else if (isEmpty(current)) {
+                            accept(currentKey, original, acc);
                         } else {
                             const [nextKey] = Object.getOwnPropertyNames(current);
                             const { [nextKey]: next, ...rest } = current;
