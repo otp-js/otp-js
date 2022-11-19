@@ -13,7 +13,11 @@ module.exports = {
     setupFilesAfterEnv: ['./tools/regenerator.js'],
     moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
     collectCoverage: true,
-    collectCoverageFrom: ['packages/*/src/**/*.js', 'transports/*/src/**/*.js'],
+    collectCoverageFrom: [
+        'packages/*/src/**/*.js',
+        'serializers/*/src/**/*.js',
+        'transports/*/src/**/*.js',
+    ],
     rootDir: __dirname,
     testEnvironment: 'node',
     coverageReporters: [
