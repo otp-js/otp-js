@@ -1,3 +1,10 @@
+## 0.17.4 (2022-11-19)
+
+
+### Bug Fixes
+
+* **serializer-json:** honor toJSON methods e120f30
+
 ## 0.17.3 (2022-11-19)
 
 
