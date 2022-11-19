@@ -254,7 +254,7 @@ describe('@otpjs/transports-socket.io', function () {
                 ctxB.exit(kill);
             });
 
-            it.only('is not discovered by new nodes', async function () {
+            it('is not discovered by new nodes', async function () {
                 const port = server.address().port;
                 const clientNodeC = new otp.Node();
 
