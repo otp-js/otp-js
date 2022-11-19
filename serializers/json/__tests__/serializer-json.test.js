@@ -21,6 +21,155 @@ describe('@otpjs/serializer-json', () => {
         ctx.exit();
     });
 
+    describe('with stringify enabled', function () {
+        beforeEach(function () {
+            const serdes = serializerJson.make(node, { stringify: true });
+            serialize = serdes.serialize;
+            deserialize = serdes.deserialize;
+        });
+
+        describe('and serializing', function () {
+            describe('primitves', function () {
+                let primitives = [
+                    { raw: 34234, serialized: '34234' },
+                    { raw: 98.6, serialized: '98.6' },
+                    { raw: 'string', serialized: '"string"' },
+                    { raw: false, serialized: 'false' },
+                ];
+
+                for (let primitive of primitives) {
+                    describe(`of type ${typeof primitive}`, function () {
+                        it("doesn't fail", function () {
+                            expect(function () {
+                                serialize(primitive.raw);
+                            }).not.toThrow();
+                        });
+                        it('makes a string of it', function () {
+                            const out = serialize(primitive.raw);
+                            expect(out).toBe(primitive.serialized);
+                        });
+                    });
+                }
+            });
+            describe('otp types', function () {
+                describe('tuples', function () {
+                    it('transforms all elements', function () {
+                        const encodedTuple =
+                            '["$otp.tuple",[["$otp.list",[1,2,3],"$otp.list.nil"],["$otp.tuple",[["$otp.symbol","ok"],{"a":1,"b":2,"c":["$otp.list",["a","b","c"],"$otp.list.nil"]}]],["1","2","3"]]]';
+                        const realTuple = t(
+                            l(1, 2, 3),
+                            t(ok, { a: 1, b: 2, c: l('a', 'b', 'c') }),
+                            ['1', '2', '3']
+                        );
+
+                        expect(serialize(realTuple)).toMatchPattern(
+                            encodedTuple
+                        );
+                    });
+                });
+            });
+            describe('arrays', function () {
+                it("doesn't fail", function () {
+                    const array = [];
+                    expect(function () {
+                        serialize(array);
+                    }).not.toThrow();
+                });
+            });
+            describe('objects', function () {
+                it("doesn't fail", function () {
+                    const object = {};
+                    expect(function () {
+                        serialize(object);
+                    }).not.toThrow();
+                });
+                it('transforms properties', function () {
+                    const object = {
+                        a: t(node.ref(), Pid.of(0, 1, 0, 1)),
+                        b: l(1, 2, t('a', 'b', 'c'), 4, 5),
+                        c: '2',
+                    };
+
+                    const encodedObject = `{"a":["$otp.tuple",[["$otp.ref",["$otp.symbol","${Symbol.keyFor(
+                        node.name
+                    )}"],0,0,1],["$otp.pid",["$otp.symbol","${Symbol.keyFor(
+                        node.name
+                    )}"],1,0,1]]],"b":["$otp.list",[1,2,["$otp.tuple",["a","b","c"]],4,5],"$otp.list.nil"],"c":"2"}`;
+
+                    expect(serialize(object)).toMatchPattern(encodedObject);
+                });
+            });
+        });
+        describe('and deserializing', function () {
+            describe('primitves', function () {
+                let primitives = [
+                    { raw: 34234, serialized: '34234' },
+                    { raw: 98.6, serialized: '98.6' },
+                    { raw: 'string', serialized: '"string"' },
+                    { raw: false, serialized: 'false' },
+                ];
+
+                for (let primitive of primitives) {
+                    describe(`of type ${typeof primitive}`, function () {
+                        it("doesn't fail", function () {
+                            expect(function () {
+                                deserialize(primitive.serialized);
+                            }).not.toThrow();
+                        });
+                        it('converts it', function () {
+                            const out = deserialize(primitive.serialized);
+                            expect(out).toBe(primitive.raw);
+                        });
+                    });
+                }
+            });
+            describe('arrays', function () {
+                it("doesn't fail", function () {
+                    const array = '[]';
+                    expect(function () {
+                        deserialize(array);
+                    }).not.toThrow();
+                });
+            });
+            describe('otp types', function () {
+                describe('tuples', function () {
+                    it('transforms all elements', function () {
+                        const encodedTuple =
+                            '["$otp.tuple",[["$otp.list",[1,2,3],"$otp.list.nil"],["$otp.tuple",[["$otp.symbol","ok"],{"a":1,"b":2,"c":["$otp.list",["a","b","c"],"$otp.list.nil"]}]],["1","2","3"]]]';
+                        const realTuple = t(
+                            l(1, 2, 3),
+                            t(ok, { a: 1, b: 2, c: l('a', 'b', 'c') }),
+                            ['1', '2', '3']
+                        );
+
+                        expect(deserialize(encodedTuple)).toMatchPattern(
+                            realTuple
+                        );
+                    });
+                });
+            });
+            describe('objects', function () {
+                it("doesn't fail", function () {
+                    const object = '{}';
+                    expect(function () {
+                        deserialize(object);
+                    }).not.toThrow();
+                });
+                it('transforms properties', function () {
+                    const encodedObject = `{"a":["$otp.tuple",[["$otp.ref",["$otp.symbol","${Symbol.keyFor(
+                        node.name
+                    )}"],0,0,1],["$otp.pid",["$otp.symbol","${Symbol.keyFor(
+                        node.name
+                    )}"],1,0,1]]],"b":["$otp.list",[1,["$otp.tuple",["t","w",["$otp.list", ["a","b","c"],"$otp.list.nil"]]],3,4,5],"$otp.list.nil"],"c":"2"}`;
+                    expect(deserialize(encodedObject)).toMatchPattern({
+                        a: t(node.ref(), Pid.of(0, 1, 0, 1)),
+                        b: l(1, t('t', 'w', l('a', 'b', 'c')), 3, 4, 5),
+                        c: '2',
+                    });
+                });
+            });
+        });
+    });
     describe('with stringify disabled', function () {
         beforeEach(function () {
             const serdes = serializerJson.make(node, { stringify: false });
@@ -30,14 +179,7 @@ describe('@otpjs/serializer-json', () => {
 
         describe('and serializing', function () {
             describe('primitves', function () {
-                let primitives = [
-                    99999999n,
-                    34234,
-                    98.6,
-                    'string',
-                    false,
-                    undefined,
-                ];
+                let primitives = [34234, 98.6, 'string', false, undefined];
 
                 for (let primitive of primitives) {
                     describe(`of type ${typeof primitive}`, function () {
@@ -144,14 +286,7 @@ describe('@otpjs/serializer-json', () => {
         });
         describe('and deserializing', function () {
             describe('primitves', function () {
-                let primitives = [
-                    99999999n,
-                    34234,
-                    98.6,
-                    'string',
-                    false,
-                    undefined,
-                ];
+                let primitives = [34234, 98.6, 'string', false, undefined];
 
                 for (let primitive of primitives) {
                     describe(`of type ${typeof primitive}`, function () {
@@ -182,15 +317,29 @@ describe('@otpjs/serializer-json', () => {
                             '$otp.tuple',
                             [
                                 ['$otp.list', [1, 2, 3], '$otp.list.nil'],
-                                { a: 1, b: 2, c: 3 },
+                                [
+                                    '$otp.tuple',
+                                    [
+                                        ['$otp.symbol', 'ok'],
+                                        {
+                                            a: 1,
+                                            b: 2,
+                                            c: [
+                                                '$otp.list',
+                                                ['a', 'b', 'c'],
+                                                '$otp.list.nil',
+                                            ],
+                                        },
+                                    ],
+                                ],
                                 ['1', '2', '3'],
                             ],
                         ];
-                        const realTuple = t(l(1, 2, 3), { a: 1, b: 2, c: 3 }, [
-                            '1',
-                            '2',
-                            '3',
-                        ]);
+                        const realTuple = t(
+                            l(1, 2, 3),
+                            t(ok, { a: 1, b: 2, c: l('a', 'b', 'c') }),
+                            ['1', '2', '3']
+                        );
 
                         expect(deserialize(encodedTuple)).toMatchPattern(
                             realTuple
