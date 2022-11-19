@@ -1,3 +1,10 @@
+## 0.17.2 (2022-11-19)
+
+
+### Bug Fixes
+
+* **transports-socket.io:** fix compare usage 500725b
+
 ## 0.17.1 (2022-11-19)
 
 
