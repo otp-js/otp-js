@@ -2,14 +2,7 @@
     "name": "@otpjs/transports-socket.io",
     "version": "0.16.0",
     "description": "A transport for communicating with OTP nodes over socket.io",
-    "keywords": [
-        "otp",
-        "open",
-        "telecom",
-        "platform",
-        "erlang",
-        "javascript"
-    ],
+    "keywords": ["otp", "open", "telecom", "platform", "erlang", "javascript"],
     "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
     "homepage": "https://otpjs.dev",
     "license": "MIT",
@@ -18,9 +11,7 @@
         "lib": "lib",
         "test": "__tests__"
     },
-    "files": [
-        "lib"
-    ],
+    "files": ["lib"],
     "publishConfig": {
         "access": "public"
     },
@@ -39,6 +30,7 @@
     },
     "dependencies": {
         "@babel/runtime": "^7.19.0",
+        "@otpjs/serializer-json": "file:../../serializers/json",
         "@otpjs/core": "file:../../packages/core"
     },
     "peerDependencies": {
