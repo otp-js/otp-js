@@ -34,7 +34,9 @@ function defaultOptions() {
 }
 
 export function register(node, socket, options = defaultOptions()) {
-    const { serialize, deserialize } = makeSerializer(node, {stringify: false});
+    const { serialize, deserialize } = makeSerializer(node, {
+        stringify: false,
+    });
     let ctx;
     let running = false;
 
@@ -391,10 +393,13 @@ export function register(node, socket, options = defaultOptions()) {
                 if (
                     typeof value === 'object' &&
                     value !== null &&
-                    matching.compare(value, {
-                        type: 'otp.buffer',
-                        index: Number.isInteger,
-                    })
+                    matching.compare(
+                        {
+                            type: 'otp.buffer',
+                            index: Number.isInteger,
+                        },
+                        value
+                    )
                 ) {
                     return buffers[index];
                 }
