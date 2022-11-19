@@ -1,3 +1,11 @@
+## 0.17.1 (2022-11-19)
+
+
+### Bug Fixes
+
+* **serializer-json:** check isNil first 1061359
+* **serializer-json:** check isNull first eebfcaf
+
 # 0.17.0 (2022-11-19)
 
 
