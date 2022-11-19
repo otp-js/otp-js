@@ -12,6 +12,10 @@ function isNull(v) {
     return v === null;
 }
 
+function hasJSON(v) {
+    return !!v?.toJSON;
+}
+
 export function make(env, options = {}) {
     const log = env.logger('serializer:json');
     const isSymbol = (v) => typeof v === 'symbol';
@@ -67,6 +71,8 @@ export function make(env, options = {}) {
                             );
                         } else if (isEmpty(current)) {
                             accept(currentKey, original, acc, push, moveNext);
+                        } else if (hasJSON(current)) {
+                            push(currentKey, current.toJSON());
                         } else {
                             const [nextKey] =
                                 Object.getOwnPropertyNames(current);
@@ -96,8 +102,6 @@ export function make(env, options = {}) {
                             return 0;
                         case 'symbol':
                             return '';
-                        case 'bigint':
-                            return 0n;
                         case 'undefined':
                         default:
                             return undefined;
@@ -129,10 +133,8 @@ export function make(env, options = {}) {
                 function assign(acc, key, value) {
                     if (Array.isArray(acc)) {
                         acc.splice(key + 1, 0, value);
-                    } else if (typeof acc === 'object') {
-                        acc[key] = value;
                     } else {
-                        return value;
+                        acc[key] = value;
                     }
                 }
             },

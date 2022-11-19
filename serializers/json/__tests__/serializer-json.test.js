@@ -83,20 +83,50 @@ describe('@otpjs/serializer-json', () => {
                         serialize(object);
                     }).not.toThrow();
                 });
-                it('transforms properties', function () {
-                    const object = {
-                        a: t(node.ref(), Pid.of(0, 1, 0, 1)),
-                        b: l(1, 2, t('a', 'b', 'c'), 4, 5),
-                        c: '2',
-                    };
+                describe('with toJSON', function () {
+                    it('uses the result', function () {
+                        const obj = {
+                            value: 42,
+                            toJSON() {
+                                return this.value;
+                            },
+                        };
 
-                    const encodedObject = `{"a":["$otp.tuple",[["$otp.ref",["$otp.symbol","${Symbol.keyFor(
-                        node.name
-                    )}"],0,0,1],["$otp.pid",["$otp.symbol","${Symbol.keyFor(
-                        node.name
-                    )}"],1,0,1]]],"b":["$otp.list",[1,2,["$otp.tuple",["a","b","c"]],4,5],"$otp.list.nil"],"c":"2"}`;
+                        expect(serialize(obj)).toBe('42');
+                    });
 
-                    expect(serialize(object)).toMatchPattern(encodedObject);
+                    it('walks the result', function () {
+                        const obj = {
+                            value: t(ok, 42),
+                            toJSON() {
+                                return this.value;
+                            },
+                        };
+
+                        expect(serialize(obj)).toBe(
+                            '["$otp.tuple",[["$otp.symbol","ok"],42]]'
+                        );
+                    });
+                });
+                describe('with no toJSON', function () {
+                    it('transforms properties', function () {
+                        const object = {
+                            a: t(node.ref(), Pid.of(0, 1, 0, 1)),
+                            b: l(1, 2, t('a', 'b', 'c'), 4, 5),
+                            c: '2',
+                            d: {
+                                value: t(ok, 42),
+                            },
+                        };
+
+                        const encodedObject = `{"a":["$otp.tuple",[["$otp.ref",["$otp.symbol","${Symbol.keyFor(
+                            node.name
+                        )}"],0,0,1],["$otp.pid",["$otp.symbol","${Symbol.keyFor(
+                            node.name
+                        )}"],1,0,1]]],"b":["$otp.list",[1,2,["$otp.tuple",["a","b","c"]],4,5],"$otp.list.nil"],"c":"2","d":{"value":["$otp.tuple",[["$otp.symbol","ok"],42]]}}`;
+
+                        expect(serialize(object)).toMatchPattern(encodedObject);
+                    });
                 });
             });
         });
