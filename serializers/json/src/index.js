@@ -29,7 +29,7 @@ export function make(env, options = {}) {
 
     return { serialize, deserialize };
 
-    function walk(obj, key = '') {
+    function walk(obj, accept) {
         return {
             with(fn) {
                 const stack = [];
@@ -37,7 +37,7 @@ export function make(env, options = {}) {
                 let original = obj;
                 let current = obj;
                 let acc = initialFor(current);
-                let currentKey = key;
+                let currentKey = '';
 
                 log('walk(in: %o)', obj);
                 while (stack.length > 0 || current !== undefined) {
@@ -54,22 +54,23 @@ export function make(env, options = {}) {
                             defer(currentKey, rest, original, acc);
                             push(acc.length, next);
                         } else {
-                            accept(currentKey, original, acc);
+                            accept(currentKey, original, acc, push, moveNext);
                         }
                     } else if (typeof current === 'object') {
                         if (isNull(current)) {
                             accept(currentKey, original, original);
                         } else if (isEmpty(current)) {
-                            accept(currentKey, original, acc);
+                            accept(currentKey, original, acc, push, moveNext);
                         } else {
-                            const [nextKey] = Object.getOwnPropertyNames(current);
+                            const [nextKey] =
+                                Object.getOwnPropertyNames(current);
                             const { [nextKey]: next, ...rest } = current;
 
                             defer(currentKey, rest, original, acc);
                             push(nextKey, next);
                         }
                     } else {
-                        accept(currentKey, original, original);
+                        accept(currentKey, original, original, push, moveNext);
                     }
                 }
 
@@ -104,16 +105,6 @@ export function make(env, options = {}) {
                 }
                 function defer(key, obj, original, acc) {
                     stack.push({ key, obj, original, acc });
-                }
-                function accept(key, original, accumulated) {
-                    const processed = fn(key, original);
-                    if (processed) {
-                        log('accept(key: %o, %o -> %o)', key, original, processed)
-                        moveNext(processed);
-                    } else {
-                        log('accept(key: %o, %o -> %o)', key, original, accumulated ?? original)
-                        moveNext(accumulated ?? original);
-                    }
                 }
                 function moveNext(accepted) {
                     const next = stack.pop();
@@ -152,7 +143,23 @@ export function make(env, options = {}) {
         if (stringify) {
             return JSON.parse(stringOrObject, reviver);
         } else {
-            return walk(stringOrObject).with(reviver);
+            return walk(stringOrObject, accept).with(reviver);
+        }
+
+        function accept(key, original, accumulated, push, moveNext) {
+            const processed = reviver(key, accumulated ?? original);
+            if (processed) {
+                log('accept(key: %o, %o -> %o)', key, original, processed);
+                moveNext(processed);
+            } else {
+                log(
+                    'accept(key: %o, %o -> %o)',
+                    key,
+                    original,
+                    accumulated ?? original
+                );
+                moveNext(accumulated ?? original);
+            }
         }
     }
     function serialize(data, replacer = undefined) {
@@ -165,7 +172,23 @@ export function make(env, options = {}) {
         if (stringify) {
             return JSON.stringify(data, replacer);
         } else {
-            return walk(data).with(replacer);
+            return walk(data, accept).with(replacer);
+        }
+
+        function accept(key, original, accumulated, push, moveNext) {
+            const processed = replacer(key, original);
+            if (processed) {
+                log('accept(key: %o, %o -> %o)', key, original, processed);
+                push(key, processed);
+            } else {
+                log(
+                    'accept(key: %o, %o -> %o)',
+                    key,
+                    original,
+                    accumulated ?? original
+                );
+                moveNext(accumulated ?? original);
+            }
         }
     }
     function reviveOTP(key, value) {
@@ -190,12 +213,16 @@ export function make(env, options = {}) {
             return new Ref(nodeId, serial, id, creation);
         } else if (compare(isEncodedList)) {
             return improperList(
-                ...value[1].map((value, index) => reviveOTP(index, value) ?? value),
+                ...value[1].map(
+                    (value, index) => reviveOTP(index, value) ?? value
+                ),
                 reviveOTP('', value[2]) ?? value[2]
             );
         } else if (compare(isEncodedTuple)) {
             return tuple(
-                ...value[1].map((value, index) => reviveOTP(index, value) ?? value)
+                ...value[1].map(
+                    (value, index) => reviveOTP(index, value) ?? value
+                )
             );
         } else if (compare(isEncodedNil)) {
             return list.nil;
@@ -235,42 +262,23 @@ export function make(env, options = {}) {
             ];
         } else if (compare(Pid.isPid)) {
             const node = env.getRouterName(value.node);
-            return [
-                '$otp.pid',
-                replaceOTP('', node),
-                value.id,
-                value.serial,
-                value.creation,
-            ];
+            return ['$otp.pid', node, value.id, value.serial, value.creation];
         } else if (compare(Ref.isRef)) {
             const node = env.getRouterName(value.node);
-            return [
-                '$otp.ref',
-                replaceOTP('', node),
-                value.id,
-                value.serial,
-                value.creation,
-            ];
+            return ['$otp.ref', node, value.id, value.serial, value.creation];
         } else if (list.isList(value) && value != list.nil) {
             let result = [];
             let node = value;
-            let index = 0;
 
             while (list.isList(node) && node != list.nil) {
-                const transformed = replaceOTP(index, node.head) ?? node.head;
-                result.push(transformed);
+                result.push(node.head);
                 node = node.tail;
             }
             let tail = node;
 
-            return ['$otp.list', result, replaceOTP('', tail) ?? tail];
+            return ['$otp.list', result, tail];
         } else if (compare(tuple.isTuple)) {
-            return [
-                '$otp.tuple',
-                Array.from(value).map(
-                    (value, index) => replaceOTP(index, value) ?? value
-                ),
-            ];
+            return ['$otp.tuple', Array.from(value)];
         } else {
             if (stringify) {
                 return value;
