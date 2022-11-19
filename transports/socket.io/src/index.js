@@ -34,7 +34,7 @@ function defaultOptions() {
 }
 
 export function register(node, socket, options = defaultOptions()) {
-    const { serialize, deserialize } = makeSerializer(node);
+    const { serialize, deserialize } = makeSerializer(node, {stringify: false});
     let ctx;
     let running = false;
 
