@@ -1,8 +1,7 @@
 import * as otp from '@otpjs/core';
 import * as matching from '@otpjs/matching';
 import { make as makeSerializer } from '@otpjs/serializer-json';
-import { caseOf, compile } from '@otpjs/matching';
-import { Pid, Ref, t, l } from '@otpjs/types';
+import { Pid, t } from '@otpjs/types';
 
 const {
     DOWN,
@@ -35,7 +34,7 @@ function defaultOptions() {
 }
 
 export function register(node, socket, options = defaultOptions()) {
-    const { serialize, deserialize } = makeSerializer(node);
+    const { serialize, deserialize } = makeSerializer(node, {stringify: false});
     let ctx;
     let running = false;
 
