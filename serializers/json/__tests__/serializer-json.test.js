@@ -35,6 +35,7 @@ describe('@otpjs/serializer-json', () => {
                     { raw: 98.6, serialized: '98.6' },
                     { raw: 'string', serialized: '"string"' },
                     { raw: false, serialized: 'false' },
+                    { raw: null, serialized: 'null' },
                 ];
 
                 for (let primitive of primitives) {
@@ -137,6 +138,7 @@ describe('@otpjs/serializer-json', () => {
                     { raw: 98.6, serialized: '98.6' },
                     { raw: 'string', serialized: '"string"' },
                     { raw: false, serialized: 'false' },
+                    { raw: null, serialized: 'null' },
                 ];
 
                 for (let primitive of primitives) {
@@ -209,7 +211,7 @@ describe('@otpjs/serializer-json', () => {
 
         describe('and serializing', function () {
             describe('primitves', function () {
-                let primitives = [34234, 98.6, 'string', false, undefined];
+                let primitives = [34234, 98.6, 'string', false, null];
 
                 for (let primitive of primitives) {
                     describe(`of type ${typeof primitive}`, function () {
@@ -316,7 +318,7 @@ describe('@otpjs/serializer-json', () => {
         });
         describe('and deserializing', function () {
             describe('primitves', function () {
-                let primitives = [34234, 98.6, 'string', false, undefined];
+                let primitives = [34234, 98.6, 'string', false, null];
 
                 for (let primitive of primitives) {
                     describe(`of type ${typeof primitive}`, function () {
