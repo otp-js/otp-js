@@ -51,7 +51,6 @@ export function register(node, socket, options = defaultOptions()) {
     const forward = matching.clauses(function routeForward(route) {
         route(t(relay, _)).to(([, op]) => process(op));
         route(t(lost, _)).to(relayLost);
-        route(t(discover, _, _, _, _)).to(relayDiscoveryNoType);
         route(t(discover, _, _, _, _, _)).to(relayDiscovery);
         return 'socket-io.process';
     });
@@ -107,38 +106,44 @@ export function register(node, socket, options = defaultOptions()) {
             toPid,
             message
         );
+        const { replace: serialize, buffers } = replacer();
         fromPid = serialize(fromPid);
         toPid = serialize(toPid);
         message = serialize(message);
-        socket.emit('otp-message', fromPid, toPid, message);
+        socket.emit('otp-message', fromPid, toPid, message, ...buffers);
     }
     function relayLink([, fromPid, toPid]) {
+        const { replace: serialize, buffers } = replacer();
         fromPid = serialize(fromPid);
         toPid = serialize(toPid);
-        socket.emit('otp-link', fromPid, toPid);
+        socket.emit('otp-link', fromPid, toPid, ...buffers);
     }
     function relayUnlink([, fromPid, toPid]) {
+        const { replace: serialize, buffers } = replacer();
         fromPid = serialize(fromPid);
         toPid = serialize(toPid);
-        socket.emit('otp-unlink', fromPid, toPid);
+        socket.emit('otp-unlink', fromPid, toPid, ...buffers);
     }
     function relayMonitor([, fromPid, toPid, ref]) {
+        const { replace: serialize, buffers } = replacer();
         fromPid = serialize(fromPid);
         toPid = serialize(toPid);
         ref = serialize(ref);
-        socket.emit('otp-monitor', fromPid, toPid, ref);
+        socket.emit('otp-monitor', fromPid, toPid, ref, ...buffers);
     }
     function relayDemonitor([, fromPid, toPid, ref]) {
+        const { replace: serialize, buffers } = replacer();
         fromPid = serialize(fromPid);
         toPid = serialize(toPid);
         ref = serialize(ref);
-        socket.emit('otp-demonitor', toPid, ref, fromPid);
+        socket.emit('otp-demonitor', toPid, ref, fromPid, ...buffers);
     }
     function relayEXIT([, fromPid, toPid, reason]) {
+        const { replace: serialize, buffers } = replacer();
         fromPid = serialize(fromPid);
         toPid = serialize(toPid);
         reason = serialize(reason);
-        socket.emit('otp-EXIT', fromPid, toPid, reason);
+        socket.emit('otp-EXIT', fromPid, toPid, reason, ...buffers);
     }
     function relayDOWN([, fromPid, toPid, ref, reason]) {
         log(
@@ -149,18 +154,45 @@ export function register(node, socket, options = defaultOptions()) {
             ref,
             reason
         );
+        const { replace: serialize, buffers } = replacer();
         fromPid = serialize(fromPid);
         toPid = serialize(toPid);
         ref = serialize(ref);
         reason = serialize(reason);
-        socket.emit('otp-DOWN', fromPid, toPid, ref, reason);
+        socket.emit('otp-DOWN', fromPid, toPid, ref, reason, ...buffers);
     }
-    function relayDiscoveryNoType([, source, score, name, pid]) {
+    function relayDiscovery([, source, score, name, type, pid]) {
+        const { replace: serialize, buffers } = replacer();
+        log(
+            ctx,
+            'relayDiscover(source: %o, score: %o, name: %o, type: %o, pid: %o)',
+            source,
+            score,
+            name,
+            type,
+            pid
+        );
         source = serialize(source ?? node.name);
         score = serialize(score);
         name = serialize(name);
+        type = serialize(type);
         pid = serialize(pid);
-        socket.emit('otp-discover', source, score, name, pid);
+        log(
+            ctx,
+            'relayDiscover(source: %o, score: %o, name: %o, type: %o, pid: %o)',
+            source,
+            score,
+            name,
+            type,
+            pid
+        );
+        socket.emit('otp-discover', source, score, name, type, pid, ...buffers);
+    }
+
+    function relayLost([, pid]) {
+        const { replace: serialize, buffers } = replacer();
+        pid = serialize(pid);
+        socket.emit('otp-lost', pid, ...buffers);
     }
     function relayDiscovery([, source, score, name, type, pid]) {
         source = serialize(source ?? node.name);
@@ -181,34 +213,80 @@ export function register(node, socket, options = defaultOptions()) {
         ctx.log = ctx.logger('transports:socket.io');
         ctx.processFlag(trap_exit, true);
 
+        let name = null;
+        let score = 0;
+        let source = node.name;
+        let ourType = type;
+        let pid = null;
+
+        const { replace: serialize, buffers } = replacer();
+        log(
+            ctx,
+            'handleConnect(source: %o, score: %o, name: %o, type: %o, pid: %o)',
+            source,
+            score,
+            name,
+            ourType,
+            pid
+        );
+        name = serialize(null);
+        score = serialize(0);
+        source = serialize(node.name);
+        ourType = serialize(ourType);
+        pid = serialize(null);
+        log(
+            ctx,
+            'handleConnect(source: %o, score: %o, name: %o, type: %o, pid: %o)',
+            source,
+            score,
+            name,
+            ourType,
+            pid
+        );
+
         socket.emit(
             'otp-discover',
-            serialize(null),
-            serialize(0),
-            serialize(node.name),
-            serialize(type),
-            serialize(null)
+            source,
+            score,
+            name,
+            ourType,
+            pid,
+            ...buffers
         );
 
         running = true;
         recycle();
     }
-    function handleLost(pid) {
+    function handleLost(pid, ...buffers) {
+        const deserialize = reviver(buffers);
         pid = deserialize(pid);
         node.unregisterRouter(pid);
     }
-    function handleDiscover(source, score, name, theirType, pid = undefined) {
+    function handleDiscover(source, score, name, theirType, pid, ...buffers) {
+        const deserialize = reviver(buffers);
+        log(
+            ctx,
+            'handleDiscover(source: %o, score: %o, name: %o, type: %o, pid: %o)',
+            source,
+            score,
+            name,
+            theirType,
+            pid
+        );
         source = deserialize(source) ?? node.name;
-        score = deserialize(score);
         name = deserialize(name);
+        score = deserialize(score);
         theirType = deserialize(theirType);
-
-        if (Pid.isPid(theirType)) {
-            pid = type;
-            theirType = type;
-        } else {
-            pid = pid ? deserialize(pid) ?? ctx.self() : ctx.self();
-        }
+        pid = deserialize(pid) ?? ctx.self();
+        log(
+            ctx,
+            'handleDiscover(source: %o, score: %o, name: %o, type: %o, pid: %o)',
+            source,
+            score,
+            name,
+            theirType,
+            pid
+        );
 
         // Apply "transportation cost" to score to account for indirect connections
         score += TRANSPORT_COST;
@@ -230,17 +308,27 @@ export function register(node, socket, options = defaultOptions()) {
             log(ctx, 'drain() : error : %o', err);
         }
     }
-    function handleLink(fromPid, toPid) {
+    function handleLink(fromPid, toPid, ...buffers) {
+        const deserialize = reviver(buffers);
         fromPid = deserialize(fromPid);
         toPid = deserialize(toPid);
         node.signal(fromPid, link, toPid);
     }
-    function handleUnlink(fromPid, toPid) {
+    function handleUnlink(fromPid, toPid, ...buffers) {
+        const deserialize = reviver(buffers);
         fromPid = deserialize(fromPid);
         toPid = deserialize(toPid);
         node.signal(fromPid, unlink, toPid);
     }
-    function handleMessage(fromPid, toPid, message) {
+    function handleMessage(fromPid, toPid, message, ...buffers) {
+        const deserialize = reviver(buffers);
+        log(
+            ctx,
+            'handleMessage(fromPid: %o, toPid: %o, message: %o)',
+            fromPid,
+            toPid,
+            message
+        );
         fromPid = deserialize(fromPid);
         toPid = deserialize(toPid);
         message = deserialize(message);
@@ -253,7 +341,8 @@ export function register(node, socket, options = defaultOptions()) {
         );
         node.deliver(fromPid, toPid, message);
     }
-    function handleMonitor(fromPid, toPid, ref) {
+    function handleMonitor(fromPid, toPid, ref, ...buffers) {
+        const deserialize = reviver(buffers);
         try {
             fromPid = deserialize(fromPid);
             toPid = deserialize(toPid);
@@ -263,20 +352,23 @@ export function register(node, socket, options = defaultOptions()) {
             node.signal(fromPid, DOWN, toPid, ref, err.term ?? err.message);
         }
     }
-    function handleDemonitor(toPid, ref, fromPid) {
+    function handleDemonitor(toPid, ref, fromPid, ...buffers) {
+        const deserialize = reviver(buffers);
         fromPid = deserialize(fromPid);
         toPid = deserialize(toPid);
         ref = deserialize(ref);
         node.signal(fromPid, demonitor, toPid, ref);
     }
-    function handleEXIT(fromPid, toPid, reason) {
+    function handleEXIT(fromPid, toPid, reason, ...buffers) {
+        const deserialize = reviver(buffers);
         fromPid = deserialize(fromPid);
         toPid = deserialize(toPid);
         reason = deserialize(reason);
 
         node.signal(fromPid, EXIT, toPid, reason);
     }
-    function handleDOWN(fromPid, toPid, ref, reason) {
+    function handleDOWN(fromPid, toPid, ref, reason, ...buffers) {
+        const deserialize = reviver(buffers);
         fromPid = deserialize(fromPid);
         toPid = deserialize(toPid);
         ref = deserialize(ref);
@@ -292,5 +384,39 @@ export function register(node, socket, options = defaultOptions()) {
         );
 
         node.signal(fromPid, DOWN, toPid, ref, reason);
+    }
+
+    function reviver(buffers) {
+        return function revive(value) {
+            return deserialize(value, (key, value) => {
+                if (
+                    typeof value === 'object' &&
+                    value !== null &&
+                    matching.compare(value, {
+                        type: 'otp.buffer',
+                        index: Number.isInteger,
+                    })
+                ) {
+                    return buffers[index];
+                }
+            });
+        };
+    }
+
+    function replacer() {
+        const buffers = [];
+        return { replace, buffers };
+        function replace(key, value) {
+            if (value instanceof ArrayBuffer) {
+                const index = buffers.indexOf(value);
+                if (index >= 0) {
+                    return { type: 'otp.buffer', index };
+                } else {
+                    const index = buffers.length;
+                    buffers.push(value);
+                    return { type: 'otp.buffer', index };
+                }
+            }
+        }
     }
 }
