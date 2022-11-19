@@ -212,9 +212,9 @@ export function register(node, socket, options = defaultOptions()) {
         ctx.log = ctx.logger('transports:socket.io');
         ctx.processFlag(trap_exit, true);
 
-        let name = null;
+        let name = node.name;
         let score = 0;
-        let source = node.name;
+        let source = null;
         let ourType = type;
         let pid = null;
 
@@ -228,11 +228,11 @@ export function register(node, socket, options = defaultOptions()) {
             ourType,
             pid
         );
-        name = serialize(null);
-        score = serialize(0);
-        source = serialize(node.name);
+        name = serialize(name);
+        score = serialize(score);
+        source = serialize(source);
         ourType = serialize(ourType);
-        pid = serialize(null);
+        pid = serialize(pid);
         log(
             ctx,
             'handleConnect(source: %o, score: %o, name: %o, type: %o, pid: %o)',
@@ -405,17 +405,19 @@ export function register(node, socket, options = defaultOptions()) {
     function replacer() {
         const buffers = [];
         return { replace, buffers };
-        function replace(key, value) {
-            if (value instanceof ArrayBuffer) {
-                const index = buffers.indexOf(value);
-                if (index >= 0) {
-                    return { type: 'otp.buffer', index };
-                } else {
-                    const index = buffers.length;
-                    buffers.push(value);
-                    return { type: 'otp.buffer', index };
+        function replace(value) {
+            return serialize(value, (key, value) => {
+                if (value instanceof ArrayBuffer) {
+                    const index = buffers.indexOf(value);
+                    if (index >= 0) {
+                        return { type: 'otp.buffer', index };
+                    } else {
+                        const index = buffers.length;
+                        buffers.push(value);
+                        return { type: 'otp.buffer', index };
+                    }
                 }
-            }
+            });
         }
     }
 }
