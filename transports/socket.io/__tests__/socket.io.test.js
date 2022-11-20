@@ -7,7 +7,7 @@ import clientIO from 'socket.io-client';
 import { register as useSocketIO } from '../src';
 import * as otp from '@otpjs/core';
 
-const { DOWN, kill, normal } = otp.Symbols;
+const { ok, DOWN, kill, normal } = otp.Symbols;
 const test_name = Symbol.for('test');
 
 function log(ctx, ...args) {
@@ -146,7 +146,6 @@ describe('@otpjs/transports-socket.io', function () {
         ctx.send(t(test_name, serverNode.name), 'die');
         await expect(ctx.receive(100)).rejects.toThrow('timeout');
     });
-
     it('can be unregistered', async function () {
         const destroyClient = useSocketIO(clientNode, clientSocket);
         const destroyServer = useSocketIO(serverNode, serverSocket);
@@ -163,6 +162,64 @@ describe('@otpjs/transports-socket.io', function () {
 
         expect(Array.from(serverNode.nodes())).not.toContain(clientNode.name);
         expect(Array.from(clientNode.nodes())).not.toContain(serverNode.name);
+    });
+    describe('sending messages', function () {
+        describe('with ArrayBuffers', function () {
+            let buffA, buffB;
+            beforeEach(function () {
+                buffA = new ArrayBuffer(1024);
+                buffB = new ArrayBuffer(256);
+            });
+            it('sends them seperately', async function () {
+                const ctx = clientNode.makeContext();
+                const name = Symbol.for('receiver');
+                const listener = jest.fn(function (
+                    fromPid,
+                    toPid,
+                    message,
+                    ...buffers
+                ) {
+                    log(
+                        ctx,
+                        'OTP-MESSAGE : %o %o %o %o',
+                        fromPid,
+                        toPid,
+                        message,
+                        buffers
+                    );
+                    expect(buffers.length).toBe(2);
+                });
+                const destroyClient = useSocketIO(clientNode, clientSocket);
+                const destroyServer = useSocketIO(serverNode, serverSocket);
+
+                clientSocket.on('otp-message', listener);
+                await wait(500);
+
+                clientNode.spawn(async (ctx) => {
+                    ctx.register(name);
+                    await ctx.receive();
+                });
+                serverNode.spawn(async (ctx) => {
+                    while (!ctx.nodes().includes(clientNode.name))
+                        await wait(100);
+                    await ctx.send(
+                        t(name, clientNode.name),
+                        t(ok, buffA, {
+                            make: {
+                                one: { deeply: { nested: l(t(ok, buffB)) } },
+                            },
+                        })
+                    );
+                });
+
+                await wait(500);
+
+                expect(listener).toHaveBeenCalled();
+
+                destroyClient();
+                destroyServer();
+            });
+        });
     });
 
     describe('when bridged over another node', function () {

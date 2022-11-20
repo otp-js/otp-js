@@ -395,13 +395,13 @@ export function register(node, socket, options = defaultOptions()) {
                     value !== null &&
                     matching.compare(
                         {
-                            type: 'otp.buffer',
+                            type: '$otp.buffer',
                             index: Number.isInteger,
                         },
                         value
                     )
                 ) {
-                    return buffers[index];
+                    return buffers[value.index];
                 }
             });
         };
@@ -415,11 +415,11 @@ export function register(node, socket, options = defaultOptions()) {
                 if (value instanceof ArrayBuffer) {
                     const index = buffers.indexOf(value);
                     if (index >= 0) {
-                        return { type: 'otp.buffer', index };
+                        return { type: '$otp.buffer', index };
                     } else {
                         const index = buffers.length;
                         buffers.push(value);
-                        return { type: 'otp.buffer', index };
+                        return { type: '$otp.buffer', index };
                     }
                 }
             });
