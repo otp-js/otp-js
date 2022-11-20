@@ -1,3 +1,11 @@
+## 0.17.7 (2022-11-20)
+
+
+### Bug Fixes
+
+* **serializer-json:** check & ignore binary types 8d33bdb
+* **transports-socket.io:** allow arraybuffer views 9be3023
+
 ## 0.17.6 (2022-11-20)
 
 
