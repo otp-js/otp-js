@@ -164,13 +164,16 @@ describe('@otpjs/transports-socket.io', function () {
         expect(Array.from(clientNode.nodes())).not.toContain(serverNode.name);
     });
     describe('sending messages', function () {
-        describe('with ArrayBuffers', function () {
+        describe('with buffer types', function () {
             let buffA, buffB;
             beforeEach(function () {
-                buffA = new ArrayBuffer(1024);
-                buffB = new ArrayBuffer(256);
+                buffA = Buffer.from(
+                    'buffer A is a Buffer instance, which is a view of an ArrayBuffer',
+                    'utf8'
+                );
+                buffB = Buffer.from('buffer B is a small ArrayBuffer', 'utf8');
             });
-            it('sends them seperately', async function () {
+            it.only('sends them seperately', async function () {
                 const ctx = clientNode.makeContext();
                 const name = Symbol.for('receiver');
                 const listener = jest.fn(function (
@@ -179,14 +182,7 @@ describe('@otpjs/transports-socket.io', function () {
                     message,
                     ...buffers
                 ) {
-                    log(
-                        ctx,
-                        'OTP-MESSAGE : %o %o %o %o',
-                        fromPid,
-                        toPid,
-                        message,
-                        buffers
-                    );
+                    log(ctx, 'transportSocketIO(buffers: %o)', buffers);
                     expect(buffers.length).toBe(2);
                 });
                 const destroyClient = useSocketIO(clientNode, clientSocket);

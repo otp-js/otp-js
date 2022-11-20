@@ -412,7 +412,7 @@ export function register(node, socket, options = defaultOptions()) {
         return { replace, buffers };
         function replace(value) {
             return serialize(value, (key, value) => {
-                if (value instanceof ArrayBuffer) {
+                if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
                     const index = buffers.indexOf(value);
                     if (index >= 0) {
                         return { type: '$otp.buffer', index };
