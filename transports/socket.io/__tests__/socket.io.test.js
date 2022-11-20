@@ -173,7 +173,7 @@ describe('@otpjs/transports-socket.io', function () {
                 );
                 buffB = Buffer.from('buffer B is a small ArrayBuffer', 'utf8');
             });
-            it.only('sends them seperately', async function () {
+            it('sends them seperately', async function () {
                 const ctx = clientNode.makeContext();
                 const name = Symbol.for('receiver');
                 const listener = jest.fn(function (
