@@ -1,3 +1,10 @@
+## 0.17.5 (2022-11-20)
+
+
+### Bug Fixes
+
+* **serializer-json:** check hasJSON before isEmpty f0ea3ac
+
 ## 0.17.4 (2022-11-19)
 
 
