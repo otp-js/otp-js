@@ -1,3 +1,11 @@
+## 0.17.6 (2022-11-20)
+
+
+### Bug Fixes
+
+* **serializer-json:** kvCompose tweak 1f97d13
+* **transport-socket.io:** ArrayBuffer tests, 1 fix 2e716a8
+
 ## 0.17.5 (2022-11-20)
 
 

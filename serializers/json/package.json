@@ -1,6 +1,6 @@
 {
     "name": "@otpjs/serializer-json",
-    "version": "0.17.5",
+    "version": "0.17.6",
     "description": "> TODO: description",
     "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
     "homepage": "https://github.com/otp-js/otp-js#readme",

@@ -1,6 +1,6 @@
 {
     "name": "@otpjs/proc_lib",
-    "version": "0.17.5",
+    "version": "0.17.6",
     "description": "An implementation of the proc_lib functionality of Erlang",
     "keywords": [
         "erlang",
