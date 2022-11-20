@@ -69,10 +69,10 @@ export function make(env, options = {}) {
                                 push,
                                 moveNext
                             );
-                        } else if (isEmpty(current)) {
-                            accept(currentKey, original, acc, push, moveNext);
                         } else if (hasJSON(current)) {
                             push(currentKey, current.toJSON());
+                        } else if (isEmpty(current)) {
+                            accept(currentKey, original, acc, push, moveNext);
                         } else {
                             const [nextKey] =
                                 Object.getOwnPropertyNames(current);
