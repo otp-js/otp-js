@@ -297,8 +297,15 @@ export function make(env, options = {}) {
     }
     function kvCompose(...funs) {
         return funs.reduceRight(
-            (acc, fun) => (key, value) => fun(key, acc(key, value) ?? value),
-            (_key, value) => value
+            (acc, fun) => (key, value) => {
+                let processed = fun(key, value);
+                if (processed) {
+                    return processed;
+                } else {
+                    return acc(key, value);
+                }
+            },
+            (_key, value) => (stringify ? value : undefined)
         );
     }
 }
