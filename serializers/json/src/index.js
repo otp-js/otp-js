@@ -12,6 +12,10 @@ function isNull(v) {
     return v === null;
 }
 
+function isBinary(v) {
+    return v instanceof ArrayBuffer || ArrayBuffer.isView(v);
+}
+
 function hasJSON(v) {
     return !!v?.toJSON;
 }
@@ -62,6 +66,14 @@ export function make(env, options = {}) {
                         }
                     } else if (typeof current === 'object') {
                         if (isNull(current)) {
+                            accept(
+                                currentKey,
+                                original,
+                                original,
+                                push,
+                                moveNext
+                            );
+                        } else if (isBinary(current)) {
                             accept(
                                 currentKey,
                                 original,

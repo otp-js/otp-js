@@ -296,6 +296,12 @@ describe('@otpjs/serializer-json', () => {
                     });
                 });
             });
+            describe('buffers', function () {
+                it('leaves them alone', function () {
+                    const buff = Buffer.from('testing a thing', 'utf8');
+                    expect(serialize(buff)).toBe(buff);
+                });
+            });
             describe('otp types', function () {
                 describe('tuples', function () {
                     it('transforms all elements', function () {
@@ -446,6 +452,12 @@ describe('@otpjs/serializer-json', () => {
                             realTuple
                         );
                     });
+                });
+            });
+            describe('buffers', function () {
+                it('leaves them alone', function () {
+                    const buff = Buffer.from('testing a thing', 'utf8');
+                    expect(deserialize(buff)).toBe(buff);
                 });
             });
             describe('objects', function () {
