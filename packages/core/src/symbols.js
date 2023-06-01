@@ -1,3 +1,4 @@
+export const already_receiving = Symbol.for('already_receiving');
 export const DOWN = Symbol.for('down');
 export const EXIT = Symbol.for('exit');
 export const badarg = Symbol.for('badarg');
@@ -18,5 +19,6 @@ export const permanent = Symbol.for('permanent');
 export const relay = Symbol.for('relay');
 export const shutdown = Symbol.for('shutdown');
 export const temporary = Symbol.for('temporary');
+export const timeout = Symbol.for('timeout');
 export const trap_exit = Symbol.for('trap_exit');
 export const unlink = Symbol.for('unlink');
