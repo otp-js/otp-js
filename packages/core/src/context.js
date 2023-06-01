@@ -17,6 +17,7 @@ const {
     monitor,
     demonitor,
     trap_exit,
+    badarg,
 } = Symbols;
 const { _, spread } = matching.Symbols;
 
@@ -74,34 +75,30 @@ export class Context {
 
         this.death = new Promise(
             (resolve) =>
-            (this.die = (reason) => {
-                this.#log(
-                    'die(%o) : lastMessage : %o',
-                    reason,
-                    this.#lastMessage
-                );
+                (this.die = (reason) => {
+                    this.#log(
+                        'die(%o) : lastMessage : %o',
+                        reason,
+                        this.#lastMessage
+                    );
 
-                if (reason instanceof OTPError) {
                     resolve(reason);
-                } else {
-                    const err = OTPError(reason);
-                    Error.captureStackTrace(err, OTPError);
-                    resolve(err);
-                }
-            })
+                })
         );
         this.#dead = false;
 
         this.death.then((reason) => this.destroy(reason));
     }
     processFlag(flag, value) {
+        this.#log('processFlag(flag: %o)', flag);
         if (processFlags.has(flag)) {
             if (value) {
                 this.#flags.set(flag, value);
             }
             return this.#flags.get(flag);
         } else {
-            throw new OTPError(t('unknown_flag', flag));
+            this.#log('processFlag(bad_flag: %o)', flag);
+            throw OTPError(t('unknown_flag', flag));
         }
     }
     destroy(reason) {
