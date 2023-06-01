@@ -268,26 +268,30 @@ export class Context {
     #unlink(other) {
         if (!this.#dead) this.#links.delete(other);
     }
-    #exit(fromPid, error) {
-        const errorIs = matching.caseOf(error);
+    #exit(fromPid, reason) {
+        const reasonIs = matching.caseOf(reason);
         this.#log(
             '_exit(self: %o, dead: %o, fromPid: %o, error: %o)',
             this.self(),
             this.#dead,
             fromPid,
-            error
+            reason
         );
         if (!this.#dead) {
             const trappingExits = this.processFlag(trap_exit);
-            if (!trappingExits || errorIs(kill)) {
+            if (!trappingExits) {
                 this.#log(
                     '_exit(self: %o) : this.die(error: %o)',
                     this.self(),
-                    error
+                    reason
                 );
-                this.die(killed);
+                if (reasonIs(kill)) {
+                    this.die(killed);
+                } else {
+                    this.die(reason);
+                }
             } else {
-                const notice = t(EXIT, fromPid, error.term, error.stack);
+                const notice = t(EXIT, fromPid, reason.term, reason.stack);
                 this.#log('_exit(self: %o, notice: %o)', this.self(), notice);
                 this.#deliver(notice);
             }
