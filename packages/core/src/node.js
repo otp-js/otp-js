@@ -73,6 +73,7 @@ export class Node {
         this.#id = id;
         this.#living = new Set();
         this.#log = log.extend(this.name.toString());
+        /* istanbul ignore next */
         this.#finalizer = new FinalizationRegistry((pid) => {
             log('finalize(pid: %o)', pid);
             this.#processes.delete(pid.process);
