@@ -1,55 +1,53 @@
-import { ok } from './symbols';
+import * as Symbols from './symbols';
+import { t, OTPError } from '@otpjs/types';
 import debug from 'debug';
 
 const defaultLogger = debug('otpjs:core:message-box');
+const defaultPredicate = () => true;
+const { ok, already_receiving, timeout } = Symbols;
 
 // [1]
 // index++ is the same as index += 1
 export class MessageBox extends Array {
     #log;
-    #resolvers;
+    #pending;
 
     constructor(log = defaultLogger, ...args) {
         super(...args);
 
         this.#log = log;
 
-        this.#resolvers = [];
+        this.#pending = null;
     }
 
     get pending() {
-        return this.#resolvers.length;
+        return this.length;
+    }
+
+    get isReceiving() {
+        return this.#pending ? true : false;
     }
 
     clear(reason) {
         this.splice(0, this.length);
 
-        const droppedReceivers = this.#resolvers.splice(
-            0,
-            this.#resolvers.length
-        );
-
-        for (let [_resolve, reject, _predicate] of droppedReceivers) {
+        if (this.#pending) {
+            const [_resolve, reject, _predicate] = this.#pending;
             reject(reason);
+            this.#pending = null;
         }
     }
     push(message) {
         this.#log('push(message: %o)', message);
-        if (this.#resolvers.length > 0) {
-            let index = 0;
-            for (let [_resolve, _reject, predicates] of this.#resolvers) {
-                for (let predicate of predicates) {
-                    try {
-                        if (predicate(message)) {
-                            const [[resolve, _reject, _predicates]] =
-                                this.#resolvers.splice(index, 1);
-                            return resolve([ok, message, predicate]);
-                        }
-                    } catch (err) {
-                        continue;
-                    }
+        if (this.#pending) {
+            const [resolve, _reject, predicate] = this.#pending;
+            try {
+                if (predicate(message)) {
+                    this.#pending = null;
+                    return resolve(t(ok, message));
                 }
-                index++;
+            } catch (err) {
+                this.#log('push(predicate: %o, error: %o)', predicate, err);
             }
 
             // If we get here, we didn't bail out above, so the message
@@ -59,16 +57,21 @@ export class MessageBox extends Array {
             super.push(message);
         }
     }
-    async pop(...predicates) {
-        let timeout = Infinity;
-        if (predicates.length > 0) {
-            if (typeof predicates[predicates.length - 1] === 'number') {
-                timeout = predicates.pop();
-            }
+    async pop(predicate, timeout) {
+        if (this.#pending) {
+            throw OTPError(already_receiving);
         }
 
-        if (predicates.length === 0) {
-            predicates.push(() => true);
+        if (arguments.length === 0) {
+            predicate = defaultPredicate;
+            timeout = Infinity;
+        } else if (arguments.length === 1) {
+            if (typeof predicate === 'number') {
+                timeout = predicate;
+                predicate = defaultPredicate;
+            } else {
+                timeout = Infinity;
+            }
         }
 
         return new Promise((innerResolve, innerReject) => {
@@ -82,26 +85,19 @@ export class MessageBox extends Array {
             };
             if (this.length > 0) {
                 for (let index = 0; index < this.length; index++) {
-                    const message = this[index];
-
-                    for (let predicate of predicates) {
-                        try {
-                            if (predicate(message)) {
-                                return resolve([
-                                    ok,
-                                    this.#consume(index),
-                                    predicate,
-                                ]);
-                            }
-                        } catch (err) {
-                            continue;
+                    try {
+                        const message = this[index];
+                        if (predicate(message)) {
+                            return resolve(t(ok, this.#consume(index)));
                         }
+                    } catch (err) {
+                        continue;
                     }
                 }
 
-                this.#defer(resolve, reject, predicates, timeout);
+                this.#defer(resolve, reject, predicate, timeout);
             } else {
-                this.#defer(resolve, reject, predicates, timeout);
+                this.#defer(resolve, reject, predicate, timeout);
             }
         });
     }
@@ -113,31 +109,28 @@ export class MessageBox extends Array {
         if (timeout !== Infinity) {
             let originalResolve = resolve;
             resolve = (...args) => {
+                this.#pending = null;
                 clearTimeout(timer);
                 originalResolve(...args);
             };
 
             let originalReject = reject;
             reject = (...args) => {
+                this.#pending = null;
                 clearTimeout(timer);
                 originalReject(...args);
             };
 
             timer = setTimeout(() => {
-                reject(Error('timeout'));
-
-                const index = this.#resolvers.indexOf(record);
-                if (index >= 0) {
-                    this.#resolvers.splice(index, 1);
-                }
+                reject(OTPError(Symbols.timeout));
             }, timeout);
 
-            record = [resolve, reject, predicate];
+            record = t(resolve, reject, predicate);
         } else {
-            record = [resolve, reject, predicate];
+            record = t(resolve, reject, predicate);
         }
 
-        this.#resolvers.push(record);
+        this.#pending = record;
     }
     #consume(index) {
         const [message] = this.splice(index, 1);

@@ -117,26 +117,22 @@ export class Context {
     self() {
         return this.#pid;
     }
-    async receive(...predicates) {
-        let timeout = Infinity;
-
-        if (predicates.length > 0) {
-            if (typeof predicates[predicates.length - 1] === 'number') {
-                timeout = predicates.pop();
+    async receive(predicate, timeout) {
+        if (arguments.length === 0) {
+            timeout = Infinity;
+            predicate = _;
+        } else if (arguments.length === 1) {
+            if (typeof predicate === 'number') {
+                timeout = predicate;
+                predicate = _;
             }
+        } else if (arguments.length > 2) {
+            throw OTPError(badarg);
         }
 
-        if (predicates.length === 0) {
-            predicates.push(_);
-        }
+        predicate = matching.compile(predicate);
 
-        predicates = predicates.map(matching.compile);
-
-        const [, message, _predicate] = await this.#mb.pop(
-            ...predicates,
-            timeout
-        );
-
+        const [, message] = await this.#mb.pop(predicate, timeout);
         this.#lastMessage = message;
 
         return message;
@@ -170,7 +166,7 @@ export class Context {
     get #status() {
         if (this.#dead) {
             return 'exiting';
-        } else if (this.#mb.pending > 0) {
+        } else if (this.#mb.isReceiving) {
             return 'waiting';
         } else {
             return 'running';
