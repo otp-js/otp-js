@@ -246,24 +246,15 @@ export class Node {
         const compare = matching.caseOf(response);
 
         if (compare(t(error, _))) {
-            try {
-                const [, reason] = response;
-                this.#log(
-                    '_monitor(toPid: %o, ref: %o, fromPid: %o, error: %o)',
-                    toPid,
-                    ref,
-                    fromPid,
-                    reason
-                );
-                this.signal(toPid, DOWN, fromPid, ref, reason);
-            } catch (err) {
-                this.#log(
-                    '_monitor(self: %o, ref: %o, error: %o)',
-                    this.self(),
-                    ref,
-                    err
-                );
-            }
+            const [, reason] = response;
+            this.#log(
+                '_monitor(toPid: %o, ref: %o, fromPid: %o, error: %o)',
+                toPid,
+                ref,
+                fromPid,
+                reason
+            );
+            this.signal(toPid, DOWN, fromPid, ref, reason);
         }
 
         return ref;
