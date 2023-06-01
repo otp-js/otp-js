@@ -37,9 +37,13 @@ export function compile(pattern) {
             const compiledPattern = patterns.get(pattern);
             return compiledPattern;
         } else if (typeof pattern === 'object') {
-            const compiledPattern = doCompile(pattern);
-            patterns.set(pattern, compiledPattern);
-            return compiledPattern;
+            if (pattern === null) {
+                return doCompile(pattern);
+            } else {
+                const compiledPattern = doCompile(pattern);
+                patterns.set(pattern, compiledPattern);
+                return compiledPattern;
+            }
         } else {
             return doCompile(pattern);
         }
@@ -70,7 +74,11 @@ function comparator(pattern, comparisons = []) {
     } else if (Ref.isRef(pattern)) {
         refComparator(pattern, comparisons);
     } else if (typeof pattern === 'object') {
-        objectComparator(pattern, comparisons);
+        if (pattern === null) {
+            nullComparator(pattern, comparisons);
+        } else {
+            objectComparator(pattern, comparisons);
+        }
     } else if (typeof pattern === 'function') {
         comparisons.push(pattern);
     } else if (pattern === _) {
@@ -289,6 +297,12 @@ function listComparator(pattern, comparisons, subComparisons = []) {
 
         return matches;
     });
+}
+function isNull(message) {
+    return message === null;
+}
+function nullComparator(pattern, comparisons) {
+    comparisons.push(isNull);
 }
 function objectComparator(pattern, comparisons) {
     comparisons.push(function isObject(message) {
