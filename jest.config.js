@@ -7,8 +7,8 @@ function tool(file) {
 }
 
 const lcovConfig = process.env.CI
-    ? { projectRoot: path.resolve(__dirname, 'coverage') }
-    : {};
+    ? {}
+    : { projectRoot: path.resolve(__dirname, 'coverage') };
 
 module.exports = {
     moduleNameMapper: {
