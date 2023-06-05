@@ -185,7 +185,7 @@ async function handleCallReply(ctx, callbacks, from, state, result) {
             t(ok, stopReplyDemand),
             async ([ok, [_stop, reason, response, nextState]]) => {
                 try {
-                    await terminate(
+                    return await terminate(
                         ctx,
                         callbacks,
                         EXIT,
@@ -209,7 +209,7 @@ async function handleCallReply(ctx, callbacks, from, state, result) {
             t(ok, stopNoReplyDemand),
             async ([ok, [_stop, reason, nextState]]) => {
                 try {
-                    await terminate(
+                    return await terminate(
                         ctx,
                         callbacks,
                         EXIT,
@@ -219,7 +219,6 @@ async function handleCallReply(ctx, callbacks, from, state, result) {
                     );
                 } catch (err) {
                     log(ctx, 'handleCallReply(error: %o)', callbacks, err);
-                    reply(ctx, from, response);
                     throw err;
                 }
             }
@@ -284,7 +283,9 @@ async function tryHandleCall(ctx, callbacks, message, from, state) {
     try {
         return t(ok, await callbacks.handleCall(ctx, message, from, state));
     } catch (err) {
-        if (err instanceof Error) {
+        if (err instanceof OTPError) {
+            return t(EXIT, err.name, err.term, err.stack);
+        } else if (err instanceof Error) {
             log(ctx, 'tryHandleCall(error: %o)', err.message);
             return t(EXIT, err.name, err.message, err.stack);
         } else {
@@ -307,12 +308,7 @@ async function tryDispatch(ctx, callback, message, state) {
 }
 
 async function terminate(ctx, callbacks, type, reason, state, stack = null) {
-    const response = await tryTerminate(
-        ctx,
-        callbacks,
-        t(type, reason, stack),
-        state
-    );
+    const response = await tryTerminate(ctx, callbacks, reason, state);
 
     log(ctx, 'terminate(reason: %o, response: %o)', reason, response);
 
