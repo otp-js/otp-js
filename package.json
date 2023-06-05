@@ -1,6 +1,6 @@
 {
   "name": "root",
-  "version": "0.17.9",
+  "version": "0.17.10",
   "private": true,
   "scripts": {
     "build": "nx run-many --target=build --parallel=5",
