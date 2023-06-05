@@ -5,6 +5,11 @@ function package(index) {
 function tool(file) {
     return path.resolve(__dirname, 'tools/', file);
 }
+
+const lcovConfig = process.env.CI
+    ? { projectRoot: path.resolve(__dirname, 'coverage') }
+    : {};
+
 module.exports = {
     moduleNameMapper: {
         '@otpjs/transports-(.*)': package('transports/$1/src/index.js'),
@@ -13,12 +18,7 @@ module.exports = {
     },
     setupFiles: [tool('unhandled.js')],
     setupFilesAfterEnv: [tool('regenerator.js')],
-    coverageReporters: [
-        'clover',
-        'json',
-        ['lcov', { projectRoot: path.resolve(__dirname, 'coverage') }],
-        'text',
-    ],
+    coverageReporters: ['clover', 'json', ['lcov', lcovConfig], 'text'],
     projects: [
         'packages/*/jest.config.js',
         'serializers/*/jest.config.js',
