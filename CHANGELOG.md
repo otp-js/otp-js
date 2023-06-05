@@ -1,3 +1,10 @@
+## 0.17.9 (2023-06-05)
+
+
+### Bug Fixes
+
+* exclude lcov config in CI environments f77e615
+
 ## 0.17.8 (2023-06-05)
 
 
