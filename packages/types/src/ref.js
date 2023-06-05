@@ -48,19 +48,14 @@ Ref.LOCAL = 0;
 Ref.REMOTE = 'r';
 Ref.isRef = (other) => other instanceof Ref;
 Ref.for = (node, id, serial, creation) => Ref(node, id, serial, creation);
-Ref.from = (string) => {
+Ref.fromString = (string) => {
     const match = string.match(
         /^Ref<(?<node>[0-9]+)\.(?<id>[0-9]+)\.(?<serial>[0-9]+)>$/
     );
+    const { node, id, serial } = match.groups;
+    const creation = 1;
 
-    if (match) {
-        const { node, id, serial } = match.groups;
-        const creation = 1;
-
-        return Ref(parseInt(node), parseInt(id), parseInt(serial), creation);
-    } else {
-        throw OTPError(t(invalid_ref_spec, string));
-    }
+    return Ref(parseInt(node), parseInt(id), parseInt(serial), creation);
 };
 Ref.compare = (a, b) => {
     if (a.node < b.node) return -1;

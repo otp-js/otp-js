@@ -1,7 +1,5 @@
 import inspect from 'inspect-custom-symbol';
 export function Pid(node, id, serial, creation = 1) {
-    if (!(this instanceof Pid)) return new Pid(node, id, serial, creation);
-
     Reflect.defineProperty(this, 'node', {
         get() {
             return node;

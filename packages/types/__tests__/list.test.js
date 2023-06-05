@@ -1,184 +1,12 @@
-import { Pid, Ref, l, il, cons, t } from '../src';
+import { List, Tuple, l, il, cons, car, cdr } from '../src';
+import '@otpjs/test_utils';
 import crypto from 'crypto';
 import util from 'util';
-import '@otpjs/test_utils';
+import debug from 'debug';
 
-jest.disableAutomock();
+const log = debug('otpjs:types:list:__tests__');
 
 const inspect = Symbol.for('nodejs.util.inspect.custom');
-
-describe('Pid', function () {
-    it('cannot identify Pids from strings', function () {
-        expect(Pid.isPid('Pid<0.0>')).toBe(false);
-    });
-    it('can identify Pids from Pids', function () {
-        expect(Pid.isPid(Pid.of(0, 0))).toBe(true);
-    });
-});
-describe('Ref', function () {
-    it('cannot identify Refs from strings', function () {
-        expect(Ref.isRef('Ref<0.0>')).toBe(false);
-    });
-    it('can identify Refs from Refs', function () {
-        expect(Ref.isRef(Ref.for(0, 0))).toBe(true);
-    });
-});
-describe('Tuple', function () {
-    describe('isTuple', function () {
-        it('returns true if the object is a tuple', function () {
-            expect(t.isTuple(t(1, 2, 3))).toBe(true);
-        });
-        it('returns false if the object is not a tuple', function () {
-            expect(t.isTuple([])).toBe(false);
-            expect(t.isTuple({})).toBe(false);
-            expect(t.isTuple('')).toBe(false);
-            expect(t.isTuple(0)).toBe(false);
-            expect(t.isTuple(0n)).toBe(false);
-            expect(t.isTuple(false)).toBe(false);
-        });
-    });
-    it('accepts an arbitrary number of items', function () {
-        const tuple1 = t(1, 2, 3);
-        expect(tuple1.size).toBe(3);
-
-        const tuple2 = t(...new Array(100));
-        expect(tuple2.size).toBe(100);
-    });
-
-    it('is iterable', function () {
-        const tuple = t(1, 2, 3);
-        expect(tuple[Symbol.iterator]).not.toBe(undefined);
-        expect(function () {
-            for (let value of tuple) {
-                expect(value).toEqual(expect.any(Number));
-            }
-        }).not.toThrow();
-    });
-
-    it('allows read access via get method', function () {
-        const buffer = crypto.randomBytes(Math.floor(Math.random() * 128) + 1);
-        const tuple1 = t(...buffer);
-
-        for (let index = 0; index < buffer.length; index++) {
-            const value = buffer.readUInt8(index);
-            expect(tuple1.get(index)).toBe(value);
-        }
-
-        expect(() => tuple1.get(buffer.length + 1)).toThrow(RangeError);
-    });
-
-    it('allows read access via numeric index', function () {
-        const buffer = crypto.randomBytes(Math.floor(Math.random() * 128) + 1);
-        const tuple1 = t(...buffer);
-
-        for (let index = 0; index < buffer.length; index++) {
-            const value = buffer.readUInt8(index);
-            expect(tuple1[index]).toBe(value);
-        }
-
-        expect(() => tuple1[buffer.length + 1]).toThrow(RangeError);
-    });
-
-    it('allows reading of defined string and symbol properties', function () {
-        const tuple1 = t(1, 2, 3);
-
-        expect(() => tuple1.get).not.toThrow();
-        expect(() => tuple1.set).not.toThrow();
-        expect(() => tuple1.size).not.toThrow();
-        expect(() => tuple1.toJSON).not.toThrow();
-        expect(() => tuple1[inspect]).not.toThrow();
-        expect(() => tuple1[Symbol.iterator]).not.toThrow();
-    });
-    it('allows reading of undefined string and symbol properties', function () {
-        const tuple1 = t(1, 2, 3);
-        expect(tuple1.newProperty).toBe(undefined);
-        expect(tuple1[Symbol()]).toBe(undefined);
-    });
-
-    it('does not allow writing to defined string and symbol properties', function () {
-        const tuple1 = t(1, 2, 3);
-
-        expect(() => (tuple1.get = undefined)).toThrow(RangeError);
-        expect(() => (tuple1.set = undefined)).toThrow(RangeError);
-        expect(() => (tuple1.size = undefined)).toThrow(RangeError);
-        expect(() => (tuple1.toJSON = undefined)).toThrow(RangeError);
-        expect(() => (tuple1[inspect] = undefined)).toThrow(RangeError);
-        expect(() => (tuple1[Symbol.iterator] = undefined)).toThrow(RangeError);
-    });
-    it('does not allow writing to undefined string and symbol properties', function () {
-        const tuple1 = t(1, 2, 3);
-        expect(() => (tuple1.newProperty = null)).toThrow(RangeError);
-        expect(() => (tuple1[Symbol()] = null)).toThrow(RangeError);
-    });
-
-    it('allows write access via set method', function () {
-        const size = Math.floor(Math.random() * 128) + 1;
-        const tuple1 = t(...String.fromCharCode(0).repeat(size));
-
-        for (let index = 0; index < size; index++) {
-            const value = Math.floor(Math.random() * 128);
-            expect(tuple1.get(index)).toBe('\x00');
-            expect(() => tuple1.set(index, value)).not.toThrow();
-            expect(tuple1.get(index)).toBe(value);
-        }
-
-        expect(() => tuple1.set(size + 1, 'any value')).toThrow(RangeError);
-    });
-
-    it('allows write access via numeric index', function () {
-        const size = Math.floor(Math.random() * 128) + 1;
-        const tuple1 = t(...String.fromCharCode(0).repeat(size));
-
-        for (let index = 0; index < size; index++) {
-            const value = Math.floor(Math.random() * 128);
-            expect(tuple1[index]).toBe('\x00');
-            expect(() => (tuple1[index] = value)).not.toThrow();
-            expect(tuple1[index]).toBe(value);
-        }
-
-        expect(() => (tuple1[size + 1] = 'any value')).toThrow(RangeError);
-    });
-
-    describe('inspection', function () {
-        it('implements a custom inspect function', function () {
-            const tuple = t(1, 2, 3);
-            expect(tuple[inspect]).not.toBe(undefined);
-            expect(tuple[inspect]).toBeInstanceOf(Function);
-        });
-
-        it('returns a string', function () {
-            const tuple = t(1, 2, 3);
-            expect(function () {
-                util.inspect(tuple);
-            }).not.toThrow();
-        });
-
-        it('returns a shortened form if depth is consumed', function () {
-            expect(util.inspect(t(1, 2, 3), { depth: -1 })).toBe('[Tuple]');
-        });
-
-        it('returns a shortened form if size is greater than maxArrayLength', function () {
-            expect(util.inspect(t(1, 2, 3), { maxArrayLength: 0 })).toBe(
-                '{ ... 3 more items }'
-            );
-        });
-
-        it('handles null depth', function () {
-            expect(util.inspect(t(1, 2, 3), { depth: null })).toBe(
-                '{ 1, 2, 3 }'
-            );
-        });
-    });
-
-    describe('toJSON', function () {
-        it('encodes as an array with tag and array of items', function () {
-            expect(t(1, 2, 3).toJSON()).toMatchPattern([
-                '$otp.tuple',
-                [1, 2, 3],
-            ]);
-        });
-    });
-});
 
 describe('List', function () {
     it('can be nil', function () {
@@ -376,5 +204,137 @@ describe('List', function () {
                 expect(item).toBe(list.nth(index++));
             }
         }).not.toThrow();
+    });
+    describe('map', function () {
+        it('handles nil', function () {
+            const fn = jest.fn();
+            expect(l.nil).toHaveProperty('map');
+            expect(function () {
+                l.nil.map(fn);
+            }).not.toThrow();
+        });
+        it('returns a promise', function () {
+            expect(l.nil.map()).toBeInstanceOf(Promise);
+        });
+        it('runs the given function over every element of the list', async function () {
+            const elements = crypto.randomBytes(8);
+            const list = l(...elements);
+            const fn = jest.fn();
+
+            await expect(list.map(fn)).resolves.not.toBeFalsy();
+            expect(fn).toHaveBeenCalledTimes(elements.length);
+
+            for (let index = 0; index < elements.length; index++) {
+                expect(fn.mock.calls[index][0]).toBe(elements[index]);
+            }
+        });
+        it('creates a new list of the return values for each run', async function () {
+            const transform = (value) => value * 4;
+            const elements = Array.from(crypto.randomBytes(8));
+            const nextElements = elements.map(transform);
+            const list = l(...elements);
+            const fn = jest.fn(transform);
+
+            const promise = list.map(fn);
+            await expect(promise).resolves.not.toBeFalsy();
+            expect(fn).toHaveBeenCalledTimes(elements.length);
+
+            let it = await promise;
+            log(
+                'map(it: %o, elements: %o, nextElements: %o)',
+                it,
+                elements,
+                nextElements
+            );
+            for (let index = 0; index < elements.length; index++) {
+                expect(fn.mock.calls[index][0]).toBe(elements[index]);
+                expect(fn.mock.results[index].value).toBe(nextElements[index]);
+
+                const head = car(it);
+                expect(head).toBe(nextElements[index]);
+                it = cdr(it);
+            }
+        });
+    });
+    describe('filter', function () {
+        it('handles nil', function () {
+            const fn = jest.fn();
+            expect(l.nil).toHaveProperty('map');
+            expect(function () {
+                l.nil.map(fn);
+            }).not.toThrow();
+        });
+        it('returns a promise', function () {
+            expect(l.nil.map()).toBeInstanceOf(Promise);
+        });
+        it('creates a list of elements for which the function returned true', async function () {
+            const filter = (value) => value > 3;
+            const elements = [0, 7, 1, 6, 2, 5, 3, 4];
+            const results = elements.map(filter);
+            const list = l(...elements);
+            const fn = jest.fn(filter);
+
+            const promise = list.filter(fn);
+            await expect(promise).resolves.not.toBeFalsy();
+            expect(fn).toHaveBeenCalledTimes(elements.length);
+
+            let it = await promise;
+            log(
+                'map(it: %o, elements: %o, results: %o)',
+                it,
+                elements,
+                results
+            );
+
+            for (let index = 0; index < elements.length; index++) {
+                expect(fn.mock.calls[index][0]).toBe(elements[index]);
+                expect(fn.mock.results[index].value).toBe(results[index]);
+
+                if (results[index]) {
+                    const head = car(it);
+                    expect(head).toBe(elements[index]);
+                    it = cdr(it);
+                }
+            }
+        });
+    });
+
+    describe('split', function () {
+        describe('on nil', function () {
+            it('does not throw', function () {
+                expect(function () {
+                    l.nil.split();
+                }).not.toThrow();
+            });
+            it('returns a tuple with two nils', function () {
+                const result = l.nil.split(() => true);
+                expect(result).toBeInstanceOf(Tuple);
+                expect(result[0]).toBe(l.nil);
+                expect(result[1]).toBe(l.nil);
+            });
+            it('splits the list at the point where the predicate returns true', function () {
+                const expectedA = [0, 1, 2, 3];
+                const expectedB = [4, 5, 6, 7];
+                const result = l(0, 1, 2, 3, 4, 5, 6, 7).split(
+                    (value) => value === 4
+                );
+                expect(result).toBeInstanceOf(Tuple);
+
+                const [listA, listB] = result;
+                let itA = listA;
+                let itB = listB;
+
+                for (let index = 0; index < expectedA.length; index++) {
+                    const headA = car(itA);
+                    const headB = car(itB);
+
+                    expect(headA).toBe(expectedA[index]);
+                    expect(headB).toBe(expectedB[index]);
+
+                    itA = cdr(itA);
+                    itB = cdr(itB);
+                }
+            });
+        });
     });
 });
