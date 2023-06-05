@@ -1,7 +1,7 @@
 import * as otp from '@otpjs/core';
 import * as matching from '@otpjs/matching';
 import { make as makeSerializer } from '@otpjs/serializer-json';
-import { Pid, t } from '@otpjs/types';
+import { t } from '@otpjs/types';
 
 const {
     DOWN,

@@ -1,5 +1,5 @@
 import '@otpjs/test_utils';
-import { Pid, t, l } from '@otpjs/types';
+import { Pid, Ref, t, l } from '@otpjs/types';
 import { createServer } from 'http';
 import io from 'socket.io';
 import clientIO from 'socket.io-client';
@@ -121,7 +121,9 @@ describe('@otpjs/transports-socket.io', function () {
                     resolve(await ctx.receive());
                 });
             })
-        ).resolves.toMatchPattern(t(DOWN, mref, 'process', Pid.isPid, normal));
+        ).resolves.toMatchPattern(
+            t(DOWN, Ref.isRef, 'process', Pid.isPid, normal)
+        );
     });
     it('supports demonitoring over the transport', async function () {
         useSocketIO(clientNode, clientSocket);
@@ -303,8 +305,8 @@ describe('@otpjs/transports-socket.io', function () {
                 expect(Array.from(ctxA.nodes())).not.toContain(ctxB.node());
                 expect(Array.from(ctxB.nodes())).not.toContain(ctxA.node());
 
-                ctxA.exit(kill);
-                ctxB.exit(kill);
+                ctxA.exit(ctxA.self(), kill);
+                ctxB.exit(ctxB.self(), kill);
             });
 
             it('is not discovered by new nodes', async function () {
@@ -356,9 +358,9 @@ describe('@otpjs/transports-socket.io', function () {
                 expect(Array.from(ctxC.nodes())).not.toContain(ctxB.node());
                 expect(Array.from(ctxC.nodes())).toContain(ctxA.node());
 
-                ctxA.exit(kill);
-                ctxB.exit(kill);
-                ctxC.exit(kill);
+                ctxA.exit(ctxA.self(), kill);
+                ctxB.exit(ctxB.self(), kill);
+                ctxC.exit(ctxC.self(), kill);
 
                 destroyServerC();
                 destroyClientC();
