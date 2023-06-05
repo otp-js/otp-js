@@ -1,6 +1,6 @@
 {
     "name": "@otpjs/gen",
-    "version": "0.17.7",
+    "version": "0.17.8",
     "description": "The gen module for otpjs",
     "keywords": [
         "open",

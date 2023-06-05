@@ -1,3 +1,19 @@
+## 0.17.8 (2023-06-05)
+
+
+### Bug Fixes
+
+* **core:** don't force exit reason error wrapping e7c8d93
+* **core:** drop multi-receive support for now cd0b384
+* **core:** proper EXIT reason kill handling bdc9afb
+* **matching:** null object trap 540c99a
+* **test_utils:** fix toThrowTerm implementation 22deae8
+* **types:** smarter OTPError constructor 5808a86
+* **workflows:** move coverage report to release d7a0f6a
+* **workflows:** remove extra release step 79a4f1d
+* **workflows:** update LTS version 98a0684
+* **workflows:** use 20.x node version in release 53c860e
+
 ## 0.17.7 (2022-11-20)
 
 

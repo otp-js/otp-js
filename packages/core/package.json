@@ -1,8 +1,12 @@
 {
     "name": "@otpjs/core",
-    "version": "0.17.7",
+    "version": "0.17.8",
     "description": "Open Telecom Platform",
-    "keywords": ["otp", "erlang", "javascript"],
+    "keywords": [
+        "otp",
+        "erlang",
+        "javascript"
+    ],
     "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
     "homepage": "https://github.com/otp-js/otp-js#readme",
     "license": "MIT",
@@ -15,7 +19,9 @@
         "lib": "lib",
         "test": "__tests__"
     },
-    "files": ["lib"],
+    "files": [
+        "lib"
+    ],
     "publishConfig": {
         "access": "public"
     },
