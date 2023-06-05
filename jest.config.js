@@ -13,5 +13,15 @@ module.exports = {
     },
     setupFiles: [tool('unhandled.js')],
     setupFilesAfterEnv: [tool('regenerator.js')],
-    projects: ['packages/*', 'serializers/*', 'transports/*'],
+    coverageReporters: [
+        'clover',
+        'json',
+        ['lcov', { projectRoot: path.resolve(__dirname, 'coverage') }],
+        'text',
+    ],
+    projects: [
+        'packages/*/jest.config.js',
+        'serializers/*/jest.config.js',
+        'transports/*/jest.config.js',
+    ],
 };
