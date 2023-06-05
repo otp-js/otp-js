@@ -5,11 +5,13 @@ import '@otpjs/test_utils';
 import * as supervisor from '../src';
 import * as Adder from './adder';
 import * as Subtracter from './subtracter';
+import * as Ignored from './ignored';
+import * as Failed from './failed';
 import * as gen_server from '@otpjs/gen_server';
 import * as matching from '@otpjs/matching';
 import { t, l } from '@otpjs/types';
 
-const { ok, trap_exit, normal, kill } = Symbols;
+const { error, ok, trap_exit, normal, kill, badarg, timeout } = Symbols;
 const { _, spread } = matching.Symbols;
 const {
     one_for_one,
@@ -56,6 +58,20 @@ describe('@otp-js/supervisor', () => {
         await expect(start).resolves.toMatchPattern(pattern);
     });
 
+    it('ignores unsupported calls', async function () {
+        const [, pid] = await supervisor.startLink(ctx, callbacks, args);
+        await expect(
+            gen_server.call(ctx, pid, 'nonsense', 500)
+        ).rejects.toThrowTerm(timeout);
+    });
+
+    it('ignores unsupported casts', async function () {
+        const [, pid] = await supervisor.startLink(ctx, callbacks, args);
+        await expect(gen_server.cast(ctx, pid, 'nonsense')).resolves.toBe(ok);
+        await wait(50);
+        expect(ctx.processInfo(pid)).not.toBeUndefined();
+    });
+
     describe('describes a process pattern', function () {
         describe('using callbacks', function () {
             describe('init', function () {
@@ -67,7 +83,6 @@ describe('@otp-js/supervisor', () => {
                     );
                     expect(callbacks.init).toHaveBeenCalled();
                 });
-
                 it('receives the arguments from the start call', async function () {
                     const arg1 = Math.random();
                     const arg2 = Symbol.for('$otp.supervisor.test_arg');
@@ -90,11 +105,167 @@ describe('@otp-js/supervisor', () => {
                     // use of spread operator means we'll capture this as an array
                     expect(received).toMatchPattern([arg1, arg2]);
                 });
+                it('may indicate to stop', async function () {
+                    const callbacks = {
+                        init: () => t(stop, badarg),
+                    };
+
+                    const startPromise = supervisor.startLink(ctx, callbacks);
+                    await expect(startPromise).resolves.not.toThrow();
+                    await expect(startPromise).resolves.toMatchPattern(
+                        t(error, badarg)
+                    );
+                });
+                it('may fail to start correctly', async function () {
+                    const callbacks = {
+                        init: () => badarg,
+                    };
+
+                    const startPromise = supervisor.startLink(ctx, callbacks);
+                    await expect(startPromise).resolves.not.toThrow();
+                    await expect(startPromise).resolves.toMatchPattern(
+                        t(error, 'bad_init')
+                    );
+                });
             });
         });
     });
     describe('when started', function () {
         describe('with a valid initializer', function () {
+            describe('and a child does not start', function () {
+                describe('due to an ignore response', function () {
+                    let start;
+                    let startIgnore;
+
+                    beforeEach(function () {
+                        node = new Node();
+                        ctx = node.makeContext();
+                        ctx.processFlag(trap_exit, true);
+                        args = [];
+                        start = jest.fn(Adder.startLink);
+                        startIgnore = jest.fn(Ignored.startLink);
+                        callbacks = {
+                            init: jest.fn(() => {
+                                return t(
+                                    ok,
+                                    t(
+                                        { strategy: one_for_all },
+                                        l(
+                                            {
+                                                id: 'a',
+                                                start: [start, [1, 2, 3]],
+                                                restart: transient,
+                                            },
+                                            {
+                                                id: 'b',
+                                                start: [start, [4, 5, 6]],
+                                                restart: transient,
+                                            },
+                                            {
+                                                id: 'c',
+                                                start: [startIgnore, []],
+                                                restart: transient,
+                                            },
+                                            {
+                                                id: 'd',
+                                                start: [start, [7, 8, 9]],
+                                                restart: transient,
+                                            },
+                                            {
+                                                id: 'e',
+                                                start: [start, [10, 11, 12]],
+                                                restart: transient,
+                                            }
+                                        )
+                                    )
+                                );
+                            }),
+                        };
+                    });
+
+                    it('continues to start the remaining children', async function () {
+                        const startPromise = supervisor.startLink(
+                            ctx,
+                            callbacks
+                        );
+                        await expect(startPromise).resolves.not.toThrow();
+                        await expect(startPromise).resolves.toMatchPattern(
+                            t(ok, Pid.isPid)
+                        );
+                        const [, pid] = await startPromise;
+
+                        const living = { pid: Pid.isPid, [spread]: _ };
+                        const dead = { pid: null, [spread]: _ };
+
+                        await expect(
+                            supervisor.whichChildren(ctx, pid)
+                        ).resolves.toMatchPattern(
+                            t(ok, l(living, living, dead, living, living))
+                        );
+                    });
+
+                    describe('from a temporary child', function () {
+                        beforeEach(function () {
+                            callbacks = {
+                                init: jest.fn(() => {
+                                    return t(
+                                        ok,
+                                        t(
+                                            { strategy: one_for_all },
+                                            l(
+                                                {
+                                                    id: 'a',
+                                                    start: [start, [1, 2, 3]],
+                                                    restart: transient,
+                                                },
+                                                {
+                                                    id: 'b',
+                                                    start: [start, [4, 5, 6]],
+                                                    restart: transient,
+                                                },
+                                                {
+                                                    id: 'c',
+                                                    start: [startIgnore, []],
+                                                    restart: temporary,
+                                                },
+                                                {
+                                                    id: 'd',
+                                                    start: [start, [7, 8, 9]],
+                                                    restart: transient,
+                                                },
+                                                {
+                                                    id: 'e',
+                                                    start: [
+                                                        start,
+                                                        [10, 11, 12],
+                                                    ],
+                                                    restart: transient,
+                                                }
+                                            )
+                                        )
+                                    );
+                                }),
+                            };
+                        });
+                        it('removes the child spec', async function () {
+                            const [, pid] = await supervisor.startLink(
+                                ctx,
+                                callbacks
+                            );
+
+                            const living = { pid: Pid.isPid, [spread]: _ };
+                            const dead = { pid: null, [spread]: _ };
+
+                            await expect(
+                                supervisor.whichChildren(ctx, pid)
+                            ).resolves.toMatchPattern(
+                                t(ok, l(living, living, living, living))
+                            );
+                        });
+                    });
+                });
+                describe('due to an error', function () {});
+            });
             describe('for a one_for_one strategy', function () {
                 let config = null;
                 let callbacks = null;
@@ -163,7 +334,6 @@ describe('@otp-js/supervisor', () => {
 
                     node.exit(node.system, pid, kill);
                 });
-
                 it('restarts the processes when they die', async function () {
                     const [, pid] = await supervisor.startLink(ctx, callbacks);
                     log(ctx, 'spawned : %o', pid);
@@ -200,6 +370,128 @@ describe('@otp-js/supervisor', () => {
                             { id: 'subtracter', pid: Pid.isPid }
                         )
                     );
+                });
+
+                describe('startChild called', function () {
+                    let start;
+                    beforeEach(function () {
+                        node = new Node();
+                        ctx = node.makeContext();
+                        ctx.processFlag(trap_exit, true);
+                        args = [];
+                        start = jest.fn(Adder.startLink);
+                        callbacks = {
+                            init: jest.fn(() => {
+                                return t(
+                                    ok,
+                                    t(
+                                        { strategy: one_for_one },
+                                        l({
+                                            id: 'a',
+                                            start: [start, [1, 2, 3]],
+                                            restart: transient,
+                                        })
+                                    )
+                                );
+                            }),
+                        };
+                    });
+
+                    describe('the new child', function () {
+                        it('starts with provided spec', async function () {
+                            const [, pid] = await supervisor.startLink(
+                                ctx,
+                                callbacks
+                            );
+
+                            const startChildPromiseA = supervisor.startChild(
+                                ctx,
+                                pid,
+                                {
+                                    id: 'b',
+                                    start: [start, [1, 2, 3]],
+                                    restart: transient,
+                                }
+                            );
+                            await expect(
+                                startChildPromiseA
+                            ).resolves.toMatchPattern(t(ok, Pid.isPid));
+
+                            const [, child] = await startChildPromiseA;
+                            await expect(
+                                gen_server.call(ctx, child, 'get')
+                            ).resolves.toBe(6);
+
+                            await expect(
+                                supervisor.whichChildren(ctx, pid)
+                            ).resolves.toMatchPattern(t(ok, l(_, _)));
+                        });
+                        describe('when it fails to start', function () {
+                            describe('with a temporary restart strategy', function () {
+                                it('responds with the error reason', async function () {
+                                    const [, pid] = await supervisor.startLink(
+                                        ctx,
+                                        callbacks
+                                    );
+
+                                    await expect(
+                                        supervisor.startChild(ctx, pid, {
+                                            id: 'b',
+                                            start: [
+                                                Failed.startLink,
+                                                [1, 2, 3],
+                                            ],
+                                            restart: temporary,
+                                        })
+                                    ).resolves.toMatchPattern(t(error, _));
+                                });
+                                it('does not add the spec to the list of children', async function () {
+                                    const [, pid] = await supervisor.startLink(
+                                        ctx,
+                                        callbacks
+                                    );
+
+                                    await expect(
+                                        supervisor.startChild(ctx, pid, {
+                                            id: 'b',
+                                            start: [
+                                                Failed.startLink,
+                                                [1, 2, 3],
+                                            ],
+                                            restart: temporary,
+                                        })
+                                    ).resolves.toMatchPattern(t(error, _));
+
+                                    await expect(
+                                        supervisor.whichChildren(ctx, pid)
+                                    ).resolves.toMatchPattern(
+                                        t(ok, l({ id: 'a', pid: Pid.isPid }))
+                                    );
+                                });
+                            });
+                            describe('with a transient restart strategy', function () {
+                                it('retries the maximum number of times', async function () {
+                                    const [, pid] = await supervisor.startLink(
+                                        ctx,
+                                        callbacks
+                                    );
+
+                                    await expect(
+                                        supervisor.startChild(ctx, pid, {
+                                            id: 'b',
+                                            start: [
+                                                Failed.startLink,
+                                                [1, 2, 3],
+                                            ],
+                                            restart: transient,
+                                        })
+                                    ).rejects.toThrowTerm(
+                                        t('cannot_start', 'b', 'max_retries')
+                                    );
+                                });
+                            });
+                        });
+                    });
                 });
             });
             describe('for a one_for_all strategy', function () {
@@ -392,6 +684,8 @@ describe('@otp-js/supervisor', () => {
                         { pid: pidE1 },
                     ] = children;
 
+                    log(ctx, 'CHILDREN: %O', children);
+
                     await ctx.exit(pidC1, kill);
                     await wait(100);
 
@@ -407,7 +701,6 @@ describe('@otp-js/supervisor', () => {
                         { pid: pidE2 },
                     ] = nextChildren;
 
-                    log(ctx, 'CHILDREN: %O', children);
                     log(ctx, 'NEXT_CHILDREN: %O', nextChildren);
 
                     expect(pidA1).toMatchPattern(pidA2);
@@ -500,6 +793,99 @@ describe('@otp-js/supervisor', () => {
                         supervisor.countChildren(ctx, pid)
                     ).resolves.toMatchPattern(10);
                 });
+                describe('and a child does not start', function () {
+                    describe('with a temporary restart', function () {
+                        describe('due to an ignore response', function () {
+                            let start;
+                            let startIgnore;
+
+                            beforeEach(function () {
+                                node = new Node();
+                                ctx = node.makeContext();
+                                ctx.processFlag(trap_exit, true);
+                                args = [];
+                                start = jest.fn(Adder.startLink);
+                                startIgnore = jest.fn(Ignored.startLink);
+                                callbacks = {
+                                    init: jest.fn(() => {
+                                        return t(
+                                            ok,
+                                            t(
+                                                {
+                                                    strategy:
+                                                        simple_one_for_one,
+                                                },
+                                                l({
+                                                    start: [startIgnore, []],
+                                                    restart: temporary,
+                                                })
+                                            )
+                                        );
+                                    }),
+                                };
+                            });
+
+                            it('drops the child spec', async function () {
+                                const [, pid] = await supervisor.startLink(
+                                    ctx,
+                                    callbacks
+                                );
+
+                                await supervisor.startChild(ctx, pid, l());
+                                expect(startIgnore).toHaveBeenCalledTimes(1);
+                                await expect(
+                                    supervisor.whichChildren(ctx, pid)
+                                ).resolves.toMatchPattern(t(ok, l()));
+                            });
+                        });
+                    });
+                    describe('with a transient restart', function () {
+                        describe('due to an ignore response', function () {
+                            let start;
+                            let startIgnore;
+
+                            beforeEach(function () {
+                                node = new Node();
+                                ctx = node.makeContext();
+                                ctx.processFlag(trap_exit, true);
+                                args = [];
+                                start = jest.fn(Adder.startLink);
+                                startIgnore = jest.fn(Ignored.startLink);
+                                callbacks = {
+                                    init: jest.fn(() => {
+                                        return t(
+                                            ok,
+                                            t(
+                                                {
+                                                    strategy:
+                                                        simple_one_for_one,
+                                                },
+                                                l({
+                                                    start: [startIgnore, []],
+                                                    restart: transient,
+                                                })
+                                            )
+                                        );
+                                    }),
+                                };
+                            });
+
+                            it('drops the child spec', async function () {
+                                const [, pid] = await supervisor.startLink(
+                                    ctx,
+                                    callbacks
+                                );
+
+                                await supervisor.startChild(ctx, pid, l());
+                                expect(startIgnore).toHaveBeenCalledTimes(1);
+                                await expect(
+                                    supervisor.whichChildren(ctx, pid)
+                                ).resolves.toMatchPattern(t(ok, l()));
+                            });
+                        });
+                    });
+                    describe('due to an error', function () {});
+                });
                 describe('with transient restarts', function () {
                     let serverCallbacks;
                     beforeEach(function () {
@@ -551,6 +937,72 @@ describe('@otp-js/supervisor', () => {
                         await expect(
                             supervisor.whichChildren(ctx, pid)
                         ).resolves.toMatchPattern(t(ok, l()));
+                    });
+                });
+                describe('startChild called', function () {
+                    let start;
+                    beforeEach(function () {
+                        node = new Node();
+                        ctx = node.makeContext();
+                        ctx.processFlag(trap_exit, true);
+                        args = [];
+                        start = jest.fn(Adder.startLink);
+                        callbacks = {
+                            init: jest.fn(() => {
+                                return t(
+                                    ok,
+                                    t(
+                                        { strategy: simple_one_for_one },
+                                        l({
+                                            start: [start, [1, 2, 3]],
+                                            restart: transient,
+                                        })
+                                    )
+                                );
+                            }),
+                        };
+                    });
+
+                    it('starts a process with the initialized spec', async function () {
+                        const [, pid] = await supervisor.startLink(
+                            ctx,
+                            callbacks
+                        );
+
+                        const startChildPromiseA = supervisor.startChild(
+                            ctx,
+                            pid,
+                            l()
+                        );
+                        await expect(
+                            startChildPromiseA
+                        ).resolves.toMatchPattern(t(ok, Pid.isPid));
+
+                        const [, child] = await startChildPromiseA;
+                        await expect(
+                            gen_server.call(ctx, child, 'get')
+                        ).resolves.toBe(6);
+                    });
+
+                    it('appends the passed arguments to the specification args', async function () {
+                        const [, pid] = await supervisor.startLink(
+                            ctx,
+                            callbacks
+                        );
+
+                        const startChildPromiseA = supervisor.startChild(
+                            ctx,
+                            pid,
+                            l(4, 5, 6)
+                        );
+                        await expect(
+                            startChildPromiseA
+                        ).resolves.toMatchPattern(t(ok, Pid.isPid));
+
+                        const [, child] = await startChildPromiseA;
+                        await expect(
+                            gen_server.call(ctx, child, 'get')
+                        ).resolves.toBe(21);
                     });
                 });
             });

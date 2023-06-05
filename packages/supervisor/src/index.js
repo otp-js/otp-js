@@ -84,11 +84,11 @@ async function _countChildren(ctx, call, from, state) {
     return t(reply, state.children.length(), state);
 }
 async function _startChild(ctx, [, specOrArgs], from, state) {
-    const compare = core.caseOf(state.strategy);
+    const { strategy } = state;
 
     log(ctx, '_startChild(%o, %o)', state.strategy, specOrArgs);
 
-    if (compare(isSimpleOneForOne)) {
+    if (isSimpleOneForOne(strategy)) {
         log(
             ctx,
             '_startChild(simple_one_for_one, %o) : state : %o',
@@ -123,15 +123,13 @@ async function _startChild(ctx, [, specOrArgs], from, state) {
                 children: cons(child, state.children),
             };
             return _handleStartResult(t(ok, pid, nextState), nextState);
-        } else {
-            return _handleStartResult(result, state);
+        } else if (compare(t(ok, { pid: null, [spread]: _ }))) {
+            return _handleStartResult(t(ok, undefined, state), state);
+        } else if (compare(t(ok, undefined))) {
+            return _handleStartResult(t(ok, undefined, state), state);
         }
     } else {
-        log(
-            ctx,
-            '_startChild(simple_one_for_one, %o) : doStartChild()',
-            specOrArgs
-        );
+        log(ctx, '_startChild(%o, %o) : doStartChild()', strategy, specOrArgs);
         const result = await _doStartChild(ctx, specOrArgs);
         const compare = matching.caseOf(result);
 
@@ -139,14 +137,14 @@ async function _startChild(ctx, [, specOrArgs], from, state) {
             const [, child] = result;
             const nextChildren = state.children.replaceWhere(
                 ({ id }) => id === specOrArgs.id,
-                result,
+                child,
                 true
             );
             const nextState = {
                 ...state,
                 children: nextChildren,
             };
-            return _handleStartResult(t(ok, result.pid, nextState), state);
+            return _handleStartResult(t(ok, child.pid, nextState), state);
         } else {
             log(ctx, '_startChild(simple_one_for_one, result: %o)', result);
             return _handleStartResult(result, state);
@@ -176,22 +174,11 @@ async function _startChildren(ctx, _info, state) {
     if (compare(Symbols.simple_one_for_one)) {
         return t(noreply, { ...state, children: l() });
     } else {
-        let children = l.nil;
-        for (let spec of childSpecs) {
-            try {
-                const response = await _doStartChild(ctx, spec);
-                const compare = matching.caseOf(response);
-                if (compare(t(ok, _))) {
-                    const [, child] = response;
-                    children = cons(child, children);
-                } else {
-                    children = cons({ ...spec, pid: null }, children);
-                }
-            } catch (err) {
-                children = cons({ ...spec, pid: null }, children);
-            }
-        }
-        children = children.reverse();
+        const [, children] = await doStartChildren(
+            ctx,
+            childSpecs,
+            '_startChildren'
+        );
         return t(noreply, { ...state, children });
     }
 }
@@ -215,7 +202,11 @@ async function _doStartChild(ctx, spec, retries = 0) {
         const [, pid] = response;
         return t(ok, { ...spec, pid });
     } else if (compare(ignore)) {
-        return t(ok, undefined);
+        if (restart === temporary) {
+            return t(ok, undefined);
+        } else {
+            return t(ok, { ...spec, pid: null });
+        }
     } else if (compare(t(error, _))) {
         const [, reason] = response;
 
@@ -231,8 +222,6 @@ async function _doStartChild(ctx, spec, retries = 0) {
                 retries + 1
             );
             return _doStartChild(ctx, spec, retries + 1);
-        } else {
-            return t(ok, { ...spec, pid: null });
         }
     } else {
         throw new OTPError(t('cannot_start', spec.id, response));
@@ -241,15 +230,14 @@ async function _doStartChild(ctx, spec, retries = 0) {
 async function _handleStartResult(result, state) {
     const compare = core.caseOf(result);
     if (compare(t(ok, _, _))) {
-        const [, pid, nextState] = result;
-        return t(reply, t(ok, pid), nextState);
+        const [, response, nextState] = result;
+        return t(reply, t(ok, response), nextState);
     } else if (compare(t(error, normal))) {
         return t(reply, t(error, normal), state);
     } else if (compare(t(error, _))) {
-        const [, reason] = result;
-        return t(stop, reason);
+        return t(reply, result, state);
     } else {
-        return t(stop, t('unrecognized_response', result));
+        return t(stop, t('unrecognized_response', result), state);
     }
 }
 
@@ -630,6 +618,7 @@ const callbacks = gen_server.callbacks((server) => {
     server.onCast(_, _handleCast);
 
     server.onInfo(t(EXIT, Pid.isPid, _, _), _handleEXIT);
+    server.onInfo(t(EXIT, Pid.isPid, _), _handleEXIT);
     server.onInfo(start_children, _startChildren);
     server.onInfo(_, _handleInfo);
 });
