@@ -11,8 +11,18 @@ async function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const { ok, nodedown, normal, error, DOWN, badarg, EXIT, trap_exit } =
-    core.Symbols;
+const {
+    ok,
+    nodedown,
+    normal,
+    error,
+    DOWN,
+    kill,
+    killed,
+    badarg,
+    EXIT,
+    trap_exit,
+} = core.Symbols;
 const { spread, _ } = matching.Symbols;
 const test = Symbol.for('test');
 const test_b = Symbol.for('test_b');
@@ -98,24 +108,23 @@ describe('@otpjs/core.Context', () => {
                     it('captures exit signals', async function () {
                         ctxA.processFlag(trap_exit, true);
                         ctxA.link(ctxB.self());
-                        ctxB.die(OTPError(badarg));
+                        ctxA.exit(ctxB.self(), kill);
 
-                        await expect(ctxA.receive(_)).resolves.toMatchPattern(
-                            t(EXIT, _, _, _)
+                        await expect(ctxA.receive()).resolves.toMatchPattern(
+                            t(EXIT, _, _)
                         );
                     });
                 });
                 describe('when disabled', function () {
                     it('exits after receiving an exit signal', async function () {
                         ctxA.link(ctxB.self());
-                        ctxB.die(OTPError(badarg));
+                        ctxA.exit(ctxB.self(), kill);
 
                         await wait(50);
 
-                        expect(ctxA._processInfo()).toBeUndefined();
-                        await expect(ctxA.death).resolves.toBeInstanceOf(
-                            OTPError
-                        );
+                        expect(ctxB.dead).toBe(true);
+                        expect(ctxA.dead).toBe(true);
+                        await expect(ctxA.death).resolves.toBe(killed);
                     });
                 });
             });

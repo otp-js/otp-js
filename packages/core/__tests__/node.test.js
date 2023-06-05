@@ -7,7 +7,7 @@ function log(ctx, ...args) {
     return ctx.log.extend('core:__tests__')(...args);
 }
 
-async function wait(ms) {
+async function wait(ms = 10) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -51,14 +51,16 @@ describe('@otpjs/core.Node', () => {
                 proc = node.spawn(() => ({}));
                 expect(proc).toBeInstanceOf(core.Pid);
             });
-            it('runs a given function', function () {
+            it('runs a given function', async function () {
                 const runner = jest.fn();
                 node.spawn(runner);
+                await wait();
                 expect(runner).toHaveBeenCalled();
             });
-            it('passes a Context instance', function () {
+            it('passes a Context instance', async function () {
                 const runner = jest.fn();
                 node.spawn(runner);
+                await wait();
                 expect(runner.mock.calls[0][0]).toBeInstanceOf(core.Context);
             });
         });
@@ -68,17 +70,19 @@ describe('@otpjs/core.Node', () => {
                 proc = node.spawnLink(ctx.self(), () => ({}));
                 expect(proc).toBeInstanceOf(core.Pid);
             });
-            it('runs a given function', function () {
+            it('runs a given function', async function () {
                 const ctx = node.makeContext();
                 const runner = jest.fn();
                 node.spawnLink(ctx.self(), runner);
+                await wait();
                 expect(runner).toHaveBeenCalled();
             });
-            it('immediately links the new process with the passed one', function () {
+            it('immediately links the new process with the passed one', async function () {
                 const signal = jest.spyOn(node, 'signal');
                 const ctx = node.makeContext();
                 const runner = jest.fn((ctx) => ctx.receive());
                 const spawned = node.spawnLink(ctx.self(), runner);
+                await wait();
                 expect(runner).toHaveBeenCalled();
                 expect(signal).toHaveBeenCalledTimes(2);
                 expect(node.processInfo(ctx.self())).toMatchPattern({
@@ -97,48 +101,25 @@ describe('@otpjs/core.Node', () => {
                 ]);
             });
         });
-        describe('spawnLink', function () {
-            it('returns a pid', function () {
-                const ctx = node.makeContext();
-                proc = node.spawnLink(ctx.self(), () => ({}));
-                expect(proc).toBeInstanceOf(core.Pid);
-            });
-            it('runs a given function', function () {
-                const ctx = node.makeContext();
-                const runner = jest.fn();
-                node.spawnLink(ctx.self(), runner);
-                expect(runner).toHaveBeenCalled();
-            });
-            it('immediately links the new process with the passed one', function () {
-                const signal = jest.spyOn(node, 'signal');
-                const ctx = node.makeContext();
-                const runner = jest.fn((ctx) => ctx.receive());
-                const spawned = node.spawnLink(ctx.self(), runner);
-                expect(runner).toHaveBeenCalled();
-                expect(signal).toHaveBeenCalledTimes(2);
-                expect(node.processInfo(ctx.self())).toMatchPattern({
-                    links: [spawned],
-                    [spread]: _,
-                });
-            });
-        });
         describe('spawnMonitor', function () {
             it('returns a pid', function () {
                 const ctx = node.makeContext();
                 proc = node.spawnMonitor(ctx.self(), () => ({}));
                 expect(proc).toMatchPattern(t(Pid.isPid, Ref.isRef));
             });
-            it('runs a given function', function () {
+            it('runs a given function', async function () {
                 const ctx = node.makeContext();
                 const runner = jest.fn();
                 node.spawnMonitor(ctx.self(), runner);
+                await wait();
                 expect(runner).toHaveBeenCalled();
             });
-            it('immediately links the new process with the passed one', function () {
+            it('immediately links the new process with the passed one', async function () {
                 const signal = jest.spyOn(node, 'signal');
                 const ctx = node.makeContext();
                 const runner = jest.fn((ctx) => ctx.receive());
                 const [spawned, mref] = node.spawnMonitor(ctx.self(), runner);
+                await wait();
                 expect(runner).toHaveBeenCalled();
                 expect(signal).toHaveBeenCalledTimes(1);
                 expect(node.processInfo(spawned)).toMatchPattern({
@@ -187,7 +168,7 @@ describe('@otpjs/core.Node', () => {
             // noop
         });
 
-        await wait(100);
+        await wait();
 
         expect(node.deliver).toBeInstanceOf(Function);
         expect(() => node.deliver(proc, proc, 1)).not.toThrow();
@@ -206,9 +187,11 @@ describe('@otpjs/core.Node', () => {
         });
         const ctx = node.makeContext();
 
-        expect(await node.whereis(test)).toBe(pid);
-        expect(await ctx.whereis(test)).toBe(pid);
-        expect(await node.whereis(test_b)).toBe(undefined);
+        await wait();
+
+        expect(node.whereis(test)).toBe(pid);
+        expect(ctx.whereis(test)).toBe(pid);
+        expect(node.whereis(test_b)).toBe(undefined);
     });
     it('only allows one process to register a name', async function () {
         const pidA = node.spawn(async (ctx) => {
@@ -244,7 +227,7 @@ describe('@otpjs/core.Node', () => {
                 resolve(result);
             });
 
-            await wait(10);
+            await wait();
 
             expect(node.whereis(test)).toBe(pid);
             expect(() => node.deliver(pid, test, message)).not.toThrow();
@@ -258,12 +241,12 @@ describe('@otpjs/core.Node', () => {
             const message = await ctx.receive();
         });
 
-        await wait(10);
+        await wait();
 
         expect(node.whereis(test)).not.toBeUndefined();
         node.deliver(proc, proc, 'stop');
 
-        await wait(10);
+        await wait();
 
         expect(node.whereis(test)).toBeUndefined();
     });
@@ -596,7 +579,7 @@ describe('@otpjs/core.Node', () => {
                         });
                     });
 
-                    await wait(100);
+                    await wait(1);
 
                     expect(node.nodes()).toMatchPattern(
                         l(node.name, remoteNode)
@@ -605,7 +588,7 @@ describe('@otpjs/core.Node', () => {
                     ctx.send(pid, ok);
 
                     await promise;
-                    await wait(100);
+                    await wait();
 
                     expect(node.processInfo(pid)).toBeUndefined();
                     expect(node.nodes()).toMatchPattern(l(node.name));
@@ -648,6 +631,8 @@ describe('@otpjs/core.Node', () => {
                 expect(message).toBe(1);
                 done(true);
             });
+
+            await wait(10);
             expect(() => node.deliver(pid, procName, 1)).not.toThrow();
             await expect(promise).resolves.toBe(true);
         });
@@ -662,6 +647,7 @@ describe('@otpjs/core.Node', () => {
                 expect(message).toBe(1);
                 done(true);
             });
+            await wait();
             expect(() =>
                 node.deliver(pid, t(procName, node.name), 1)
             ).not.toThrow();
@@ -678,7 +664,7 @@ describe('@otpjs/core.Node', () => {
             procA = node.spawn(async (ctx) => {
                 await ctx.receive();
             });
-            await wait(10);
+            await wait();
             let result = new Promise((resolve) => {
                 procB = node.spawn(async (ctx) => {
                     ref = ctx.monitor(procA);
@@ -686,6 +672,7 @@ describe('@otpjs/core.Node', () => {
                     resolve(await ctx.receive());
                 });
             });
+            await wait();
             await expect(result).resolves.toMatchPattern(
                 t(DOWN, ref, 'process', procA, normal)
             );
@@ -698,7 +685,7 @@ describe('@otpjs/core.Node', () => {
                 const promise = new Promise((resolve, reject) => {
                     node.spawn(async (ctx) => {
                         ctx.monitorNode(nodeName);
-                        resolve(ctx.receive());
+                        resolve(await ctx.receive());
                     });
                 });
 
@@ -734,12 +721,12 @@ describe('@otpjs/core.Node', () => {
                     receive(await ctx.receive());
                 });
 
-                await wait(50);
+                await wait();
 
                 expect(Array.from(node.nodes())).toContain(nodeName);
                 unregister();
 
-                await wait(50);
+                await wait();
 
                 expect(Array.from(node.nodes())).not.toContain(nodeName);
                 expect(received).resolves.toMatchPattern(t(nodedown, nodeName));

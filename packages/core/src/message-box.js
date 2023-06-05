@@ -74,6 +74,8 @@ export class MessageBox extends Array {
             }
         }
 
+        this.#log('pop(predicate: %o, timeout: %o)', predicate, timeout);
+
         return new Promise((innerResolve, innerReject) => {
             const resolve = (result) => {
                 this.#log('pop(resolved: %o)', result);

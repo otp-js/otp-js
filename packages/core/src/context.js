@@ -19,10 +19,17 @@ const {
     trap_exit,
     badarg,
 } = Symbols;
-const { _, spread } = matching.Symbols;
+const { _, spread, skip_matching } = matching.Symbols;
 
 const isExitMessage = matching.match(t(EXIT, _, _), t(EXIT, _, _, _));
 const processFlags = new Set([trap_exit]);
+
+function immediate(fn) {
+    return function (...args) {
+        setImmediate(() => fn(...args));
+        return ok;
+    };
+}
 
 export class Context {
     #pid;
@@ -42,6 +49,10 @@ export class Context {
 
     get log() {
         return this.#logger;
+    }
+
+    get [skip_matching]() {
+        return true;
     }
 
     constructor(parent) {
@@ -117,7 +128,12 @@ export class Context {
     self() {
         return this.#pid;
     }
-    async receive(predicate, timeout) {
+    async receive(predicate, timeout = Infinity) {
+        this.#log(
+            'receive(length: %o, arguments: %o)',
+            arguments.length,
+            arguments
+        );
         if (arguments.length === 0) {
             timeout = Infinity;
             predicate = _;
@@ -180,11 +196,11 @@ export class Context {
     }
     #notifyMonitors(reason) {
         const pid = this.self();
-        if (reason instanceof Error) {
+        if (reason instanceof OTPError) {
             reason = reason.term;
         }
         for (let [ref, monitor] of this.#monitors) {
-            ref = Ref.from(ref);
+            ref = Ref.fromString(ref);
             this.#log('#notifyMonitors(ref: %o, monitor: %o)', ref, monitor);
             this.#node.signal(pid, DOWN, monitor, ref, reason);
         }
@@ -242,22 +258,28 @@ export class Context {
     }
 
     #signal = matching.clauses((route) => {
-        route(relay, spread).to((_relay, _fromPid, message) =>
-            this.#deliver(message)
+        route(relay, spread).to(
+            immediate((_relay, _fromPid, message) => this.#deliver(message))
         );
-        route(link, spread).to((_link, fromPid) => this.#link(fromPid));
-        route(unlink, spread).to((_unlink, fromPid) => this.#unlink(fromPid));
-        route(monitor, spread).to((_monitor, fromPid, ref) =>
-            this.#monitor(ref, fromPid)
+        route(link, spread).to(
+            immediate((_link, fromPid) => this.#link(fromPid))
         );
-        route(demonitor, spread).to((_demonitor, _fromPid, ref) =>
-            this.#demonitor(ref)
+        route(unlink, spread).to(
+            immediate((_unlink, fromPid) => this.#unlink(fromPid))
         );
-        route(EXIT, spread).to((_exit, fromPid, reason) =>
-            this.#exit(fromPid, reason)
+        route(monitor, spread).to(
+            immediate((_monitor, fromPid, ref) => this.#monitor(ref, fromPid))
         );
-        route(DOWN, spread).to((_down, fromPid, ref, reason) =>
-            this.#deliver(t(DOWN, ref, 'process', fromPid, reason))
+        route(demonitor, spread).to(
+            immediate((_demonitor, _fromPid, ref) => this.#demonitor(ref))
+        );
+        route(EXIT, spread).to(
+            immediate((_exit, fromPid, reason) => this.#exit(fromPid, reason))
+        );
+        route(DOWN, spread).to(
+            immediate((_down, fromPid, ref, reason) =>
+                this.#deliver(t(DOWN, ref, 'process', fromPid, reason))
+            )
         );
         return 'context.signal';
     }, 'context.signal');
@@ -271,7 +293,7 @@ export class Context {
     #exit(fromPid, reason) {
         const reasonIs = matching.caseOf(reason);
         this.#log(
-            '_exit(self: %o, dead: %o, fromPid: %o, error: %o)',
+            '_exit(self: %o, dead: %o, fromPid: %o, reason: %o)',
             this.self(),
             this.#dead,
             fromPid,
@@ -291,7 +313,7 @@ export class Context {
                     this.die(reason);
                 }
             } else {
-                const notice = t(EXIT, fromPid, reason.term, reason.stack);
+                const notice = t(EXIT, fromPid, reason);
                 this.#log('_exit(self: %o, notice: %o)', this.self(), notice);
                 this.#deliver(notice);
             }
@@ -312,7 +334,13 @@ export class Context {
 
         return ok;
     }
-    #monitor(ref, watcher) {
+    async #monitor(ref, watcher) {
+        this.#log(
+            '#monitor(ref: %o, watcher: %o, #dead: %o)',
+            ref,
+            watcher,
+            this.#dead
+        );
         if (!this.#dead) {
             this.#log(
                 '_monitor(self: %o, ref: %o, watcher: %o)',
@@ -323,7 +351,14 @@ export class Context {
             this.#monitors.set(ref.toString(), watcher);
             return ok;
         } else {
-            return t(error, 'noproc');
+            const reason = await this.death;
+            this.#log(
+                '#monitor(ref: %o, watcher: %o, reason: %o)',
+                ref,
+                watcher,
+                reason
+            );
+            this.#node.signal(this.#pid, DOWN, watcher, ref, reason);
         }
     }
     #demonitor(ref) {

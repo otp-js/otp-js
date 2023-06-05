@@ -177,7 +177,7 @@ export class Node {
             signal,
             toPid
         );
-        if (toCtx) {
+        if (toCtx && !toCtx.dead) {
             return toCtx.signal(signal, fromPid, ...args);
         } else {
             return t(error, 'noproc');
@@ -324,10 +324,7 @@ export class Node {
             });
             toUnregister.forEach((name) => this.unregister(pid, name));
             return ok;
-        } else if (
-            this.#registrations.has(name) &&
-            this.#registrations.get(name) === pid
-        ) {
+        } else if (this.#registrations.has(name)) {
             this.#registrations.delete(name);
             return ok;
         } else {
@@ -601,11 +598,14 @@ export class Node {
     }
     async doSpawn(ctx, fun) {
         this.#finalizer.register(ctx, ctx.self());
-        try {
-            await fun(ctx);
-            ctx.die(normal);
-        } catch (err) {
-            ctx.die(err.term ?? err.message);
+        setImmediate(go);
+        async function go() {
+            try {
+                await fun(ctx);
+                ctx.die(normal);
+            } catch (err) {
+                ctx.die(err.term ?? err.message);
+            }
         }
     }
 
@@ -616,7 +616,8 @@ export class Node {
             toProc,
             message
         );
-        return this.signal(fromPid, relay, toProc, message);
+        this.signal(fromPid, relay, toProc, message);
+        return ok;
     }
 
     processInfo(pid) {
