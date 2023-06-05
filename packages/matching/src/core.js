@@ -26,6 +26,13 @@ export function compare(pattern, value) {
     const compiled = compile(pattern);
     return compiled(value);
 }
+export function oneOf(...patterns) {
+    const compiled = patterns.map(compile);
+    return compiled.reduceRight(
+        (acc, compare) => (value) => compare(value) || acc(value),
+        (_value) => false
+    );
+}
 
 export function compile(pattern) {
     if (typeof pattern === 'function') {

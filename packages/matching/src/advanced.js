@@ -1,10 +1,10 @@
 import debug from 'debug';
 import { OTPError, Pid, Ref, tuple, list, cons } from '@otpjs/types';
 import * as Symbols from './symbols';
-import { Node } from '@otpjs/core';
 import { compile } from './core';
 
-const { _, spread, case_clause, route_clause } = Symbols;
+const { _, spread, case_clause, route_clause, skip_matching } = Symbols;
+const badarg = Symbol.for('badarg');
 
 const log = debug('otpjs:matching:advanced');
 
@@ -12,8 +12,19 @@ export function buildCase(builder) {
     let handlers = list.nil;
 
     builder((pattern, handler) => {
-        const compiled = compile(pattern);
-        handlers = cons(tuple(compiled, handler), handlers);
+        log('buildCase(pattern: %o, handler: %o)', pattern, handler);
+        if (handler instanceof Function) {
+            const compiled = compile(pattern);
+            handlers = cons(tuple(compiled, handler), handlers);
+        } else {
+            log(
+                'buildCase(pattern: %o, handler: %o, isFunction: %o)',
+                pattern,
+                handler,
+                handler instanceof Function
+            );
+            throw OTPError(badarg);
+        }
     });
     handlers = handlers.reverse();
 
@@ -39,16 +50,16 @@ export function buildCase(builder) {
 export function clauses(builder, name) {
     let handlers = list.nil;
     const route = (...pattern) => {
-        try {
-            const test = compile(pattern);
-            return {
-                to(handler) {
+        const test = compile(pattern);
+        return {
+            to(handler) {
+                if (handler instanceof Function) {
                     handlers = cons(tuple(pattern, test, handler), handlers);
-                },
-            };
-        } catch (err) {
-            log('route(pattern: %o, error: %o)', pattern, err);
-        }
+                } else {
+                    throw OTPError(badarg);
+                }
+            },
+        };
     };
     builder(route);
     name ||= builder.name || 'route';
@@ -56,10 +67,14 @@ export function clauses(builder, name) {
 
     return {
         [name](...args) {
-            let subject = args;
-            if (args[0] instanceof Node.Context) {
-                subject = args.slice(1);
-            }
+            log('clauses(args: %o)', args);
+
+            let subject = args.filter((arg) =>
+                arg ? !arg[skip_matching] : true
+            );
+
+            log('clauses(subject: %o)', args);
+
             for (let [pattern, test, handler] of handlers) {
                 log('clauses(name: %o, pattern: %o)', name, pattern);
                 const result = test(subject);

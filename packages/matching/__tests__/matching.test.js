@@ -1,9 +1,9 @@
 import './extend';
 import { _, spread } from '../src/symbols';
-import { compile } from '../src';
+import { compile, oneOf } from '../src';
 import { t, l, il } from '@otpjs/types';
 
-describe('@otpjs/core/matching/compile', function () {
+describe('@otpjs/matching/core/compile', function () {
     it('understands _ to match everything', function () {
         let compiled = compile(_);
         expect(compiled(1)).toBe(true);
@@ -155,5 +155,20 @@ describe('@otpjs/core/matching/compile', function () {
         });
     });
 });
+describe('@otpjs/matching/core/oneOf', function () {
+    it('matches any supplied pattern', function () {
+        const patternA = Number.isInteger;
+        const patternB = Array.isArray;
+        expect(oneOf).toBeInstanceOf(Function);
+        expect(function () {
+            oneOf(patternA, patternB);
+        }).not.toThrow();
+        expect(oneOf(patternA, patternB)).toBeInstanceOf(Function);
 
-describe('@otpjs/core/matching/match', function () {});
+        const match = oneOf(patternA, patternB);
+        expect(match(1)).toBe(true);
+        expect(match([])).toBe(true);
+        expect(match({})).toBe(false);
+        expect(match('1')).toBe(false);
+    });
+});
