@@ -1,8 +1,8 @@
 'use strict';
 
-require('../../../packages/test_utils');
+require('@otpjs/test_utils');
 
-const { Node, Symbols } = require('@otpjs/core');
+const { Node, Symbols, shutdown } = require('@otpjs/core');
 const { Pid, Ref, l, t } = require('@otpjs/types');
 const serializerJson = require('../src/');
 
@@ -18,7 +18,7 @@ describe('@otpjs/serializer-json', () => {
     });
 
     afterEach(function () {
-        ctx.exit();
+        ctx.exit(ctx.self(), shutdown);
     });
 
     describe('with stringify enabled', function () {

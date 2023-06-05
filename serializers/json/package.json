@@ -33,5 +33,8 @@
         "@babel/runtime": "^7.19.0",
         "@otpjs/matching": "file:../../packages/matching",
         "@otpjs/types": "file:../../packages/types"
+    },
+    "devDependencies": {
+        "jest": "^29.5.0"
     }
 }
