@@ -5,6 +5,7 @@ import debug from 'debug';
 const defaultLogger = debug('otpjs:core:message-box');
 const defaultPredicate = () => true;
 const { ok, already_receiving, timeout } = Symbols;
+const nothing = Symbol();
 
 // [1]
 // index++ is the same as index += 1
@@ -100,6 +101,44 @@ export class MessageBox extends Array {
                 this.#defer(resolve, reject, predicate, timeout);
             } else {
                 this.#defer(resolve, reject, predicate, timeout);
+            }
+        });
+    }
+
+    async popWith(blocks, timeout = Infinity) {
+        if (this.#pending) {
+            throw OTPError(already_receiving);
+        }
+
+        return new Promise(async (innerResolve, innerReject) => {
+            const resolve = (result) => {
+                this.#log('popWith(resolved: %o)', result);
+                innerResolve(result);
+            };
+            const reject = (reason) => {
+                this.#log('popWith(rejected: %o)', reason);
+                innerReject(reason);
+            };
+
+            if (this.length > 0) {
+                let found = false;
+                for (
+                    let index = 0;
+                    found === nothing && index < this.length;
+                    index++
+                ) {
+                    try {
+                        const message = this[index];
+                        found = await blocks(message);
+                        this.#consume(index);
+                    } catch (err) {
+                        continue;
+                    }
+                }
+
+                if (found) {
+                    return resolve;
+                }
             }
         });
     }

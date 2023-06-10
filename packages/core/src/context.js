@@ -169,6 +169,16 @@ export class Context {
 
         return [message, predicate];
     }
+    async receiveBlock(predicateBuilder, timeout = Infinity) {
+        let blocks = l.nil;
+        const addBlock = (pattern) => ({
+            to: (block) => (blocks = cons(t(pattern, block), blocks)),
+        });
+
+        predicateBuilder(addBlock);
+
+        const [, result] = await this.#mb.popWith(blocks, timeout);
+    }
     exit(pid, reason) {
         if (!Pid.isPid(pid)) {
             reason = pid;
