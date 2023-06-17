@@ -1,3 +1,4 @@
+/* eslint-env jest */
 import * as core from '../src';
 import * as matching from '@otpjs/matching';
 import { t } from '@otpjs/types';
@@ -121,7 +122,7 @@ describe('@otpjs/core.MessageBox', function () {
                 it('will not throw given an incompatible message', async function () {
                     const mb = new core.MessageBox();
                     mb.push({ iam: 'not_iterable' });
-                    let promise = mb.pop(() => {
+                    const promise = mb.pop(() => {
                         throw Error('badarg');
                     }, 100);
                     mb.push({ iam: 'not_iterable' });
@@ -144,8 +145,8 @@ describe('@otpjs/core.MessageBox', function () {
                         mb.push('test');
                         mb.push('test2');
                         mb.push('test3');
-                        let request = mb.pop((m) => m === 'test4', 100);
-                        let expectation =
+                        const request = mb.pop((m) => m === 'test4', 100);
+                        const expectation =
                             expect(request).rejects.toThrowTerm(timeout);
                         expect(mb.isReceiving).toBe(true);
                         await expectation;
@@ -155,8 +156,8 @@ describe('@otpjs/core.MessageBox', function () {
                 describe('when there are no available messages', function () {
                     it('times out if no message is received', async function () {
                         const mb = new core.MessageBox();
-                        let request = mb.pop((m) => m === 'test', 100);
-                        let expectation =
+                        const request = mb.pop((m) => m === 'test', 100);
+                        const expectation =
                             expect(request).rejects.toThrowTerm(timeout);
                         expect(mb.isReceiving).toBe(true);
                         await expectation;
@@ -164,8 +165,8 @@ describe('@otpjs/core.MessageBox', function () {
                     });
                     it('does not time out if a matching message is received', async function () {
                         const mb = new core.MessageBox();
-                        let request = mb.pop((m) => m === 'test', 100);
-                        let expectation = expect(
+                        const request = mb.pop((m) => m === 'test', 100);
+                        const expectation = expect(
                             request
                         ).resolves.toMatchPattern(t(ok, 'test'));
                         expect(mb.isReceiving).toBe(true);

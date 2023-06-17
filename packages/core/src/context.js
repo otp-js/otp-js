@@ -1,5 +1,4 @@
-import debug from 'debug';
-import { Pid, OTPError, t, Ref } from '@otpjs/types';
+import { Pid, OTPError, t, l, Ref } from '@otpjs/types';
 import { MessageBox } from './message-box.js';
 import * as matching from '@otpjs/matching';
 import * as Symbols from './symbols';
@@ -17,16 +16,14 @@ const {
     monitor,
     demonitor,
     trap_exit,
-    badarg,
+    badarg
 } = Symbols;
 const { _, spread, skip_matching } = matching.Symbols;
-
-const isExitMessage = matching.match(t(EXIT, _, _), t(EXIT, _, _, _));
 const processFlags = new Set([trap_exit]);
 
 function immediate(fn) {
     return function (...args) {
-        setImmediate(() => fn(...args));
+        setTimeout(() => fn(...args));
         return ok;
     };
 }
@@ -85,21 +82,13 @@ export class Context {
         this.#forwardWithPid('unregister');
 
         this.death = new Promise(
-            (resolve) =>
-                (this.die = (reason) => {
-                    this.#log(
-                        'die(%o) : lastMessage : %o',
-                        reason,
-                        this.#lastMessage
-                    );
-
-                    resolve(reason);
-                })
+            (resolve) => (this.die = (reason) => resolve(reason))
         );
         this.#dead = false;
 
         this.death.then((reason) => this.destroy(reason));
     }
+
     processFlag(flag, value) {
         this.#log('processFlag(flag: %o)', flag);
         if (processFlags.has(flag)) {
@@ -112,6 +101,7 @@ export class Context {
             throw OTPError(t('unknown_flag', flag));
         }
     }
+
     destroy(reason) {
         this.#log('destroy(self: %o, reason: %o)', this.self(), reason);
         this.#dead = true;
@@ -125,9 +115,11 @@ export class Context {
 
         inbox.clear(reason);
     }
+
     self() {
         return this.#pid;
     }
+
     async receive(predicate, timeout = Infinity) {
         this.#log(
             'receive(length: %o, arguments: %o)',
@@ -153,32 +145,35 @@ export class Context {
 
         return message;
     }
-    async receiveWithPredicate(...predicates) {
-        let timeout = Infinity;
 
-        if (typeof predicates[predicates.length - 1] === 'number') {
-            timeout = predicates.pop();
-        }
+    // async receiveWithPredicate(...predicates) {
+    //    let timeout = Infinity;
 
-        predicates = predicates.map(matching.compile);
+    //    if (typeof predicates[predicates.length - 1] === 'number') {
+    //        timeout = predicates.pop();
+    //    }
 
-        const [, message, predicate] = await this.#mb.pop(
-            ...predicates,
-            timeout
-        );
+    //    predicates = predicates.map(matching.compile);
 
-        return [message, predicate];
-    }
-    async receiveBlock(predicateBuilder, timeout = Infinity) {
-        let blocks = l.nil;
-        const addBlock = (pattern) => ({
-            to: (block) => (blocks = cons(t(pattern, block), blocks)),
-        });
+    //    const [, message, predicate] = await this.#mb.pop(
+    //        ...predicates,
+    //        timeout
+    //    );
 
-        predicateBuilder(addBlock);
+    //    return [message, predicate];
+    // }
 
-        const [, result] = await this.#mb.popWith(blocks, timeout);
-    }
+    // async receiveBlock(predicateBuilder, timeout = Infinity) {
+    //    let blocks = l.nil;
+    //    const addBlock = (pattern) => ({
+    //        to: (block) => (blocks = cons(t(pattern, block), blocks))
+    //    });
+
+    //    predicateBuilder(addBlock);
+
+    //    const [, result] = await this.#mb.popWith(blocks, timeout);
+    // }
+
     exit(pid, reason) {
         if (!Pid.isPid(pid)) {
             reason = pid;
@@ -186,24 +181,26 @@ export class Context {
         }
         return this.#node.exit(this.#pid, pid, reason);
     }
+
     get dead() {
         return this.#dead;
     }
+
     get #status() {
-        if (this.#dead) {
-            return 'exiting';
-        } else if (this.#mb.isReceiving) {
+        if (this.#mb.isReceiving) {
             return 'waiting';
         } else {
             return 'running';
         }
     }
+
     #notifyLinks(reason) {
         const pid = this.self();
-        for (let link of this.#links) {
+        for (const link of this.#links) {
             this.#node.signal(pid, EXIT, link, reason);
         }
     }
+
     #notifyMonitors(reason) {
         const pid = this.self();
         if (reason instanceof OTPError) {
@@ -215,6 +212,7 @@ export class Context {
             this.#node.signal(pid, DOWN, monitor, ref, reason);
         }
     }
+
     _processInfo() {
         if (this.#dead) {
             return undefined;
@@ -224,16 +222,17 @@ export class Context {
                 links: Array.from(this.#links),
                 messageQueueLength: this.#mb.length,
                 messages: Array.from(this.#mb),
-                monitors: Array.from(this.#monitors.values()),
+                monitors: Array.from(this.#monitors.values())
             };
         }
     }
+
     drain(reason) {
-        if (this.#mb) {
-            this.#mb.clear(reason);
-        }
+        this.#mb.clear(reason);
     }
+
     #forward(operation, name = operation) {
+        this.#log('#forward(operation: %o, name: %o)', operation, name);
         this[name] = (...args) => {
             try {
                 return this.#node[operation](...args);
@@ -243,6 +242,7 @@ export class Context {
             }
         };
     }
+
     #forwardWithPid(operation, name = operation) {
         this[name] = (...args) => {
             try {
@@ -261,6 +261,7 @@ export class Context {
 
     signal(...args) {
         try {
+            this.#log('signal(...%o)', args);
             return this.#signal(...args);
         } catch (err) {
             return t(error, err);
@@ -295,12 +296,16 @@ export class Context {
     }, 'context.signal');
 
     #link(other) {
+        this.#log('#link(other: %o)', other);
         this.#links.add(other);
     }
+
     #unlink(other) {
         if (!this.#dead) this.#links.delete(other);
     }
+
     #exit(fromPid, reason) {
+        this.#log('#exit(fromPid: %o, reason: %o)', fromPid, reason);
         const reasonIs = matching.caseOf(reason);
         this.#log(
             '_exit(self: %o, dead: %o, fromPid: %o, reason: %o)',
@@ -329,58 +334,30 @@ export class Context {
             }
         }
     }
+
     #deliver(message) {
         this.#log('_deliver() : message : %o', message);
-        if (!this.#dead) {
-            try {
-                this.#mb.push(message);
-                this.#log('_deliver(mb: %o)', this.#mb);
-            } catch (err) {
-                this.#log('_deliver(error: %o) : undeliverable', err);
-            }
-        } else {
-            this.#log('_deliver() : DEAD');
-        }
-
+        this.#mb.push(message);
         return ok;
     }
+
     async #monitor(ref, watcher) {
         this.#log(
-            '#monitor(ref: %o, watcher: %o, #dead: %o)',
+            '_monitor(self: %o, ref: %o, watcher: %o)',
+            this.self(),
             ref,
-            watcher,
-            this.#dead
+            watcher
         );
-        if (!this.#dead) {
-            this.#log(
-                '_monitor(self: %o, ref: %o, watcher: %o)',
-                this.self(),
-                ref,
-                watcher
-            );
-            this.#monitors.set(ref.toString(), watcher);
-            return ok;
-        } else {
-            const reason = await this.death;
-            this.#log(
-                '#monitor(ref: %o, watcher: %o, reason: %o)',
-                ref,
-                watcher,
-                reason
-            );
-            this.#node.signal(this.#pid, DOWN, watcher, ref, reason);
-        }
+        this.#monitors.set(ref.toString(), watcher);
+        return ok;
     }
+
     #demonitor(ref) {
         this.#monitors.delete(ref.toString());
     }
 
-    get log() {
-        return this.#log;
-    }
-
     set log(logger) {
-        this.#log = logger;
+        this.#logger = logger;
     }
 
     logger(...segments) {

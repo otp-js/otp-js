@@ -20,7 +20,7 @@ const {
     permanent,
     relay,
     temporary,
-    unlink,
+    unlink
 } = Symbols;
 const { _, spread } = matching.Symbols;
 
@@ -60,6 +60,7 @@ export class Node {
     #processes;
     #processesCount;
     #refCount;
+    #registrar;
     #registrations;
     #router;
     #routerCount;
@@ -69,7 +70,9 @@ export class Node {
     #system;
     #systemContext;
 
-    constructor(id = Symbol.for(`${getNodeId()}@${getNodeHost()}`)) {
+    constructor(
+        id = Symbol.for(`${getNodeId()}@${getNodeHost()}`)
+    ) {
         this.#id = id;
         this.#living = new Set();
         this.#log = log.extend(this.name.toString());
@@ -83,14 +86,15 @@ export class Node {
         this.#processesCount = 0;
         this.#monitors = new Map();
 
-        this.#system = this.spawn((ctx) => this.system(ctx));
+        this.#systemContext = this.makeContext();
+        this.#system = this.#systemContext.self();
 
         this.#router = {
             id: 0,
             pid: this.#system,
             name: this.name,
             source: null,
-            score: 0,
+            score: 0
         };
         this.#routers = new Map([[this.name, this.#router]]);
         this.#routersById = new Map([[0, this.#router]]);
@@ -100,12 +104,15 @@ export class Node {
         this.#refCount = 0;
         this.#registrations = new Map();
     }
+
     get name() {
         return this.#id;
     }
+
     get systemPid() {
         return this.#system;
     }
+
     node(pid) {
         if (pid) {
             const router = this.#routersById.get(pid.node);
@@ -114,6 +121,7 @@ export class Node {
             return this.name;
         }
     }
+
     nodes() {
         return Array.from(this.#routers.values())
             .reduce((acc, router) => {
@@ -126,6 +134,7 @@ export class Node {
             }, l.nil)
             .reverse();
     }
+
     exit(fromPid, toPid, reason) {
         this.signal(fromPid, EXIT, toPid, reason);
     }
@@ -183,6 +192,7 @@ export class Node {
             return t(error, 'noproc');
         }
     }
+
     #signalLocalName(fromPid, signal, toProc, ...args) {
         const toPid = this.whereis(toProc);
         if (toPid) {
@@ -196,7 +206,7 @@ export class Node {
         const nodeId = toPid.node;
         const router = this.#routersById.get(nodeId);
 
-        if (router) {
+        if (router && router.pid) {
             this.signal(
                 fromPid,
                 relay,
@@ -208,6 +218,7 @@ export class Node {
             return t(error, 'noconnection');
         }
     }
+
     #signalRemoteName(fromPid, signal, nameNodePair, ...args) {
         const [toProc, toNode] = nameNodePair;
 
@@ -234,6 +245,7 @@ export class Node {
         this.signal(fromPid, link, toPid);
         this.signal(toPid, link, fromPid);
     }
+
     unlink(fromPid, toPid) {
         this.signal(fromPid, unlink, toPid);
         this.signal(toPid, unlink, fromPid);
@@ -270,15 +282,6 @@ export class Node {
         }
     }
 
-    async system(ctx) {
-        this.#systemContext = ctx;
-        let running = true;
-        while (running) {
-            const message = await ctx.receive();
-            this.#log('system(message: %o)', message);
-        }
-    }
-
     register(pid, name) {
         if (!isAtom(name)) {
             throw OTPError(badarg);
@@ -287,6 +290,7 @@ export class Node {
         const ref = this.#processes.get(pid.process);
         if (ref) {
             const proc = ref.deref();
+            /* istanbul ignore else */
             if (proc) {
                 if (this.#registrations.has(name)) {
                     this.#log(
@@ -306,6 +310,7 @@ export class Node {
                     return ok;
                 }
             } else {
+                /* Only occurs as a result of garbage collection; treat as a dead process */
                 this.#log('register(%o, %o) : proc === undefined', pid, name);
                 throw new OTPError(badarg);
             }
@@ -314,6 +319,7 @@ export class Node {
             throw new OTPError(badarg);
         }
     }
+
     unregister(pid, name = undefined) {
         if (name === undefined) {
             const toUnregister = [];
@@ -331,6 +337,7 @@ export class Node {
             return ok;
         }
     }
+
     whereis(name) {
         if (this.#registrations.has(name)) {
             return this.#registrations.get(name);
@@ -340,6 +347,7 @@ export class Node {
     }
 
     updatePeers(source, score, name, type, pid, operation) {
+        log('updatePeers(name: %o, pid: %o, #bridges: %o)', name, pid, this.#bridges);
         for (let [bridge, names] of this.#bridges) {
             bridge = Pid.fromString(bridge);
             const message = operation(source, score, name, type, pid);
@@ -350,7 +358,7 @@ export class Node {
                 message
             );
             this.deliver(this.systemPid, bridge, message);
-            for (let name of names) {
+            for (const name of names) {
                 const message = operation(source, score, name, type, bridge);
                 this.#log(
                     'updatePeers(bridge: %o, names: %o, message: %o)',
@@ -362,23 +370,28 @@ export class Node {
             }
         }
     }
+
     saveBridge(name, pid) {
-        let existing = this.#bridges.has(pid.toString())
+        const existing = this.#bridges.has(pid.toString())
             ? this.#bridges.get(pid.toString())
             : [];
-        let index = existing.indexOf(name);
+        const index = existing.indexOf(name);
+
+        this.#log('saveBridge(name: %o, pid: %o, index: %o)', name, pid, index);
 
         if (index < 0) {
             this.#bridges.set(pid.toString(), [...existing, name]);
         }
     }
+
     registerRouter(source, score, name, pid, options = {}) {
         this.#log(
-            'registerRouter(source: %o, score: %o, name: %o, pid: %o)',
+            'registerRouter(source: %o, score: %o, name: %o, pid: %o, options: %o)',
             source,
             score,
             name,
-            pid
+            pid,
+            options
         );
         if (this.#routers.has(name)) {
             const router = this.#routers.get(name);
@@ -393,7 +406,7 @@ export class Node {
             );
             if (
                 (oldPid === null && pid !== null) ||
-                (Pid.compare(pid, oldPid) != 0 && // Make sure it's not an echo of the current router
+                (Pid.compare(pid, oldPid) !== 0 && // Make sure it's not an echo of the current router
                     (score < router.score || // Ensure it provides better connectivity
                         oldPid === null)) // ...unless the last router died
             ) {
@@ -403,7 +416,7 @@ export class Node {
                     id,
                     name,
                     score,
-                    type: options.type ?? temporary,
+                    type: options.type ?? temporary
                 };
                 this.#routers.set(name, nextRouter);
                 this.#routersById.set(id, nextRouter);
@@ -430,7 +443,7 @@ export class Node {
                 name,
                 source,
                 score,
-                type: options.type ?? temporary,
+                type: options.type ?? temporary
             };
 
             this.#routers.set(name, router);
@@ -458,6 +471,7 @@ export class Node {
             return t(discover, source, score, name, type, pid);
         }
     }
+
     unregisterRouter(pid) {
         this.#log(
             'unregisterRouter(pid: %o, routers: %o)',
@@ -465,32 +479,31 @@ export class Node {
             Array.from(this.#routersByPid.keys())
         );
 
-        if (this.#bridges.has(pid.toString())) {
+        if (this.#bridges.has(pid?.toString())) {
             const names = this.#bridges.get(pid.toString());
             this.#bridges.delete(pid.toString());
 
-            for (let name of names) {
+            for (const name of names) {
                 this.#log(
-                    'unregisterRouter(pid: %o, bridged: %o, router: %o)',
+                    'unregisterRouter.bridged(pid: %o, bridged: %o, router: %o)',
                     pid,
                     name,
                     this.#routers.get(name)
                 );
                 if (this.#routers.has(name)) {
-                    const { pid } = this.#routers.get(name);
-                    this.unregisterRouter(pid);
+                    this.#routers.delete(name);
                 }
             }
         }
 
-        if (this.#routersByPid.has(pid.toString())) {
+        if (this.#routersByPid.has(pid?.toString())) {
             const router = this.#routersByPid.get(pid.toString());
             const { id, name, type } = router;
 
-            this.#log('unregisterRouter(pid: %o, router: %o)', pid, router);
+            this.#log('unregisterRouter.byPid(pid: %o, router: %o)', pid, router);
 
             const monitors = this.#monitors.get(name) ?? [];
-            for (let monitor of monitors) {
+            for (const monitor of monitors) {
                 this.deliver(this.system, monitor, t(nodedown, name));
             }
             this.#monitors.delete(name);
@@ -504,9 +517,9 @@ export class Node {
             }
             this.#routersByPid.delete(pid.toString());
 
-            for (let router of this.#routers.values()) {
+            for (const router of this.#routers.values()) {
                 this.#log(
-                    'unregisterRouter(router.source: %o, name: %o)',
+                    'unregisterRouter.byPid.router(router.source: %o, name: %o)',
                     router.source,
                     name
                 );
@@ -531,6 +544,7 @@ export class Node {
             return t(lost, pid);
         }
     }
+
     getRouterName(id) {
         this.#log('getRouterName(id: %o)', id);
         const router = this.#routersById.get(id);
@@ -541,6 +555,7 @@ export class Node {
             throw new OTPError(t('unrecognized_router_id', id));
         }
     }
+
     getRouterId(name) {
         const router = this.#routers.get(name);
 
@@ -548,7 +563,7 @@ export class Node {
             return router.id;
         } else {
             this.registerRouter(this.name, Infinity, name, null, {
-                type: temporary,
+                type: temporary
             });
             return this.getRouterId(name);
         }
@@ -557,6 +572,7 @@ export class Node {
     ref() {
         return Ref.for(Ref.LOCAL, this.#refCount++, 0, 1);
     }
+
     pid() {
         return Pid.of(Pid.LOCAL, this.#processesCount++, 0, 1);
     }
@@ -570,6 +586,7 @@ export class Node {
         this.#log('makeContext(pid: %o)', ctx.self());
         return ctx;
     }
+
     spawn(fun) {
         const ctx = this.makeContext();
         const pid = ctx.self();
@@ -578,6 +595,7 @@ export class Node {
 
         return pid;
     }
+
     spawnLink(linked, fun) {
         const ctx = this.makeContext();
         const pid = ctx.self();
@@ -587,6 +605,7 @@ export class Node {
 
         return pid;
     }
+
     spawnMonitor(monitoring, fun) {
         const ctx = this.makeContext();
         const pid = ctx.self();
@@ -596,9 +615,10 @@ export class Node {
 
         return t(pid, mref);
     }
+
     async doSpawn(ctx, fun) {
         this.#finalizer.register(ctx, ctx.self());
-        setImmediate(go);
+        setTimeout(go);
         async function go() {
             try {
                 await fun(ctx);
@@ -627,6 +647,8 @@ export class Node {
             if (ctx) {
                 return ctx._processInfo();
             } else {
+                /* istanbul ignore next */
+                /* Tough to test this, as it only comes up as a result of garbage collection */
                 return undefined;
             }
         } else {

@@ -4,8 +4,8 @@ import debug from 'debug';
 
 const defaultLogger = debug('otpjs:core:message-box');
 const defaultPredicate = () => true;
-const { ok, already_receiving, timeout } = Symbols;
-const nothing = Symbol();
+const { ok, already_receiving } = Symbols;
+const nothing = Symbol('nothing');
 
 // [1]
 // index++ is the same as index += 1
@@ -26,7 +26,7 @@ export class MessageBox extends Array {
     }
 
     get isReceiving() {
-        return this.#pending ? true : false;
+        return !!this.#pending;
     }
 
     clear(reason) {
@@ -38,6 +38,7 @@ export class MessageBox extends Array {
             this.#pending = null;
         }
     }
+
     push(message) {
         this.#log('push(message: %o)', message);
         if (this.#pending) {
@@ -58,6 +59,7 @@ export class MessageBox extends Array {
             super.push(message);
         }
     }
+
     async pop(predicate, timeout) {
         if (this.#pending) {
             throw OTPError(already_receiving);
@@ -77,85 +79,85 @@ export class MessageBox extends Array {
 
         this.#log('pop(predicate: %o, timeout: %o)', predicate, timeout);
 
-        return new Promise((innerResolve, innerReject) => {
-            const resolve = (result) => {
+        return new Promise((resolve, reject) => {
+            const innerResolve = (result) => {
                 this.#log('pop(resolved: %o)', result);
-                innerResolve(result);
+                resolve(result);
             };
-            const reject = (reason) => {
+            const innerReject = (reason) => {
                 this.#log('pop(rejected: %o)', reason);
-                innerReject(reason);
+                reject(reason);
             };
             if (this.length > 0) {
                 for (let index = 0; index < this.length; index++) {
                     try {
                         const message = this[index];
                         if (predicate(message)) {
-                            return resolve(t(ok, this.#consume(index)));
+                            return innerResolve(t(ok, this.#consume(index)));
                         }
                     } catch (err) {
                         continue;
                     }
                 }
 
-                this.#defer(resolve, reject, predicate, timeout);
+                this.#defer(innerResolve, innerReject, predicate, timeout);
             } else {
-                this.#defer(resolve, reject, predicate, timeout);
+                this.#defer(innerResolve, innerReject, predicate, timeout);
             }
         });
     }
 
-    async popWith(blocks, timeout = Infinity) {
-        if (this.#pending) {
-            throw OTPError(already_receiving);
-        }
-
-        return new Promise(async (innerResolve, innerReject) => {
-            const resolve = (result) => {
-                this.#log('popWith(resolved: %o)', result);
-                innerResolve(result);
-            };
-            const reject = (reason) => {
-                this.#log('popWith(rejected: %o)', reason);
-                innerReject(reason);
-            };
-
-            if (this.length > 0) {
-                let found = false;
-                for (
-                    let index = 0;
-                    found === nothing && index < this.length;
-                    index++
-                ) {
-                    try {
-                        const message = this[index];
-                        found = await blocks(message);
-                        this.#consume(index);
-                    } catch (err) {
-                        continue;
-                    }
-                }
-
-                if (found) {
-                    return resolve;
-                }
-            }
-        });
-    }
+        //    async popWith(blocks, timeout = Infinity) {
+        //        if (this.#pending) {
+        //            throw OTPError(already_receiving);
+        //        }
+        //
+        //        return new Promise(async (innerResolve, innerReject) => {
+        //            const resolve = (result) => {
+        //                this.#log('popWith(resolved: %o)', result);
+        //                innerResolve(result);
+        //            };
+        //            const reject = (reason) => {
+        //                this.#log('popWith(rejected: %o)', reason);
+        //                innerReject(reason);
+        //            };
+        //
+        //            if (this.length > 0) {
+        //                let found = false;
+        //                for (
+        //                    let index = 0;
+        //                    found === nothing && index < this.length;
+        //                    index++
+        //                ) {
+        //                    try {
+        //                        const message = this[index];
+        //                        found = await blocks(message);
+        //                        this.#consume(index);
+        //                    } catch (err) {
+        //                        continue;
+        //                    }
+        //                }
+        //
+        //                if (found) {
+        //                    return resolve;
+        //                }
+        //            }
+        //        });
+        //    }
 
     #defer(resolve, reject, predicate, timeout) {
         let timer = null;
         let record = null;
 
         if (timeout !== Infinity) {
-            let originalResolve = resolve;
+            const originalResolve = resolve;
             resolve = (...args) => {
                 this.#pending = null;
                 clearTimeout(timer);
                 originalResolve(...args);
             };
 
-            let originalReject = reject;
+            const originalReject = reject;
             reject = (...args) => {
                 this.#pending = null;
                 clearTimeout(timer);
@@ -173,6 +175,7 @@ export class MessageBox extends Array {
 
         this.#pending = record;
     }
+
     #consume(index) {
         const [message] = this.splice(index, 1);
         return message;

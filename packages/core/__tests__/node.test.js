@@ -1,5 +1,6 @@
+/* eslint-env jest */
 import * as core from '../src';
-import { t, l, Pid, Ref } from '@otpjs/types';
+import { t, l, Pid, Ref, OTPError } from '@otpjs/types';
 import * as matching from '@otpjs/matching';
 import '@otpjs/test_utils';
 
@@ -13,6 +14,7 @@ async function wait(ms = 10) {
 
 const {
     ok,
+    discover,
     nodedown,
     normal,
     permanent,
@@ -22,9 +24,10 @@ const {
     killed,
     badarg,
     link,
+    lost,
     EXIT,
     relay,
-    trap_exit,
+    trap_exit
 } = core.Symbols;
 const { spread, _ } = matching.Symbols;
 const test = Symbol.for('test');
@@ -63,6 +66,21 @@ describe('@otpjs/core.Node', () => {
                 await wait();
                 expect(runner.mock.calls[0][0]).toBeInstanceOf(core.Context);
             });
+
+            describe('when the spawned process throws', function () {
+                it('dies with the error term as the reason', async function () {
+                    let ctx;
+                    const runner = jest.fn((proc) => {
+                        ctx = proc;
+                        throw new OTPError(t(error, 'test error'));
+                    });
+                    node.spawn(runner);
+                    await wait();
+
+                    expect(ctx).toBeInstanceOf(core.Context);
+                    await expect(ctx.death).resolves.toMatchPattern(t(error, 'test error'));
+                });
+            });
         });
         describe('spawnLink', function () {
             it('returns a pid', function () {
@@ -87,17 +105,17 @@ describe('@otpjs/core.Node', () => {
                 expect(signal).toHaveBeenCalledTimes(2);
                 expect(node.processInfo(ctx.self())).toMatchPattern({
                     links: [spawned],
-                    [spread]: _,
+                    [spread]: _
                 });
                 expect(signal.mock.calls[0]).toMatchPattern([
                     Pid.isPid,
                     link,
-                    Pid.isPid,
+                    Pid.isPid
                 ]);
                 expect(signal.mock.calls[1]).toMatchPattern([
                     Pid.isPid,
                     link,
-                    Pid.isPid,
+                    Pid.isPid
                 ]);
             });
         });
@@ -124,7 +142,7 @@ describe('@otpjs/core.Node', () => {
                 expect(signal).toHaveBeenCalledTimes(1);
                 expect(node.processInfo(spawned)).toMatchPattern({
                     monitors: [ctx.self()],
-                    [spread]: _,
+                    [spread]: _
                 });
             });
         });
@@ -152,15 +170,103 @@ describe('@otpjs/core.Node', () => {
                 node.exit(ctxA.self(), ctxB.self(), normal);
             });
         });
+        describe('getRouterName', function () {
+            describe('given a registered router id', function () {
+                let routerCtx;
+                let routerName;
+                let routerId;
+
+                beforeEach(function () {
+                    routerCtx = node.makeContext();
+                    routerName = Symbol.for('test@local.node');
+
+                    routerId = node.registerRouter(node.name, 1, routerName, routerCtx.self());
+                });
+
+                it('returns the router name', function () {
+                    expect(node.getRouterName(0)).toBe(node.name);
+                    expect(node.getRouterName(routerId)).toBe(routerName);
+                });
+            });
+            describe('given a non-registered router id', function () {
+                let routerId;
+
+                beforeEach(function () {
+                    routerId = 999;
+                });
+
+                it('throws an error', function () {
+                    expect(function () {
+                        node.getRouterName(routerId);
+                    }).toThrowTerm(t('unrecognized_router_id', routerId));
+                });
+            });
+        });
+        describe('getRouterId', function () {
+            describe('given a registered router name', function () {
+                let routerCtx;
+                let routerName;
+                let routerId;
+
+                beforeEach(function () {
+                    routerCtx = node.makeContext();
+                    routerName = Symbol.for('test@local.node');
+                    routerId = node.registerRouter(node.name, 1, routerName, routerCtx.self());
+                });
+
+                it('returns the router id', function () {
+                    expect(node.getRouterId(node.name)).toBe(0);
+                    expect(node.getRouterId(routerName)).toBe(routerId);
+                });
+            });
+            describe('given a non-registered router name', function () {
+                let routerName;
+
+                beforeEach(function () {
+                    routerName = Symbol.for('test@local.node');
+                });
+
+                it('generates a router id for the given name', function () {
+                    let routerId;
+
+                    expect(function () {
+                        routerId = node.getRouterId(routerName);
+                    }).not.toThrow();
+
+                    expect(routerId).toBeGreaterThan(0);
+                    expect(Number.isFinite(routerId)).toBe(true);
+                });
+            });
+        });
     });
-    it('can look up processes', function () {
-        expect(node).toHaveProperty('processInfo');
-        expect(node.processInfo).toBeInstanceOf(Function);
+    describe('processInfo', function () {
+        describe('given a pid', function () {
+            describe('to a living process', function () {
+                it('returns a process summary', function () {
+                    expect(node).toHaveProperty('processInfo');
+                    expect(node.processInfo).toBeInstanceOf(Function);
 
-        proc = node.spawn(() => ({}));
+                    proc = node.spawn(() => ({}));
 
-        expect(node.processInfo(proc)).toMatchPattern({
-            [spread]: _,
+                    expect(node.processInfo(proc)).toMatchPattern({
+                        [spread]: _
+                    });
+                });
+            });
+            describe('to a dead process', function () {
+                it('returns nothing', async function () {
+                    const fakePid = Pid.of(0, 999, 999, 999);
+                    expect(node.processInfo(fakePid)).toBeUndefined();
+
+                    const ctx = node.makeContext();
+                    const deadPid = ctx.self();
+                    ctx.die(killed);
+
+                    await wait();
+
+                    expect(node.processInfo(deadPid)).toBeUndefined();
+                });
+            });
         });
     });
     it('fails silently when a message is undeliverable', async function () {
@@ -624,7 +730,7 @@ describe('@otpjs/core.Node', () => {
 
         it('can deliver to registered processes', async function () {
             let done;
-            let promise = new Promise((resolve) => (done = resolve));
+            const promise = new Promise((resolve) => (done = resolve));
             const pid = node.spawn(async (ctx) => {
                 await ctx.register(procName);
                 const message = await ctx.receive();
@@ -639,7 +745,7 @@ describe('@otpjs/core.Node', () => {
 
         it('can deliver to name/node pairs', async function () {
             let done;
-            let promise = new Promise((resolve) => (done = resolve));
+            const promise = new Promise((resolve) => (done = resolve));
 
             const pid = node.spawn(async (ctx) => {
                 await ctx.register(procName);
@@ -665,7 +771,7 @@ describe('@otpjs/core.Node', () => {
                 await ctx.receive();
             });
             await wait();
-            let result = new Promise((resolve) => {
+            const result = new Promise((resolve) => {
                 procB = node.spawn(async (ctx) => {
                     ref = ctx.monitor(procA);
                     ctx.send(procA, 'stop');
@@ -721,12 +827,12 @@ describe('@otpjs/core.Node', () => {
                     receive(await ctx.receive());
                 });
 
-                await wait();
+                await wait(50);
 
                 expect(Array.from(node.nodes())).toContain(nodeName);
                 unregister();
 
-                await wait();
+                await wait(50);
 
                 expect(Array.from(node.nodes())).not.toContain(nodeName);
                 expect(received).resolves.toMatchPattern(t(nodedown, nodeName));
@@ -746,7 +852,7 @@ describe('@otpjs/core.Node', () => {
             expect(tryRegister({})).toThrowTerm(badarg);
             expect(tryRegister(null)).toThrowTerm(badarg);
             expect(tryRegister(undefined)).toThrowTerm(badarg);
-            expect(tryRegister(Symbol())).not.toThrow();
+            expect(tryRegister(Symbol('test_argument'))).not.toThrow();
             expect(tryRegister(Symbol.for('test'))).not.toThrow();
         });
         it('only registers living processes', function () {
@@ -806,6 +912,308 @@ describe('@otpjs/core.Node', () => {
                     const secondName = Symbol.for('second_test');
                     expect(node.unregister(ctx.self(), secondName)).toBe(ok);
                 });
+            });
+        });
+    });
+    describe('registerRouter', function () {
+        let routerCtx;
+        let routerName;
+        let routerId;
+
+        beforeEach(function () {
+            routerCtx = node.makeContext();
+            routerName = Symbol.for('test@local.node');
+        });
+
+        describe('when the given name is not registered', function () {
+            it('adds the node name to the nodes list', function () {
+                expect(node.nodes()).not.toContain(routerName);
+                routerId = node.registerRouter(node.name, 1, routerName, routerCtx.self());
+                expect(node.nodes()).toContain(routerName);
+            });
+
+            it('relays messages to processes on the registered node via the router', async function () {
+                routerId = node.registerRouter(node.name, 1, routerName, routerCtx.self());
+
+                const fakePid = Pid.of(routerId, 0, 0, 0);
+                const message = 'test message';
+                node.signal(node.systemPid, relay, fakePid, message);
+
+                await expect(routerCtx.receive()).resolves.toMatchPattern(
+                    t(relay, t(relay, node.systemPid, fakePid, message))
+                );
+            });
+        });
+
+        describe('when the given name is already registered', function () {
+            let routerName;
+            let routerCtxA;
+            let routerCtxB;
+            let routerId;
+
+            beforeEach(function () {
+                routerName = Symbol.for('test@local.node');
+                routerCtxA = node.makeContext();
+                routerCtxB = node.makeContext();
+
+                routerId = node.registerRouter(
+                    node.name,
+                    1,
+                    routerName,
+                    routerCtxA.self(),
+                    { type: permanent }
+                );
+            });
+
+            describe('when the registered router is active', function () {
+                describe('when the new routers score', function () {
+                    describe('is higher or equal', function () {
+                        it('ignores the new router', async function () {
+                            routerId = node.registerRouter(node.name, 1, routerName, routerCtxB.self());
+
+                            const fakePid = Pid.of(routerId, 0, 0, 0);
+                            const message = 'test message';
+                            node.signal(node.systemPid, relay, fakePid, message);
+
+                            await expect(routerCtxA.receive()).resolves.toMatchPattern(
+                                t(relay, t(relay, node.systemPid, fakePid, message))
+                            );
+                        });
+                    });
+                    describe('is lower', function () {
+                        it('replaces the old router', async function () {
+                            routerId = node.registerRouter(node.name, 0, routerName, routerCtxB.self());
+
+                            const fakePid = Pid.of(routerId, 0, 0, 0);
+                            const message = 'test message';
+                            node.signal(node.systemPid, relay, fakePid, message);
+
+                            await expect(routerCtxB.receive()).resolves.toMatchPattern(
+                                t(relay, t(relay, node.systemPid, fakePid, message))
+                            );
+                        });
+
+                        describe('when the router is bridged', function () {
+                            let routerNameB;
+                            let routerCtxC;
+
+                            beforeEach(function () {
+                                routerCtxC = node.makeContext();
+                                routerNameB = Symbol.for('test@b.local.node');
+                                node.registerRouter(
+                                    node.name,
+                                    0,
+                                    routerNameB,
+                                    routerCtxB.self(),
+                                    { type: permanent, bridge: true }
+                                );
+                            });
+                            it('notifies other routers of the new router', async function () {
+                                expect(node.registerRouter(
+                                    node.name,
+                                    0,
+                                    routerName,
+                                    routerCtxC.self(),
+                                    { bridge: true, type: permanent }
+                                )).toBe(routerId);
+                                await expect(routerCtxB.receive()).resolves.toMatchPattern(
+                                    t(discover, node.name, 0, routerName, permanent, routerCtxC.self())
+                                );
+                            });
+                        });
+                    });
+                });
+            });
+
+            describe('when the registered router is inactive', function () {
+                beforeEach(async function () {
+                    node.unregisterRouter(routerCtxA.self());
+                });
+
+                it('replaces the old router', async function () {
+                    routerId = node.registerRouter(node.name, 1, routerName, routerCtxB.self());
+
+                    const fakePid = Pid.of(routerId, 0, 0, 0);
+                    const message = 'test message';
+                    node.signal(node.systemPid, relay, fakePid, message);
+
+                    await expect(routerCtxB.receive()).resolves.toMatchPattern(
+                        t(relay, t(relay, node.systemPid, fakePid, message))
+                    );
+                });
+            });
+        });
+
+        describe('when the router is bridged', function () {
+            let routerCtx;
+            let routerName;
+            let routerId;
+
+            beforeEach(function () {
+                routerName = Symbol.for('test@a.local.node');
+                routerCtx = node.makeContext();
+                routerId = node.registerRouter(
+                    node.name,
+                    1,
+                    routerName,
+                    routerCtx.self(),
+                    { bridge: true, type: permanent }
+                );
+            });
+
+            it('is notified of other node discoveries', async function () {
+                const routerNameB = Symbol.for('test@b.local.node');
+                const routerCtxB = node.makeContext();
+                const routerIdB = node.registerRouter(
+                    node.name,
+                    1,
+                    routerNameB,
+                    routerCtxB.self(),
+                    { bridge: true, type: permanent }
+                );
+
+                expect(routerId).not.toBe(routerIdB);
+                await expect(routerCtx.receive()).resolves.toMatchPattern(
+                    t(discover, node.name, 1, routerNameB, permanent, routerCtxB.self())
+                );
+                await expect(routerCtxB.receive()).resolves.toMatchPattern(
+                    t(discover, node.name, 1, routerName, permanent, routerCtx.self())
+                );
+            });
+        });
+    });
+    describe('unregisterRouter', function () {
+        describe('when given a pid corresponding to a router', function () {
+            let routerName;
+            let routerCtx;
+            let routerId;
+
+            beforeEach(function () {
+                routerName = Symbol.for('test@a.local.node');
+                routerCtx = node.makeContext();
+                routerId = node.registerRouter(
+                    node.name,
+                    1,
+                    routerName,
+                    routerCtx.self(),
+                    { bridge: true, type: permanent }
+                );
+            });
+
+            it('removes the router', async function () {
+                const fakePid = Pid.of(routerId, 0, 0, 0);
+                const message = 'test message';
+
+                node.unregisterRouter(routerCtx.self());
+
+                await wait(0);
+
+                expect(node.signal(node.systemPid, relay, fakePid, message)).toMatchPattern(
+                    t(error, 'noconnection')
+                );
+            });
+            it('removes the router from the nodes list', function () {
+                expect(node.nodes()).toContain(routerName);
+                expect(node.unregisterRouter(routerCtx.self())).toBe(ok);
+                expect(node.nodes()).not.toContain(routerName);
+            });
+            describe('when bridging for another node', function () {
+                let routerCtxB;
+                let routerNameB;
+
+                beforeEach(function () {
+                    routerCtxB = node.makeContext();
+                    routerNameB = Symbol.for('test@b.local.node');
+
+                    node.registerRouter(
+                        routerName,
+                        2,
+                        routerNameB,
+                        routerCtxB.self(),
+                        { bridge: true, type: permanent }
+                    );
+                });
+
+                it('removes the bridged node from the nodes list', function () {
+                    expect(node.nodes()).toContain(routerNameB);
+                    node.unregisterRouter(routerCtx.self());
+                    expect(node.nodes()).not.toContain(routerNameB);
+                });
+
+                it('notifies other routers', async function () {
+                    const routerCtxC = node.makeContext();
+                    const routerNameC = Symbol.for('test@c.local.node');
+
+                    node.registerRouter(
+                        node.name,
+                        1,
+                        routerNameC,
+                        routerCtxC.self(),
+                        { bridge: true, type: permanent }
+                    );
+
+                    log(routerCtxC, 'receiveDiscover(routerCtxC)');
+                    await expect(routerCtxC.receive(
+                        t(
+                            discover,
+                            node.name,
+                            Number.isInteger,
+                            routerNameB,
+                            permanent,
+                            Pid.isPid
+                        )
+                    )).resolves.toMatchPattern(
+                        t(discover, node.name, 1, routerNameB, permanent, routerCtxB.self())
+                    );
+
+                    log(routerCtxC, 'unregisterRouter()');
+                    node.unregisterRouter(routerCtx.self());
+
+                    log(routerCtxC, 'receiveLost(routerCtx)');
+                    await expect(routerCtxC.receive(t(lost, routerCtx.self()))).resolves.toMatchPattern(
+                        t(lost, routerCtx.self())
+                    );
+                    log(routerCtxC, 'receiveLost(routerCtxB)');
+                    await expect(routerCtxC.receive(t(lost, routerCtxB.self()))).resolves.toMatchPattern(
+                        t(lost, routerCtxB.self())
+                    );
+                });
+            });
+            describe('when registered for multiple bridges', function () {
+                it('removes all the nodes from the nodes list', function () {
+                    const routerNameB = Symbol.for('test@b.local.node');
+                    const routerNameC = Symbol.for('test@c.local.node');
+
+                    node.registerRouter(
+                        node.name,
+                        1,
+                        routerNameB,
+                        routerCtx.self(),
+                        { bridge: true, type: permanent }
+                    );
+                    node.registerRouter(
+                        node.name,
+                        1,
+                        routerNameC,
+                        routerCtx.self(),
+                        { bridge: true, type: permanent }
+                    );
+
+                    const nodesBeforeUnregister = node.nodes();
+                    expect(nodesBeforeUnregister).toContain(routerName);
+                    expect(nodesBeforeUnregister).toContain(routerNameB);
+                    expect(nodesBeforeUnregister).toContain(routerNameC);
+
+                    node.unregisterRouter(routerCtx.self());
+
+                    const nodesAfterUnregister = node.nodes();
+                    expect(nodesAfterUnregister).not.toContain(routerName);
+                    expect(nodesAfterUnregister).not.toContain(routerNameB);
+                    expect(nodesAfterUnregister).not.toContain(routerNameC);
+                });
+            });
+            describe('which is bridged', function () {
+                it.todo('notifies other bridge routers');
             });
         });
     });

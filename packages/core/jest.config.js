@@ -2,7 +2,7 @@ module.exports = {
     automock: false,
     testRegex: '(/test/.*|(\\.|/)(test|spec))\\.(jsx?)$',
     transform: {
-        '\\.jsx?$': ['babel-jest', { rootMode: 'upward' }],
+        '\\.jsx?$': ['babel-jest', { rootMode: 'upward' }]
     },
     moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
     testEnvironment: 'node',
@@ -10,8 +10,8 @@ module.exports = {
     projects: [
         {
             displayName: 'node',
-            testEnvironment: 'node',
+            testEnvironment: 'node'
         },
-        { displayName: 'browser', testEnvironment: 'jsdom' },
-    ],
+        { displayName: 'browser', testEnvironment: 'jsdom' }
+    ]
 };
