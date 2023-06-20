@@ -314,6 +314,23 @@ describe('@otpjs/core.Context', () => {
 
                 await expect(receiver).resolves.toBe('infinite');
             });
+            describe('given an error', function () {
+                it('rejects the entire block with the error', async function () {
+                    const throwError = jest.fn(() => {
+                        throw OTPError('test error');
+                    });
+
+                    const composer = (given) => {
+                        given(_).then(throwError);
+                    };
+
+                    const receive = ctxA.receiveBlock(composer);
+
+                    node.deliver(node.systemPid, ctxA.self(), 'a string');
+
+                    await expect(receive).rejects.toThrowTerm('test error');
+                });
+            });
         });
         describe('when interrupted', function () {
             it('rejects the interrupted receive block', async function () {

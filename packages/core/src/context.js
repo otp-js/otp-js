@@ -192,7 +192,7 @@ export class Context {
             }
 
             if (found) {
-                return Promise.resolve(found(message));
+                return forward(message, found);
             } else {
                 return false;
             }
@@ -209,6 +209,17 @@ export class Context {
             } else {
                 throw err;
             }
+        }
+
+        function forward(message, block) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const result = await block(message);
+                    resolve(result);
+                } catch (err) {
+                    reject(err);
+                }
+            });
         }
     }
 

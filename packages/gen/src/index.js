@@ -159,44 +159,37 @@ function doRemoteCall(ctx, pid, message, timeout = DEFAULT_TIMEOUT) {
     log(ctx, 'call(%o) : isNotPid', pid);
     return doForProcess(ctx, pid, fun);
 }
-async function doCall(ctx, pid, message, timeout) {
+async function doCall(ctx, pid, message, timeout = DEFAULT_TIMEOUT) {
     const self = ctx.self();
     const ref = ctx.ref();
 
-    try {
-        const mref = ctx.monitor(pid);
-        const isReply = callReplyPattern(ref);
-        const isDown = downPattern(mref, pid);
+    const mref = ctx.monitor(pid);
+    const isReply = callReplyPattern(ref);
+    const isDown = downPattern(mref, pid);
 
-        ctx.send(pid, t($gen_call, t(self, ref), message));
-        log(ctx, 'doCall(%o, %o) : receive(%o, %o)', pid, ref, isReply, isDown);
-        const ret = await ctx.receive(match.oneOf(isDown, isReply), timeout);
+    ctx.send(pid, t($gen_call, t(self, ref), message));
+    log(ctx, 'doCall(%o, %o) : receive(%o, %o)', pid, ref, isReply, isDown);
 
-        log(ctx, 'doCall(%o, %o) : ret : %o', pid, ref, ret);
-
-        switch (true) {
-            case isReply(ret): {
-                const [ref, response] = ret;
-                ctx.demonitor(mref);
-                log(ctx, 'doCall(%o, %o) : response : %o', pid, ref, response);
-                return response;
-            }
-            case isDown(ret): {
-                const [_DOWN, ref, _type, pid, reason] = ret;
-                log(
-                    ctx,
-                    'doCall(%o, %o) : throw OTPError(%o)',
-                    pid,
-                    ref,
-                    reason
-                );
-                throw new OTPError(reason);
-            }
-        }
-    } catch (err) {
-        log(ctx, 'doCall(%o, %o, %o) : error : %o', pid, ref, timeout, err);
-        throw err;
-    }
+    return ctx.receiveBlock((given, after) => {
+        given(isReply).then(([ref, response]) => {
+            ctx.demonitor(mref);
+            log(ctx, 'doCall(%o, %o) : response : %o', pid, ref, response);
+            return response;
+        });
+        given(isDown).then(([, ref, , pid, reason]) => {
+            log(
+                ctx,
+                'doCall(%o, %o) : throw OTPError(%o)',
+                pid,
+                ref,
+                reason
+            );
+            throw new OTPError(reason);
+        });
+        after(timeout).then(() => {
+            throw OTPError(otp.Symbols.timeout);
+        });
+    });
 }
 
 export const cast = match.clauses(function routeCast(route) {

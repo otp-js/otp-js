@@ -1,3 +1,4 @@
+/* eslint-env jest */
 import '@otpjs/test_utils';
 import * as otp from '@otpjs/core';
 import * as gen from '../src';
@@ -5,13 +6,17 @@ import * as proc_lib from '@otpjs/proc_lib';
 import { Tuple, t, Pid, Ref, OTPError } from '@otpjs/types';
 import crypto from 'crypto';
 
-const { ok, kill, error, normal, badarg, nodedown } = otp.Symbols;
+const { ok, kill, error, normal, badarg, nodedown, timeout } = otp.Symbols;
 const { already_started, link, nolink, monitor, $gen_call, $gen_cast } =
     gen.Symbols;
 
 let node;
 let ctxServer;
 let ctxClient;
+
+function wait(ms = 10) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 beforeEach(function () {
     node = new otp.Node();
@@ -33,7 +38,7 @@ describe('start', function () {
             });
 
             await expect(
-                gen.start(ctxClient, nolink, undefined, init, {})
+                gen.start(ctxClient, nolink, undefined, init)
             ).resolves.toMatchPattern(t(ok, Pid.isPid));
         });
     });
@@ -87,7 +92,7 @@ describe('start', function () {
 
                 const [responseA, responseB] = await Promise.all([
                     startA,
-                    startB,
+                    startB
                 ]);
                 expect(responseA).toMatchPattern(t(ok, Pid.isPid));
                 const [, pid] = responseA;
@@ -118,6 +123,21 @@ describe('start', function () {
                 expect(start).toHaveBeenCalledTimes(1);
                 expect(response).toMatchPattern(t(ok, Pid.isPid));
             });
+            describe('with a timeout', function () {
+                it('rejects if the timeout expires', async function () {
+                    const spawnLimit = 300;
+                    const init = jest.fn((_ctx, _caller) => ok);
+                    await expect(
+                        gen.start(
+                            ctxClient,
+                            nolink,
+                            undefined,
+                            init,
+                            { timeout: spawnLimit }
+                        )
+                    ).rejects.toThrowTerm(timeout);
+                });
+            });
         });
         describe('link', function () {
             let init;
@@ -138,6 +158,21 @@ describe('start', function () {
 
                 expect(startLink).toHaveBeenCalledTimes(1);
                 expect(response).toMatchPattern(t(ok, Pid.isPid));
+            });
+            describe('with a timeout', function () {
+                it('rejects if the timeout expires', async function () {
+                    const spawnLimit = 300;
+                    const init = jest.fn((ctx, _caller) => ctx.receive());
+                    await expect(
+                        gen.start(
+                            ctxClient,
+                            link,
+                            undefined,
+                            init,
+                            { timeout: spawnLimit }
+                        )
+                    ).rejects.toThrowTerm(timeout);
+                });
             });
         });
         describe('unknown', function () {
@@ -167,9 +202,9 @@ describe('start', function () {
 });
 describe('reply', function () {
     it('sends response to pid for the call identified by ref', async function () {
-        let ref = ctxClient.ref();
-        let from = t(ctxClient.self(), ref);
-        let response = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        const ref = ctxClient.ref();
+        const from = t(ctxClient.self(), ref);
+        const response = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         expect(function () {
             gen.reply(from, response);
         }).toThrow();
@@ -220,7 +255,7 @@ describe('call', function () {
         let normalDeathPid;
         let abnormalDeathPid;
 
-        beforeEach(function () {
+        beforeEach(async function () {
             ctx = node.makeContext();
 
             const normalDeathCtx = node.makeContext();
@@ -230,6 +265,8 @@ describe('call', function () {
             const abnormalDeathCtx = node.makeContext();
             abnormalDeathPid = abnormalDeathCtx.self();
             abnormalDeathCtx.die(badarg);
+
+            await wait();
         });
 
         it('throws a OTPError with the down reason', async function () {
@@ -402,6 +439,31 @@ describe('call', function () {
             expect(function () {
                 gen.call(ctx, target, t('command', 0));
             }).toThrowTerm('not_implemented');
+        });
+    });
+    describe('when timed out', function () {
+        let timeout;
+        let ctx;
+        let receiver;
+        let pid;
+
+        beforeEach(function () {
+            timeout = 300;
+            ctx = node.makeContext();
+
+            receiver = node.makeContext();
+            pid = receiver.self();
+        });
+
+        it('throws a timeout error', async function () {
+            await expect(
+                gen.call(
+                    ctx,
+                    pid,
+                    crypto.randomInt(0xffffffff),
+                    timeout
+                )
+            ).rejects.toThrowTerm(otp.Symbols.timeout);
         });
     });
 });
