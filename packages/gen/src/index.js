@@ -38,8 +38,8 @@ export async function start(ctx, linking, name, init_it, options = {}) {
     switch (true) {
         case isUndefined(response):
             return doSpawn(ctx, linking, name, init_it, options);
-        default:
         case isPid(response):
+        default:
             return t(error, t(already_started, response));
     }
 }
