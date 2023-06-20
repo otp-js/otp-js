@@ -1,4 +1,4 @@
-import { Pid, OTPError, t, l, Ref } from '@otpjs/types';
+import { Pid, OTPError, t, l, cons, cdr, car, Ref } from '@otpjs/types';
 import { MessageBox } from './message-box.js';
 import * as matching from '@otpjs/matching';
 import * as Symbols from './symbols';
@@ -53,7 +53,7 @@ export class Context {
         this.#log = this.logger('context');
 
         this.#mb = new MessageBox(this.logger('message-box'));
-        this.#links = new Set();
+        this.#links = l.nil;
         this.#monitors = new Map();
         this.#flags = new Map();
 
@@ -336,17 +336,20 @@ export class Context {
     }, 'context.signal');
 
     #link(other) {
-        this.#log('#link(other: %o)', other);
-        this.#links.add(other);
+        const found = this.#links.find((pid) => Pid.compare(other, pid) === 0);
+        this.#log('#link(other: %o, #links: %o, found: %o)', other, this.#links, found);
+        if (!found) {
+            this.#links = cons(other, this.#links);
+        }
     }
 
     #unlink(other) {
-        if (!this.#dead) this.#links.delete(other);
+        this.#links = this.#links?.deleteWhere((pid) => Pid.compare(other, pid) === 0);
+        this.#log('#unlink(other: %o, #links: %o)', other, this.#links);
     }
 
     #exit(fromPid, reason) {
         this.#log('#exit(fromPid: %o, reason: %o)', fromPid, reason);
-        const reasonIs = matching.caseOf(reason);
         this.#log(
             '_exit(self: %o, dead: %o, fromPid: %o, reason: %o)',
             this.self(),
