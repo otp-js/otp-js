@@ -21,13 +21,6 @@ const {
 const { _, spread, skip_matching } = matching.Symbols;
 const processFlags = new Set([trap_exit]);
 
-function immediate(fn) {
-    return function (...args) {
-        setTimeout(() => fn(...args));
-        return ok;
-    };
-}
-
 export class Context {
     #pid;
     #node;
@@ -305,37 +298,39 @@ export class Context {
     }
 
     signal(...args) {
-        try {
-            this.#log('signal(...%o)', args);
-            return this.#signal(...args);
-        } catch (err) {
-            return t(error, err);
-        }
+        setTimeout(() => {
+            try {
+                this.#log('signal(...%o)', args);
+                return this.#signal(...args);
+            } catch (err) {
+                return t(error, err);
+            }
+        });
+        return ok;
     }
 
     #signal = matching.clauses((route) => {
         route(relay, spread).to(
-            immediate((_relay, _fromPid, message) => this.#deliver(message))
+            (_relay, _fromPid, message) => this.#deliver(message)
         );
         route(link, spread).to(
-            immediate((_link, fromPid) => this.#link(fromPid))
+            (_link, fromPid) => this.#link(fromPid)
         );
         route(unlink, spread).to(
-            immediate((_unlink, fromPid) => this.#unlink(fromPid))
+            (_unlink, fromPid) => this.#unlink(fromPid)
         );
         route(monitor, spread).to(
-            immediate((_monitor, fromPid, ref) => this.#monitor(ref, fromPid))
+            (_monitor, fromPid, ref) => this.#monitor(ref, fromPid)
         );
         route(demonitor, spread).to(
-            immediate((_demonitor, _fromPid, ref) => this.#demonitor(ref))
+            (_demonitor, _fromPid, ref) => this.#demonitor(ref)
         );
         route(EXIT, spread).to(
-            immediate((_exit, fromPid, reason) => this.#exit(fromPid, reason))
+            (_exit, fromPid, reason) => this.#exit(fromPid, reason)
         );
         route(DOWN, spread).to(
-            immediate((_down, fromPid, ref, reason) =>
+            (_down, fromPid, ref, reason) =>
                 this.#deliver(t(DOWN, ref, 'process', fromPid, reason))
-            )
         );
         return 'context.signal';
     }, 'context.signal');
