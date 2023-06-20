@@ -255,13 +255,17 @@ export class Context {
         if (this.#dead) {
             return undefined;
         } else {
-            return {
+            const info = {
                 status: this.#status,
                 links: Array.from(this.#links),
                 messageQueueLength: this.#mb.length,
                 messages: Array.from(this.#mb),
                 monitors: Array.from(this.#monitors.values())
             };
+
+            this.#log('_processInfo(infO: %o)', info);
+
+            return info;
         }
     }
 
@@ -365,6 +369,7 @@ export class Context {
                     this.self(),
                     reason
                 );
+                const reasonIs = matching.caseOf(reason);
                 if (reasonIs(kill)) {
                     this.die(killed);
                 } else {
@@ -380,7 +385,7 @@ export class Context {
 
     #deliver(message) {
         this.#log('_deliver() : message : %o', message);
-        this.#mb.push(message);
+        this.#mb?.push(message);
         return ok;
     }
 

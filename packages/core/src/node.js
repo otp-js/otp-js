@@ -172,6 +172,7 @@ export class Node {
 
     signal(...args) {
         try {
+            this.#log('signal(...%o)', args);
             return this.#signal(...args);
         } catch (err) {
             return t(error, err);
@@ -207,6 +208,7 @@ export class Node {
         const router = this.#routersById.get(nodeId);
 
         if (router && router.pid) {
+            this.#log('#signalRemote(router.pid: %o)', router.pid);
             this.signal(
                 fromPid,
                 relay,
@@ -215,6 +217,7 @@ export class Node {
             );
             return ok;
         } else {
+            this.#log('#signalRemote(noconnection)');
             return t(error, 'noconnection');
         }
     }
@@ -624,7 +627,13 @@ export class Node {
                 await fun(ctx);
                 ctx.die(normal);
             } catch (err) {
-                ctx.die(err.term ?? err.message);
+                if (err instanceof OTPError) {
+                    ctx.die(err.term);
+                } else if (err instanceof Error) {
+                    ctx.die(t(error, err.message));
+                } else {
+                    ctx.die(err);
+                }
             }
         }
     }
