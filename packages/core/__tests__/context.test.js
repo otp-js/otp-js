@@ -164,6 +164,169 @@ describe('@otpjs/core.Context', () => {
             });
         });
     });
+    describe('receiveBlock', function () {
+        it('is a function', function () {
+            expect(ctxA.receiveBlock).toBeInstanceOf(Function);
+        });
+        describe('given a block composer', function () {
+            it('calls the block composer', async function () {
+                expect.assertions(1);
+                const composer = jest.fn();
+                ctxA.receiveBlock(composer);
+                expect(composer).toHaveBeenCalled();
+            });
+            it('passes a block builder', function () {
+                expect.assertions(1);
+                const composer = jest.fn();
+                ctxA.receiveBlock(composer);
+                expect(composer).toHaveBeenCalledWith(
+                    expect.any(Function),
+                    expect.any(Function)
+                );
+            });
+            describe('the builders given helper', function () {
+                describe('given a pattern', function () {
+                    it('returns a then helper', function () {
+                        expect.assertions(1);
+                        const composer = jest.fn(given => {
+                            expect(given(_)).toEqual(expect.objectContaining({
+                                then: expect.any(Function)
+                            }));
+                        });
+                        ctxA.receiveBlock(composer);
+                    });
+                    describe('when the pattern throws', function () {
+                        it('assumes the message does not match', async function () {
+                            expect.assertions(4);
+
+                            const pattern = jest.fn(() => {
+                                throw OTPError('not a message');
+                            });
+                            const doBad = jest.fn(() => 'bad');
+                            const doGood = jest.fn(() => 'good');
+                            const compose = jest.fn(given => {
+                                given(pattern).then(doBad);
+                                given(_).then(doGood);
+                            });
+
+                            node.deliver(node.systemPid, ctxA.self(), 'any message');
+
+                            await expect(ctxA.receiveBlock(compose)).resolves.toBe(
+                                'good'
+                            );
+                            expect(pattern).toHaveBeenCalledWith('any message');
+                            expect(doBad).not.toHaveBeenCalled();
+                            expect(doGood).toHaveBeenCalledWith('any message');
+                        });
+                    });
+                    describe('the then helper', function () {
+                        it('adds the clause to the block', async function () {
+                            expect.assertions(1);
+                            const handler = jest.fn();
+                            const composer = jest.fn(given => {
+                                given(_).then(handler);
+                            });
+                            node.deliver(node.systemPid, ctxA.self(), 'test message');
+                            await ctxA.receiveBlock(composer);
+                            expect(handler).toHaveBeenCalledWith('test message');
+                        });
+                    });
+                });
+            });
+            describe('the builders after helper', function () {
+                describe('given a millisecond duration', function () {
+                    it('returns a then helper', function () {
+                        expect.assertions(1);
+                        const composer = jest.fn((_given, after) => {
+                            expect(after(300)).toEqual(expect.objectContaining({
+                                then: expect.any(Function)
+                            }));
+                        });
+                        ctxA.receiveBlock(composer);
+                    });
+
+                    describe('the then helper', function () {
+                        describe('given a millisecond duration', function () {
+                            it('adds a timeout handler to the block', async function () {
+                                expect.assertions(1);
+                                const handler = jest.fn();
+                                const composer = jest.fn((given, after) => {
+                                    after(300).then(handler);
+                                });
+                                await ctxA.receiveBlock(composer);
+                                expect(handler).toHaveBeenCalled();
+                            });
+                        });
+                    });
+                });
+            });
+        });
+        describe('the resulting block', function () {
+            it('prefers the earliest matching block', async function () {
+                const onFinite = jest.fn(() => 'finite');
+                const onInfinite = jest.fn(() => 'infinite');
+                const otherwise = jest.fn(() => 'other');
+
+                const composer = (given) => {
+                    given(Number.isFinite).then(onFinite);
+                    given(Infinity).then(onInfinite);
+                    given(_).then(otherwise);
+                };
+
+                node.deliver(node.systemPid, ctxA.self(), 'not a number');
+                await expect(ctxA.receiveBlock(composer)).resolves.toBe('other');
+                expect(otherwise).toHaveBeenCalledWith('not a number');
+                expect(onFinite).not.toHaveBeenCalled();
+                expect(onInfinite).not.toHaveBeenCalled();
+
+                jest.clearAllMocks();
+
+                node.deliver(node.systemPid, ctxA.self(), Infinity);
+                await expect(ctxA.receiveBlock(composer)).resolves.toBe('infinite');
+                expect(otherwise).not.toHaveBeenCalled();
+                expect(onFinite).not.toHaveBeenCalled();
+                expect(onInfinite).toHaveBeenCalledWith(Infinity);
+
+                jest.clearAllMocks();
+
+                node.deliver(node.systemPid, ctxA.self(), 500);
+                await expect(ctxA.receiveBlock(composer)).resolves.toBe('finite');
+                expect(otherwise).not.toHaveBeenCalled();
+                expect(onFinite).toHaveBeenCalledWith(500);
+                expect(onInfinite).not.toHaveBeenCalled();
+            });
+            it('ignores messages which do not match any clause of the block', async function () {
+                const onFinite = () => 'finite';
+                const onInfinite = () => 'infinite';
+
+                const composer = (given) => {
+                    given(Number.isFinite).then(onFinite);
+                    given(Infinity).then(onInfinite);
+                };
+
+                const receiver = ctxA.receiveBlock(composer);
+
+                node.deliver(node.systemPid, ctxA.self(), 'a string');
+                await wait();
+
+                node.deliver(node.systemPid, ctxA.self(), Infinity);
+                await wait();
+
+                await expect(receiver).resolves.toBe('infinite');
+            });
+        });
+        describe('when interrupted', function () {
+            it('rejects the interrupted receive block', async function () {
+                const handler = jest.fn();
+                const block = ctxA.receiveBlock((given, _after) => {
+                    given(_).then(handler);
+                });
+
+                ctxA.exit(shutdown);
+                await expect(block).rejects.toMatchPattern(shutdown);
+            });
+        });
+    });
 
     describe('helpers', function () {
         it('points env to node', function () {

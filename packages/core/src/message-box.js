@@ -2,11 +2,11 @@ import * as Symbols from './symbols';
 import { t, OTPError } from '@otpjs/types';
 import debug from 'debug';
 
-const defaultLogger = debug('otpjs:core:message-box');
-const defaultPredicate = () => true;
 const { ok, already_receiving } = Symbols;
 const nothing = Symbol('nothing');
 
+const defaultLogger = debug('otpjs:core:message-box');
+const defaultPredicate = (message) => Promise.resolve(t(ok, message));
 // [1]
 // index++ is the same as index += 1
 export class MessageBox extends Array {
@@ -40,16 +40,18 @@ export class MessageBox extends Array {
     }
 
     push(message) {
-        this.#log('push(message: %o)', message);
         if (this.#pending) {
-            const [resolve, _reject, predicate] = this.#pending;
+            this.#log('push(message: %o, #pending: %o)', message, this.#pending);
+            const [resolve, _reject, evaluator] = this.#pending;
             try {
-                if (predicate(message)) {
+                const result = evaluator(message);
+                this.#log('push(evaluate: %o, message: %o, result: %o)', evaluator, message, result);
+                if (result !== false) {
                     this.#pending = null;
-                    return resolve(t(ok, message));
+                    return resolve(result);
                 }
             } catch (err) {
-                this.#log('push(predicate: %o, error: %o)', predicate, err);
+                this.#log('push(predicate: %o, error: %o)', evaluator, err);
             }
 
             // If we get here, we didn't bail out above, so the message
@@ -60,24 +62,24 @@ export class MessageBox extends Array {
         }
     }
 
-    async pop(predicate, timeout) {
+    async pop(evaluator, timeout) {
         if (this.#pending) {
             throw OTPError(already_receiving);
         }
 
         if (arguments.length === 0) {
-            predicate = defaultPredicate;
+            evaluator = defaultPredicate;
             timeout = Infinity;
         } else if (arguments.length === 1) {
-            if (typeof predicate === 'number') {
-                timeout = predicate;
-                predicate = defaultPredicate;
+            if (typeof evaluator === 'number') {
+                timeout = evaluator;
+                evaluator = defaultPredicate;
             } else {
                 timeout = Infinity;
             }
         }
 
-        this.#log('pop(predicate: %o, timeout: %o)', predicate, timeout);
+        this.#log('pop(evaluate: %o, timeout: %o)', evaluator, timeout);
 
         return new Promise((resolve, reject) => {
             const innerResolve = (result) => {
@@ -92,60 +94,30 @@ export class MessageBox extends Array {
                 for (let index = 0; index < this.length; index++) {
                     try {
                         const message = this[index];
-                        if (predicate(message)) {
-                            return innerResolve(t(ok, this.#consume(index)));
+                        const result = evaluator(message);
+                        this.#log(
+                            'pop(evaluate: %o, message: %o, result: %o)',
+                            evaluator,
+                            message,
+                            result
+                        );
+                        if (result !== false) {
+                            this.#consume(index);
+                            return innerResolve(result);
                         }
                     } catch (err) {
                         continue;
                     }
                 }
 
-                this.#defer(innerResolve, innerReject, predicate, timeout);
+                this.#defer(innerResolve, innerReject, evaluator, timeout);
             } else {
-                this.#defer(innerResolve, innerReject, predicate, timeout);
+                this.#defer(innerResolve, innerReject, evaluator, timeout);
             }
         });
     }
 
-        //    async popWith(blocks, timeout = Infinity) {
-        //        if (this.#pending) {
-        //            throw OTPError(already_receiving);
-        //        }
-        //
-        //        return new Promise(async (innerResolve, innerReject) => {
-        //            const resolve = (result) => {
-        //                this.#log('popWith(resolved: %o)', result);
-        //                innerResolve(result);
-        //            };
-        //            const reject = (reason) => {
-        //                this.#log('popWith(rejected: %o)', reason);
-        //                innerReject(reason);
-        //            };
-        //
-        //            if (this.length > 0) {
-        //                let found = false;
-        //                for (
-        //                    let index = 0;
-        //                    found === nothing && index < this.length;
-        //                    index++
-        //                ) {
-        //                    try {
-        //                        const message = this[index];
-        //                        found = await blocks(message);
-        //                        this.#consume(index);
-        //                    } catch (err) {
-        //                        continue;
-        //                    }
-        //                }
-        //
-        //                if (found) {
-        //                    return resolve;
-        //                }
-        //            }
-        //        });
-        //    }
-
-    #defer(resolve, reject, predicate, timeout) {
+    #defer(resolve, reject, evaluator, timeout) {
         let timer = null;
         let record = null;
 
@@ -153,6 +125,7 @@ export class MessageBox extends Array {
             const originalResolve = resolve;
             resolve = (...args) => {
                 this.#pending = null;
+                this.#log('#defer(timer: %o)', timer);
                 clearTimeout(timer);
                 originalResolve(...args);
             };
@@ -160,18 +133,22 @@ export class MessageBox extends Array {
             const originalReject = reject;
             reject = (...args) => {
                 this.#pending = null;
+                this.#log('#defer(timer: %o)', timer);
                 clearTimeout(timer);
                 originalReject(...args);
             };
 
             timer = setTimeout(() => {
+                this.#log('#defer(timeout)');
                 reject(OTPError(Symbols.timeout));
             }, timeout);
 
-            record = t(resolve, reject, predicate);
+            record = t(resolve, reject, evaluator);
         } else {
-            record = t(resolve, reject, predicate);
+            record = t(resolve, reject, evaluator);
         }
+
+        this.#log('#defer(record: %o)', record);
 
         this.#pending = record;
     }

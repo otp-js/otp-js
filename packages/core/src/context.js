@@ -140,39 +140,84 @@ export class Context {
 
         predicate = matching.compile(predicate);
 
-        const [, message] = await this.#mb.pop(predicate, timeout);
+        const [, message] = await this.#mb.pop(
+            (message) => predicate(message)
+                ? Promise.resolve(t(ok, message))
+                : false,
+            timeout
+        );
         this.#lastMessage = message;
 
         return message;
     }
 
-    // async receiveWithPredicate(...predicates) {
-    //    let timeout = Infinity;
+    async receiveBlock(composer) {
+        let blocks = l.nil;
+        let onTimeout = null;
+        let timeout = Infinity;
 
-    //    if (typeof predicates[predicates.length - 1] === 'number') {
-    //        timeout = predicates.pop();
-    //    }
+        const given = (pattern) => ({
+            then: (block) => (blocks = cons(t(matching.compile(pattern), block), blocks))
+        });
+        const after = (ms) => ({
+            then: (block) => {
+                onTimeout = block;
+                timeout = ms;
+            }
+        });
 
-    //    predicates = predicates.map(matching.compile);
+        composer(given, after);
+        blocks = blocks.reverse();
 
-    //    const [, message, predicate] = await this.#mb.pop(
-    //        ...predicates,
-    //        timeout
-    //    );
+        const evaluate = (message) => {
+            let found = false;
+            let it = blocks;
+            while (!found && l.isList(it) && !l.isEmpty(it)) {
+                const [pattern, block] = car(it);
+                try {
+                    const result = pattern(message);
+                    this.#log(
+                        'evaluate(pattern: %o, message: %o, result: %o)',
+                        pattern,
+                        message,
+                        result
+                    );
+                    if (result) {
+                        found = block;
+                    } else {
+                        it = cdr(it);
+                    }
+                } catch (err) {
+                    it = cdr(it);
+                    this.#log(
+                        'evaluate(pattern: %o, message: %o, error: %o)',
+                        pattern,
+                        message,
+                        error
+                    );
+                }
+            }
 
-    //    return [message, predicate];
-    // }
+            if (found) {
+                return Promise.resolve(found(message));
+            } else {
+                return false;
+            }
+        };
 
-    // async receiveBlock(predicateBuilder, timeout = Infinity) {
-    //    let blocks = l.nil;
-    //    const addBlock = (pattern) => ({
-    //        to: (block) => (blocks = cons(t(pattern, block), blocks))
-    //    });
-
-    //    predicateBuilder(addBlock);
-
-    //    const [, result] = await this.#mb.popWith(blocks, timeout);
-    // }
+        try {
+            const result = await this.#mb.pop(evaluate, timeout);
+            this.#log('receiveBlock(result: %o)', result);
+            return result;
+        } catch (err) {
+            this.#log('receiveBlock(error: %o)', err);
+            if (err.term === Symbols.timeout) {
+                return onTimeout();
+            } else {
+                throw err;
+            }
+        }
+    }
 
     exit(pid, reason) {
         if (!Pid.isPid(pid)) {

@@ -100,14 +100,19 @@ describe('@otpjs/core.MessageBox', function () {
                         mb.push('test2');
                         mb.push('test3');
 
+                        const match = (predicate) =>
+                            (message) => predicate(message)
+                                ? Promise.resolve(t(ok, message))
+                                : false;
+
                         await expect(
-                            mb.pop(matching.compile('test2'), 100)
+                            mb.pop(match(matching.compile('test2')), 100)
                         ).resolves.toMatchPattern(t(ok, 'test2'));
                         await expect(
-                            mb.pop(matching.compile('test3'), 100)
+                            mb.pop(match(matching.compile('test3')), 100)
                         ).resolves.toMatchPattern(t(ok, 'test3'));
                         await expect(
-                            mb.pop(matching.compile('test'), 100)
+                            mb.pop(match(matching.compile('test')), 100)
                         ).resolves.toMatchPattern(t(ok, 'test'));
                     });
                 });
@@ -135,7 +140,7 @@ describe('@otpjs/core.MessageBox', function () {
                         mb.push('test2');
                         mb.push('test3');
                         await expect(
-                            mb.pop((message) => message === 'test2', 100)
+                            mb.pop((message) => message === 'test2' ? Promise.resolve(t(ok, message)) : false, 100)
                         ).resolves.toMatchPattern(t(ok, 'test2'));
                         expect(mb.length).toBe(2);
                     });
@@ -165,7 +170,9 @@ describe('@otpjs/core.MessageBox', function () {
                     });
                     it('does not time out if a matching message is received', async function () {
                         const mb = new core.MessageBox();
-                        const request = mb.pop((m) => m === 'test', 100);
+                        const request = mb.pop((m) => m === 'test'
+                            ? Promise.resolve(t(ok, m))
+                            : false, 100);
                         const expectation = expect(
                             request
                         ).resolves.toMatchPattern(t(ok, 'test'));
