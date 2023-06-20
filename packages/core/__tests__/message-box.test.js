@@ -205,7 +205,10 @@ describe('@otpjs/core.MessageBox', function () {
                     );
                 });
             });
-            describe('with a predicate', function () {});
+            describe('with a predicate', function () {
+                it('returns the result of the predicate', function () {
+                });
+            });
         });
     });
     describe('clear', function () {

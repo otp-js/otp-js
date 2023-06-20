@@ -597,14 +597,28 @@ describe('@otpjs/core.Context', () => {
                     ctxA.self(),
                     false_signal,
                     ctxB.self()
-                )).toMatchPattern(t(
-                    error,
-                    {
-                        term: route_clause,
-                        [spread]: _
-                    }
-                ));
+                )).toMatchPattern(ok);
                 expect(signal).toHaveBeenCalledWith(false_signal, ctxA.self());
+            });
+            describe('given an exit signal', function () {
+                describe('when the process is dead', function () {
+                    it('ignores the signal', async function () {
+                        ctxA.die(killed);
+                        const die = jest.spyOn(ctxA, 'die');
+                        await wait();
+                        ctxA.signal(EXIT, node.systemPid, kill);
+                        await wait();
+                        expect(die).not.toHaveBeenCalled();
+                    });
+                });
+                describe('when the process is alive', function () {
+                    it('exits the process', async function () {
+                        const die = jest.spyOn(ctxA, 'die');
+                        ctxA.signal(EXIT, node.systemPid, kill);
+                        await wait();
+                        expect(die).toHaveBeenCalledWith(killed);
+                    });
+                });
             });
         });
     });
@@ -619,6 +633,43 @@ describe('@otpjs/core.Context', () => {
             await wait();
             expect(ctxA.processInfo(ctxA.self())).toMatchPattern({
                 links: [],
+                [spread]: _
+            });
+        });
+        it('will not add a duplicate link', async function () {
+            ctxA.link(ctxB.self());
+            await wait();
+
+            expect(ctxA.processInfo(ctxA.self())).toMatchPattern({
+                links: [_],
+                [spread]: _
+            });
+            expect(ctxB.processInfo(ctxA.self())).toMatchPattern({
+                links: [_],
+                [spread]: _
+            });
+
+            ctxB.link(ctxA.self());
+            await wait();
+
+            expect(ctxA.processInfo(ctxA.self())).toMatchPattern({
+                links: [_],
+                [spread]: _
+            });
+            expect(ctxB.processInfo(ctxA.self())).toMatchPattern({
+                links: [_],
+                [spread]: _
+            });
+
+            ctxA.link(ctxB.self());
+            await wait();
+
+            expect(ctxA.processInfo(ctxA.self())).toMatchPattern({
+                links: [_],
+                [spread]: _
+            });
+            expect(ctxB.processInfo(ctxA.self())).toMatchPattern({
+                links: [_],
                 [spread]: _
             });
         });
