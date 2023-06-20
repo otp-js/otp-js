@@ -1,43 +1,31 @@
 {
-  "tasksRunnerOptions": {
-    "default": {
-      "runner": "nx/tasks-runners/default",
-      "options": {
-        "cacheableOperations": [
-          "build",
-          "build-client",
-          "build-server"
-        ]
-      }
-    }
-  },
-  "targetDefaults": {
-    "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "{projectRoot}/lib"
-      ]
+    "tasksRunnerOptions": {
+        "default": {
+            "runner": "nx/tasks-runners/default",
+            "options": {
+                "cacheableOperations": ["build", "build-client", "build-server"]
+            }
+        }
     },
-    "build-client": {
-      "dependsOn": [
-        "^build-client"
-      ],
-      "outputs": [
-        "{projectRoot}/lib"
-      ]
+    "targetDefaults": {
+        "build": {
+            "dependsOn": ["^build"],
+            "outputs": ["{projectRoot}/lib"]
+        },
+        "build-client": {
+            "dependsOn": ["^build-client"],
+            "outputs": ["{projectRoot}/lib"]
+        },
+        "build-server": {
+            "dependsOn": ["^build-server"],
+            "outputs": ["{projectRoot}/lib"]
+        },
+        "clean": {
+            "dependsOn": ["^clean"],
+            "outputs": ["{projectRoot}/lib"]
+        }
     },
-    "build-server": {
-      "dependsOn": [
-        "^build-server"
-      ],
-      "outputs": [
-        "{projectRoot}/lib"
-      ]
+    "affected": {
+        "defaultBase": "main"
     }
-  },
-  "affected": {
-    "defaultBase": "main"
-  }
 }

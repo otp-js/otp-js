@@ -10,9 +10,7 @@
         "lib": "lib",
         "test": "__tests__"
     },
-    "files": [
-        "lib"
-    ],
+    "files": ["lib"],
     "publishConfig": {
         "access": "public"
     },
@@ -24,8 +22,10 @@
     "scripts": {
         "build": "babel src --out-dir lib",
         "watch": "babel src --out-dir lib --watch",
+        "clean": "rimraf lib",
         "prepublish": "npm run build",
-        "test": "jest --coverage --verbose"
+        "test": "jest --coverage --verbose",
+        "lint": "eslint src"
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"

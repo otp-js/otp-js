@@ -10,10 +10,7 @@
         "lib": "lib",
         "test": "__tests__"
     },
-    "files": [
-        "lib",
-        "devtools.js"
-    ],
+    "files": ["lib", "devtools.js"],
     "publishConfig": {
         "access": "public"
     },
@@ -24,8 +21,10 @@
     "scripts": {
         "build": "babel src --out-dir lib",
         "watch": "babel src --out-dir lib --watch",
+        "clean": "rimraf lib",
         "prepublish": "npm run build",
-        "test": "echo \"Error: run tests from root\" && exit 1"
+        "test": "echo \"Error: run tests from root\" && exit 1",
+        "lint": "eslint src"
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"

@@ -2,14 +2,7 @@
     "name": "@otpjs/gen",
     "version": "0.17.8",
     "description": "The gen module for otpjs",
-    "keywords": [
-        "open",
-        "telecom",
-        "platform",
-        "javascript",
-        "es6",
-        "erlang"
-    ],
+    "keywords": ["open", "telecom", "platform", "javascript", "es6", "erlang"],
     "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
     "homepage": "https://github.com/otp-js/otp-js#readme",
     "license": "MIT",
@@ -18,9 +11,7 @@
         "lib": "lib",
         "test": "__tests__"
     },
-    "files": [
-        "lib"
-    ],
+    "files": ["lib"],
     "publishConfig": {
         "access": "public"
     },
@@ -31,8 +22,10 @@
     "scripts": {
         "build": "babel src --out-dir lib",
         "watch": "babel src --out-dir lib --watch",
+        "clean": "rimraf lib",
         "prepublish": "npm run build",
-        "test": "jest --coverage --verbose"
+        "test": "jest --coverage --verbose",
+        "lint": "eslint src"
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"

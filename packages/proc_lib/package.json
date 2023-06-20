@@ -2,14 +2,7 @@
     "name": "@otpjs/proc_lib",
     "version": "0.17.8",
     "description": "An implementation of the proc_lib functionality of Erlang",
-    "keywords": [
-        "erlang",
-        "otp",
-        "open",
-        "telecom",
-        "platform",
-        "javascript"
-    ],
+    "keywords": ["erlang", "otp", "open", "telecom", "platform", "javascript"],
     "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
     "homepage": "https://otpjs.dev",
     "license": "MIT",
@@ -20,9 +13,7 @@
         "lib": "lib",
         "test": "__tests__"
     },
-    "files": [
-        "lib"
-    ],
+    "files": ["lib"],
     "publishConfig": {
         "access": "public"
     },
@@ -33,8 +24,10 @@
     "scripts": {
         "build": "babel src --out-dir lib",
         "watch": "babel src --out-dir lib --watch",
+        "clean": "rimraf lib",
         "prepublish": "npm run build",
-        "test": "jest --coverage --verbose"
+        "test": "jest --coverage --verbose",
+        "lint": "eslint src"
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"

@@ -16,8 +16,11 @@ module.exports = {
         '@otpjs/serializer-(.*)': package('serializers/$1/src/index.js'),
         '@otpjs/(.*)': package('packages/$1/src/index.js'),
     },
+    transform: {
+        '\\.jsx?$': ['babel-jest', { sourceMaps: 'both' }],
+    },
     setupFiles: [tool('unhandled.js')],
-    setupFilesAfterEnv: [tool('regenerator.js')],
+    setupFilesAfterEnv: [tool('regenerator.js'), tool('test_utils')],
     collectCoverageFrom: ['<rootDir>/src/**/*.js'],
     coveragePathIgnorePatterns: ['<rootDir>/lib'],
     coverageReporters: ['clover', 'json', ['lcov', lcovConfig], 'text'],
