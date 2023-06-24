@@ -15,7 +15,7 @@ const {
     shutdown,
     temporary,
     trap_exit,
-    unlink,
+    unlink
 } = otp.Symbols;
 const { _ } = matching.Symbols;
 
@@ -29,13 +29,13 @@ function log(ctx, ...args) {
 function defaultOptions() {
     return {
         bridge: false,
-        type: temporary,
+        type: temporary
     };
 }
 
 export function register(node, socket, options = defaultOptions()) {
     const { serialize, deserialize } = makeSerializer(node, {
-        stringify: false,
+        stringify: false
     });
     let ctx;
     let running = false;
@@ -77,26 +77,15 @@ export function register(node, socket, options = defaultOptions()) {
     return destroy;
 
     function recycle() {
-        if (running) {
-            ctx.receive()
-                .then(forward)
-                .then(recycle)
-                .catch((err) => log(ctx, 'recycle() : error : %o', err));
-        }
+        ctx.receive()
+            .then(forward)
+            .then(recycle)
+            .catch((err) => log(ctx, 'recycle() : error : %o', err));
     }
     function destroy(reason = shutdown) {
-        try {
-            socket.disconnect();
-            handleDisconnect();
-        } catch (err) {
-            log(ctx, 'destroy(reason: %o, error: %o)', reason, err);
-        } finally {
-            ctx.die(reason);
-            socket.off('otp-message', handleMessage);
-            socket.off('otp-monitor', handleMonitor);
-            socket.off('connect', handleConnect);
-            socket.off('disconnect', handleDisconnect);
-        }
+        log(ctx, 'destroy(reason: %o)', reason);
+        socket.disconnect();
+        handleDisconnect();
     }
 
     function relayMessage([, fromPid, toPid, message]) {
@@ -173,7 +162,7 @@ export function register(node, socket, options = defaultOptions()) {
             type,
             pid
         );
-        source = serialize(source ?? node.name);
+        source = serialize(source);
         score = serialize(score);
         name = serialize(name);
         type = serialize(type);
@@ -194,19 +183,6 @@ export function register(node, socket, options = defaultOptions()) {
         const { replace: serialize, buffers } = replacer();
         pid = serialize(pid);
         socket.emit('otp-lost', pid, ...buffers);
-    }
-    function relayDiscovery([, source, score, name, type, pid]) {
-        source = serialize(source ?? node.name);
-        score = serialize(score);
-        name = serialize(name);
-        type = serialize(type);
-        pid = serialize(pid);
-        socket.emit('otp-discover', source, score, name, type, pid);
-    }
-
-    function relayLost([, pid]) {
-        pid = serialize(pid);
-        socket.emit('otp-lost', pid);
     }
 
     function handleConnect() {
@@ -294,7 +270,7 @@ export function register(node, socket, options = defaultOptions()) {
 
         node.registerRouter(source, score, name, pid, {
             bridge,
-            type: theirType,
+            type: theirType
         });
     }
     function handleDisconnect() {
@@ -302,12 +278,8 @@ export function register(node, socket, options = defaultOptions()) {
         node.unregisterRouter(ctx.self());
 
         // drain the messagebox
-        try {
-            ctx.drain(disconnect);
-            ctx.exit(disconnect);
-        } catch (err) {
-            log(ctx, 'drain() : error : %o', err);
-        }
+        ctx.drain(disconnect);
+        ctx.exit(disconnect);
     }
     function handleLink(fromPid, toPid, ...buffers) {
         const deserialize = reviver(buffers);
@@ -344,14 +316,10 @@ export function register(node, socket, options = defaultOptions()) {
     }
     function handleMonitor(fromPid, toPid, ref, ...buffers) {
         const deserialize = reviver(buffers);
-        try {
-            fromPid = deserialize(fromPid);
-            toPid = deserialize(toPid);
-            ref = deserialize(ref);
-            node.signal(fromPid, monitor, toPid, ref);
-        } catch (err) {
-            node.signal(fromPid, DOWN, toPid, ref, err.term ?? err.message);
-        }
+        fromPid = deserialize(fromPid);
+        toPid = deserialize(toPid);
+        ref = deserialize(ref);
+        node.signal(fromPid, monitor, toPid, ref);
     }
     function handleDemonitor(toPid, ref, fromPid, ...buffers) {
         const deserialize = reviver(buffers);
@@ -387,6 +355,9 @@ export function register(node, socket, options = defaultOptions()) {
         node.signal(fromPid, DOWN, toPid, ref, reason);
     }
 
+    function handleQuery() {
+    }
+
     function reviver(buffers) {
         return function revive(value) {
             return deserialize(value, (key, value) => {
@@ -396,7 +367,7 @@ export function register(node, socket, options = defaultOptions()) {
                     matching.compare(
                         {
                             type: '$otp.buffer',
-                            index: Number.isInteger,
+                            index: Number.isInteger
                         },
                         value
                     )

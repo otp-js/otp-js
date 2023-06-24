@@ -1,20 +1,23 @@
+/* eslint-env jest */
 import '@otpjs/test_utils';
-import { Pid, Ref, t, l } from '@otpjs/types';
+import * as otp from '@otpjs/core';
+import { OTPError, Pid, Ref, t, l } from '@otpjs/types';
+import * as match from '@otpjs/matching';
 import { createServer } from 'http';
 import io from 'socket.io';
 import clientIO from 'socket.io-client';
 
 import { register as useSocketIO } from '../src';
-import * as otp from '@otpjs/core';
 
-const { ok, DOWN, kill, normal } = otp.Symbols;
+const { _, spread } = match.Symbols;
+const { ok, DOWN, error, kill, killed, normal, timeout } = otp.Symbols;
 const test_name = Symbol.for('test');
 
 function log(ctx, ...args) {
     return ctx.log.extend('transports:socket.io:__tests__')(...args);
 }
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const wait = (ms = 10) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let serverNode = null;
 let clientNode = null;
@@ -31,7 +34,7 @@ beforeEach(async function () {
     server.listen(0);
     serverManager = io(server);
 
-    const loadServerSocket = new Promise((resolve, reject) => {
+    const loadServerSocket = new Promise((resolve, _reject) => {
         serverManager.once('connection', resolve);
     });
 
@@ -57,8 +60,8 @@ afterEach(function () {
 });
 
 describe('@otpjs/transports-socket.io', function () {
-    it('can register from the both sides', async function () {
-        useSocketIO(clientNode, clientSocket, 'server');
+    it('can register from both sides', async function () {
+        useSocketIO(clientNode, clientSocket);
         useSocketIO(serverNode, serverSocket);
 
         await wait(100);
@@ -104,7 +107,7 @@ describe('@otpjs/transports-socket.io', function () {
 
         await wait(100);
 
-        let pidA = serverNode.spawn(async (ctx) => {
+        const pidA = serverNode.spawn(async (ctx) => {
             ctx.register(test_name);
             await ctx.receive();
             log(ctx, 'received : stopping');
@@ -131,7 +134,7 @@ describe('@otpjs/transports-socket.io', function () {
 
         await wait(100);
 
-        let pidA = serverNode.spawn(async (ctx) => {
+        const pidA = serverNode.spawn(async (ctx) => {
             ctx.register(test_name);
             await ctx.receive();
             log(ctx, 'received : stopping');
@@ -165,61 +168,6 @@ describe('@otpjs/transports-socket.io', function () {
         expect(Array.from(serverNode.nodes())).not.toContain(clientNode.name);
         expect(Array.from(clientNode.nodes())).not.toContain(serverNode.name);
     });
-    describe('sending messages', function () {
-        describe('with buffer types', function () {
-            let buffA, buffB;
-            beforeEach(function () {
-                buffA = Buffer.from(
-                    'buffer A is a Buffer instance, which is a view of an ArrayBuffer',
-                    'utf8'
-                );
-                buffB = Buffer.from('buffer B is a small ArrayBuffer', 'utf8');
-            });
-            it('sends them seperately', async function () {
-                const ctx = clientNode.makeContext();
-                const name = Symbol.for('receiver');
-                const listener = jest.fn(function (
-                    fromPid,
-                    toPid,
-                    message,
-                    ...buffers
-                ) {
-                    log(ctx, 'transportSocketIO(buffers: %o)', buffers);
-                    expect(buffers.length).toBe(2);
-                });
-                const destroyClient = useSocketIO(clientNode, clientSocket);
-                const destroyServer = useSocketIO(serverNode, serverSocket);
-
-                clientSocket.on('otp-message', listener);
-                await wait(500);
-
-                clientNode.spawn(async (ctx) => {
-                    ctx.register(name);
-                    await ctx.receive();
-                });
-                serverNode.spawn(async (ctx) => {
-                    while (!ctx.nodes().includes(clientNode.name))
-                        await wait(100);
-                    await ctx.send(
-                        t(name, clientNode.name),
-                        t(ok, buffA, {
-                            make: {
-                                one: { deeply: { nested: l(t(ok, buffB)) } },
-                            },
-                        })
-                    );
-                });
-
-                await wait(500);
-
-                expect(listener).toHaveBeenCalled();
-
-                destroyClient();
-                destroyServer();
-            });
-        });
-    });
-
     describe('when bridged over another node', function () {
         let clientNodeB, clientSocketB, serverSocketB;
         let destroyClientA, destroyServerA, destroyClientB, destroyServerB;
@@ -235,17 +183,17 @@ describe('@otpjs/transports-socket.io', function () {
             serverSocketB = await loadServerSocket;
 
             destroyClientA = useSocketIO(clientNode, clientSocket, {
-                bridge: true,
+                bridge: true
             });
             destroyServerA = useSocketIO(serverNode, serverSocket, {
-                bridge: true,
+                bridge: true
             });
 
             destroyClientB = useSocketIO(clientNodeB, clientSocketB, {
-                bridge: true,
+                bridge: true
             });
             destroyServerB = useSocketIO(serverNode, serverSocketB, {
-                bridge: true,
+                bridge: true
             });
 
             await wait(100);
@@ -264,7 +212,7 @@ describe('@otpjs/transports-socket.io', function () {
 
         it('can route messages', async function () {
             const payload = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-            let resultA = new Promise((resolve, reject) => {
+            const resultA = new Promise((resolve, reject) => {
                 clientNode.spawn(async (ctx) => {
                     ctx.register(test_name);
                     const [message, from] = await ctx.receive();
@@ -287,7 +235,7 @@ describe('@otpjs/transports-socket.io', function () {
         });
 
         describe('when disconnected', function () {
-            it("gets removed from others' node lists", async function () {
+            it('gets removed from others\' node lists', async function () {
                 const ctxA = clientNode.makeContext();
                 const ctxB = clientNodeB.makeContext();
 
@@ -297,7 +245,7 @@ describe('@otpjs/transports-socket.io', function () {
                 destroyClientB();
                 destroyClientB = null;
 
-                await wait(500);
+                await wait(100);
 
                 log(ctxA, 'testA(nodes: %o)', Array.from(ctxA.nodes()));
                 log(ctxB, 'testB(nodes: %o)', Array.from(ctxB.nodes()));
@@ -317,7 +265,7 @@ describe('@otpjs/transports-socket.io', function () {
                 const ctxB = clientNodeB.makeContext();
                 const ctxC = clientNodeC.makeContext();
 
-                await wait(500);
+                await wait(100);
 
                 expect(Array.from(ctxA.nodes())).toContain(ctxB.node());
                 expect(Array.from(ctxB.nodes())).toContain(ctxA.node());
@@ -327,7 +275,7 @@ describe('@otpjs/transports-socket.io', function () {
                 destroyClientB();
                 destroyClientB = null;
 
-                await wait(500);
+                await wait(100);
 
                 log(ctxA, 'testA(nodes: %o)', Array.from(ctxA.nodes()));
                 log(ctxB, 'testB(nodes: %o)', Array.from(ctxB.nodes()));
@@ -344,13 +292,13 @@ describe('@otpjs/transports-socket.io', function () {
                 const serverSocketC = await loadServerSocket;
 
                 const destroyClientC = useSocketIO(clientNodeC, clientSocketC, {
-                    bridge: true,
+                    bridge: true
                 });
                 const destroyServerC = useSocketIO(serverNode, serverSocketC, {
-                    bridge: true,
+                    bridge: true
                 });
 
-                await wait(500);
+                await wait(100);
                 expect(Array.from(ctxA.nodes())).not.toContain(ctxB.node());
                 expect(Array.from(ctxA.nodes())).toContain(ctxC.node());
                 expect(Array.from(ctxB.nodes())).not.toContain(ctxA.node());
@@ -365,6 +313,220 @@ describe('@otpjs/transports-socket.io', function () {
                 destroyServerC();
                 destroyClientC();
             });
+        });
+    });
+    describe('supports signal federation', function () {
+        const serverName = Symbol.for('server');
+        const clientName = Symbol.for('client');
+        let clientCtx;
+        let serverCtx;
+        let destroyClient;
+        let destroyServer;
+
+        beforeEach(async function () {
+            clientCtx = clientNode.makeContext();
+            clientCtx.register(clientName);
+
+            serverCtx = serverNode.makeContext();
+            serverCtx.register(serverName);
+
+            destroyClient = useSocketIO(clientNode, clientSocket);
+            destroyServer = useSocketIO(serverNode, serverSocket);
+
+            await wait(100);
+        });
+
+        afterEach(function () {
+            destroyClient();
+            destroyServer();
+        });
+
+        describe('given a relay signal', function () {
+            it('passes the signal to the remote node', async function () {
+                const buildBlock = (given, after) => {
+                    given(_).then((incoming) => {
+                        expect(incoming).toBe(message);
+                        return ok;
+                    });
+                    after(2000).then(() => {
+                        throw OTPError(otp.Symbols.timeout);
+                    });
+                };
+
+                const message = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+
+                clientCtx.send(t(serverName, serverNode.name), message);
+                await expect(serverCtx.receiveBlock(buildBlock)).resolves.toBe(ok);
+
+                serverCtx.send(t(clientName, clientNode.name), message);
+                await expect(clientCtx.receiveBlock(buildBlock)).resolves.toBe(ok);
+            });
+            describe('with buffer types', function () {
+                let buffA, buffB;
+                beforeEach(function () {
+                    buffA = Buffer.from(
+                        'buffer A is a Buffer instance, which is a view of an ArrayBuffer',
+                        'utf8'
+                    );
+                    buffB = Buffer.from('buffer B is a small ArrayBuffer', 'utf8');
+                });
+                it('sends them seperately', async function () {
+                    const name = Symbol.for('receiver');
+                    const listener = jest.fn(function (
+                        fromPid,
+                        toPid,
+                        message,
+                        ...buffers
+                    ) {
+                        log(clientCtx, 'transportSocketIO(buffers: %o)', buffers);
+                        expect(buffers.length).toBe(2);
+                    });
+
+                    clientSocket.on('otp-message', listener);
+                    await wait(100);
+
+                    clientNode.spawn(async (ctx) => {
+                        ctx.register(name);
+                        await ctx.receive();
+                    });
+                    serverNode.spawn(async (ctx) => {
+                        while (!ctx.nodes().includes(clientNode.name)) { await wait(100); }
+                        await ctx.send(
+                            t(name, clientNode.name),
+                            t(ok, buffA, {
+                                make: {
+                                    one: { deeply: { nested: l(t(ok, buffB)) } }
+                                }
+                            })
+                        );
+                    });
+
+                    await wait(100);
+
+                    expect(listener).toHaveBeenCalled();
+                });
+            });
+        });
+
+        describe('given a link signal', function () {
+            it('passes the signal to the remote node', async function () {
+                serverCtx.send(t(clientName, clientNode.name), serverCtx.self());
+                const pid = await clientCtx.receive(Pid.isPid);
+                clientCtx.link(pid);
+
+                await wait(100);
+
+                const clientInfo = clientCtx.processInfo(clientCtx.self());
+                expect(clientInfo).toMatchPattern({
+                    links: [_],
+                    [spread]: _
+                });
+
+                const [remotePid] = clientInfo.links;
+                expect(remotePid).toBeInstanceOf(Pid);
+                expect(clientCtx.node(remotePid)).toBe(serverNode.name);
+            });
+        });
+        describe('given an unlink signal', function () {
+            it('passes the signal to the remote node', async function () {
+                serverCtx.send(t(clientName, clientNode.name), serverCtx.self());
+
+                const pid = await clientCtx.receive(Pid.isPid);
+                log(clientCtx, 'unlink(received_pid: %o)', pid);
+                clientCtx.link(pid);
+
+                await wait(100);
+
+                const clientInfoA = clientCtx.processInfo(clientCtx.self());
+                expect(clientInfoA).toMatchPattern({
+                    links: [_],
+                    [spread]: _
+                });
+
+                const serverInfoA = serverCtx.processInfo(serverCtx.self());
+                expect(serverInfoA).toMatchPattern({
+                    links: [_],
+                    [spread]: _
+                });
+
+                log(clientCtx, 'unlink(linked)');
+
+                clientCtx.unlink(pid);
+                await wait(100);
+
+                log(clientCtx, 'unlink(unlinked)');
+
+                const clientInfoB = clientCtx.processInfo(clientCtx.self());
+                expect(clientInfoB).toMatchPattern({
+                    links: [],
+                    [spread]: _
+                });
+                const serverInfoB = serverCtx.processInfo(serverCtx.self());
+                expect(serverInfoB).toMatchPattern({
+                    links: [],
+                    [spread]: _
+                });
+            });
+        });
+        describe('given an exit signal', function () {
+            it('passes the signal to the remote node', async function () {
+                serverCtx.send(t(clientName, clientNode.name), serverCtx.self());
+
+                const pid = await clientCtx.receive(Pid.isPid);
+                clientCtx.exit(pid, kill);
+
+                await wait(100);
+
+                expect(serverCtx.processInfo(serverCtx.self())).toBeUndefined();
+                await expect(serverCtx.death).resolves.toBe(killed);
+            });
+        });
+    });
+    describe('when destroyed', function () {
+        const serverName = Symbol.for('server');
+        const clientName = Symbol.for('client');
+        let clientCtx;
+        let serverCtx;
+        let destroyClient;
+        let destroyServer;
+
+        beforeEach(async function () {
+            clientCtx = clientNode.makeContext();
+            clientCtx.register(clientName);
+
+            serverCtx = serverNode.makeContext();
+            serverCtx.register(serverName);
+
+            destroyClient = useSocketIO(clientNode, clientSocket);
+            destroyServer = useSocketIO(serverNode, serverSocket);
+
+            await wait(100);
+        });
+
+        afterEach(function () {
+            try {
+                destroyClient();
+                /* eslint-disable-next-line no-empty */
+            } finally {}
+
+            try {
+                destroyServer();
+                /* eslint-disable-next-line no-empty */
+            } finally {}
+        });
+
+        it('stops federating signals', async function () {
+            serverCtx.send(t(clientName, clientNode.name), serverCtx.self());
+            const pid = await clientCtx.receive(Pid.isPid);
+
+            expect(destroyClient).not.toThrow();
+
+            await wait(100);
+
+            expect(clientSocket.connected).toBe(false);
+            expect(serverSocket.connected).toBe(false);
+            expect(clientCtx.send(pid, 'message')).toBe(ok);
+            expect(serverCtx.receive(_, 500)).rejects.toThrowTerm(timeout);
         });
     });
 });
