@@ -1,9 +1,8 @@
 import * as core from '@otpjs/core';
 import * as gen_server from '@otpjs/gen_server';
 import * as matching from '@otpjs/matching';
-import { Pid, t, l, cons, cdr, car, List } from '@otpjs/types';
+import { Pid, t, l, cons, cdr, car, List, OTPError } from '@otpjs/types';
 import * as Symbols from './symbols.js';
-import { OTPError } from '@otpjs/types';
 
 export { Symbols };
 
@@ -24,7 +23,7 @@ const {
     brutal_kill,
     failed_to_start_child,
     shutdown,
-    ignore,
+    ignore
 } = Symbols;
 const RESTARTING = (pid) => t(restarting, pid);
 
@@ -73,7 +72,7 @@ async function _whichChildren(ctx, call, from, state) {
             l(
                 ...Array.from(state.children).map(({ pid, id }) => ({
                     pid,
-                    id,
+                    id
                 }))
             )
         ),
@@ -105,7 +104,7 @@ async function _startChild(ctx, [, specOrArgs], from, state) {
         const result = await _doStartChild(ctx, {
             ...base,
             start: t(start, l(...args, ...specOrArgs)),
-            restart: base.restart,
+            restart: base.restart
         });
         log(
             ctx,
@@ -120,7 +119,7 @@ async function _startChild(ctx, [, specOrArgs], from, state) {
             const { pid } = child;
             const nextState = {
                 ...state,
-                children: cons(child, state.children),
+                children: cons(child, state.children)
             };
             return _handleStartResult(t(ok, pid, nextState), nextState);
         } else if (compare(t(ok, { pid: null, [spread]: _ }))) {
@@ -142,7 +141,7 @@ async function _startChild(ctx, [, specOrArgs], from, state) {
             );
             const nextState = {
                 ...state,
-                children: nextChildren,
+                children: nextChildren
             };
             return _handleStartResult(t(ok, child.pid, nextState), state);
         } else {
@@ -264,7 +263,7 @@ async function doOneForOneRestart(ctx, state, id, pid) {
 }
 async function doOneForAllRestart(ctx, state, id, pid) {
     let { name, children } = state;
-    let child = _findChildById(id, children);
+    const child = _findChildById(id, children);
     children = _deleteChild(ctx, id, children);
 
     log(ctx, 'doOneForAllRestart(child.id: %o)', child.id);
@@ -281,7 +280,7 @@ async function doOneForAllRestart(ctx, state, id, pid) {
     return t(result, { ...state, children: nextChildren });
 }
 async function doRestForOneRestart(ctx, state, id, pid) {
-    let { name, children } = state;
+    const { name, children } = state;
     const [before, after] = _splitChild(id, children);
     const [child] = after;
 
@@ -321,7 +320,7 @@ async function restartMultipleChildren(ctx, child, children, name) {
     } else if (compare(t(error, _, t(failed_to_start_child, _, _)))) {
         const [, children, [, failedId]] = result;
 
-        let newPid =
+        const newPid =
             failedId != child.id
                 ? _restarting(child.pid)
                 : RESTARTING(undefined);
@@ -486,7 +485,7 @@ function getSpecById(ctx, id, specs) {
 function updatePid(state, id, pid) {
     let { children } = state;
     let [before, after] = _splitChild(id, children);
-    let child = car(after);
+    const child = car(after);
     after = cdr(after);
     children = before.append(cons({ ...child, pid }, after));
     return { ...state, children };
@@ -542,7 +541,7 @@ function doRestart(ctx, pid, reason, state) {
                 const { children } = state;
                 return t(ok, {
                     ...state,
-                    children: children.deleteIndex(index),
+                    children: children.deleteIndex(index)
                 });
             } else {
                 const { children } = state;
@@ -552,7 +551,7 @@ function doRestart(ctx, pid, reason, state) {
                         ...children.slice(0, index),
                         { ...child, pid: null },
                         ...children.slice(index + 1)
-                    ),
+                    )
                 });
             }
         }
