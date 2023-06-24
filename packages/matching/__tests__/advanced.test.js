@@ -1,13 +1,12 @@
-import './extend';
+/* eslint-env jest */
+import { OTPError, t } from '@otpjs/types';
+import * as matching from '../src';
 import {
-    _,
-    spread,
     case_clause,
     route_clause,
-    skip_matching,
+    skip_matching, _
 } from '../src/symbols';
-import * as matching from '../src';
-import { t, OTPError } from '@otpjs/types';
+import './extend';
 
 describe('@otpjs/matching/advanced', function () {
     describe('buildCase', function () {
@@ -62,9 +61,9 @@ describe('@otpjs/matching/advanced', function () {
                     let handlerB;
                     let handlerC;
                     beforeEach(function () {
-                        handlerA = handler((value) => 0);
-                        handlerB = handler((value) => 1);
-                        handlerC = handler((value) => 2);
+                        handlerA = handler((_value) => 0);
+                        handlerB = handler((_value) => 1);
+                        handlerC = handler((_value) => 2);
                         fn = (kase) => {
                             kase(t(0, 0), handlerA);
                             kase(t(0, _), handlerB);

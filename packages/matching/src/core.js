@@ -1,5 +1,5 @@
 import debug from 'debug';
-import { OTPError, Pid, Ref, tuple, list, cons } from '@otpjs/types';
+import { OTPError, Pid, Ref, tuple, list } from '@otpjs/types';
 import * as Symbols from './symbols';
 
 const { _, spread } = Symbols;
@@ -11,10 +11,10 @@ export function caseOf(value) {
     return (pattern) => compare(pattern, value);
 }
 export function match(...patterns) {
-    let compiled = patterns.map(compile);
+    const compiled = patterns.map(compile);
 
     return function matchAny(message) {
-        for (let compare of compiled) {
+        for (const compare of compiled) {
             if (compare(message)) {
                 return true;
             }
@@ -22,6 +22,7 @@ export function match(...patterns) {
         return false;
     };
 }
+
 export function compare(pattern, value) {
     const compiled = compile(pattern);
     return compiled(value);
@@ -35,9 +36,7 @@ export function oneOf(...patterns) {
 }
 
 export function compile(pattern) {
-    if (typeof pattern === 'function') {
-        return pattern;
-    } else if (pattern instanceof RegExp) {
+    if (pattern instanceof RegExp) {
         return pattern.test.bind(pattern);
     } else {
         if (patterns.has(pattern)) {
@@ -60,7 +59,7 @@ function doCompile(pattern) {
     const comparisons = comparator(pattern);
     return compiledPattern;
     function compiledPattern(message) {
-        for (let compare of comparisons) {
+        for (const compare of comparisons) {
             if (!compare(message)) {
                 return false;
             }
@@ -226,7 +225,11 @@ function tupleComparator(pattern, comparisons, subComparisons = []) {
 
     const size = pattern.size;
     comparisons.push(function matchesSize(message) {
-        log('%s(%o) : matchesSize(%o)', tupleComparator.name, pattern, size);
+        log('%s(%o) : matchesSize(%o)',
+            tupleComparator.name,
+            pattern,
+            size);
+
         return message.size === size;
     });
 
@@ -260,7 +263,7 @@ function tupleComparator(pattern, comparisons, subComparisons = []) {
 function listComparator(pattern, comparisons, subComparisons = []) {
     comparisons.push(list.isList);
 
-    if (pattern == list.nil) {
+    if (pattern === list.nil) {
         simpleComparator(pattern, comparisons);
         return;
     }
@@ -268,7 +271,7 @@ function listComparator(pattern, comparisons, subComparisons = []) {
     log('listComparator(list.nil: %o)', list.nil);
 
     let node = pattern;
-    while (list.isList(node) && node != list.nil) {
+    while (list.isList(node) && node !== list.nil) {
         const subPattern = node.head;
         const subComparison = compile(subPattern);
         subComparisons.push(subComparison);
@@ -291,7 +294,7 @@ function listComparator(pattern, comparisons, subComparisons = []) {
             index < subComparisons.length &&
             matches &&
             list.isList(node) &&
-            node != list.nil;
+            node !== list.nil;
             index++
         ) {
             const compare = subComparisons[index];
@@ -299,7 +302,7 @@ function listComparator(pattern, comparisons, subComparisons = []) {
             node = node.tail;
         }
 
-        matches &&= index == subComparisons.length;
+        matches &&= index === subComparisons.length;
         matches &&= tailComparison(node);
 
         return matches;
@@ -308,7 +311,7 @@ function listComparator(pattern, comparisons, subComparisons = []) {
 function isNull(message) {
     return message === null;
 }
-function nullComparator(pattern, comparisons) {
+function nullComparator(_pattern, comparisons) {
     comparisons.push(isNull);
 }
 function objectComparator(pattern, comparisons) {

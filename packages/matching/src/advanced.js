@@ -1,9 +1,9 @@
+import { cons, list, OTPError, tuple } from '@otpjs/types';
 import debug from 'debug';
-import { OTPError, Pid, Ref, tuple, list, cons } from '@otpjs/types';
-import * as Symbols from './symbols';
 import { compile } from './core';
+import * as Symbols from './symbols';
 
-const { _, spread, case_clause, route_clause, skip_matching } = Symbols;
+const { case_clause, route_clause, skip_matching } = Symbols;
 const badarg = Symbol.for('badarg');
 
 const log = debug('otpjs:matching:advanced');
@@ -30,7 +30,7 @@ export function buildCase(builder) {
 
     return {
         for(value) {
-            for (let [pattern, handler] of handlers) {
+            for (const [pattern, handler] of handlers) {
                 if (pattern(value)) {
                     return handler;
                 }
@@ -38,13 +38,13 @@ export function buildCase(builder) {
             throw OTPError(case_clause);
         },
         with(value) {
-            for (let [pattern, handler] of handlers) {
+            for (const [pattern, handler] of handlers) {
                 if (pattern(value)) {
                     return handler(value);
                 }
             }
             throw OTPError(case_clause);
-        },
+        }
     };
 }
 export function clauses(builder, name) {
@@ -58,7 +58,7 @@ export function clauses(builder, name) {
                 } else {
                     throw OTPError(badarg);
                 }
-            },
+            }
         };
     };
     builder(route);
@@ -69,22 +69,22 @@ export function clauses(builder, name) {
         [name](...args) {
             log('clauses(args: %o)', args);
 
-            let subject = args.filter((arg) =>
+            const subject = args.filter((arg) =>
                 arg ? !arg[skip_matching] : true
             );
 
             log('clauses(subject: %o)', args);
 
-            for (let [pattern, test, handler] of handlers) {
-                log('clauses(name: %o, pattern: %o)', name, pattern);
+            for (const [pattern, test, handler] of handlers) {
                 const result = test(subject);
 
                 if (result) {
-                    log('clauses(name: %o, handler: %o)', name, handler);
                     return handler.call(this, ...args);
+                } else {
+                    log('clauses(name: %o, pattern: %o, failed)', name, pattern);
                 }
             }
             throw OTPError(route_clause);
-        },
+        }
     }[name];
 }
