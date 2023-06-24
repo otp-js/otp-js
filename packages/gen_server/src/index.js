@@ -74,7 +74,6 @@ function initializer(callbacks, args) {
         }
     });
     return async function initialize(ctx, caller) {
-        let state = null;
         try {
             log(ctx, 'initialize(args: %o)', args);
             const response = await callbacks.init(ctx, ...args);
@@ -91,33 +90,29 @@ function initializer(callbacks, args) {
 async function enterLoop(ctx, callbacks, state) {
     let timeout = Infinity;
 
-    log(ctx, 'enterLoop()');
+    log(ctx, 'enterLoop(callbacks: %o)', callbacks);
     try {
         while (true) {
             log(ctx, 'enterLoop() : await receive()');
-            const message = await ctx.receive(timeout);
+            const message = await ctx.receiveBlock((given, after) => {
+                given(_).then((message) => message);
+                after(timeout).then(() => core.Symbols.timeout);
+            });
             log(ctx, 'enterLoop() : await receive() -> %o', message);
             const response = await loop(ctx, callbacks, message, state);
             log(ctx, 'enterLoop() : await loop() -> %o', response);
 
-            const compare = matching.caseOf(response);
-            if (compare(t(ok, _, _))) {
-                const [, nextState, nextTimeout] = response;
-                state = nextState;
-                timeout = nextTimeout;
-            } else {
-                throw new OTPError(t('bad_response', response));
-            }
+            const [, nextState, nextTimeout] = response;
+            state = nextState;
+            timeout = nextTimeout;
         }
     } catch (err) {
         log(ctx, 'enterLoop() : error : %o', err);
         const compare = matching.caseOf(err);
 
-        if (compare(t(EXIT, _, _, _))) {
-            const [EXIT, pid, reason, stack] = response;
-            return ctx.die(reason);
-        } else if (compare(t(EXIT, _, _))) {
-            const [EXIT, pid, reason] = response;
+        if (compare(t(EXIT, _, _))) {
+            const [_EXIT, _pid, reason] = err;
+            await new Promise((resolve) => setTimeout(resolve));
             return ctx.die(reason);
         } else {
             return ctx.die(err);
@@ -264,6 +259,7 @@ async function handleCommonReply(ctx, callbacks, result, state) {
                 Error().stack
             );
         });
+        /* istanbul ignore next */
         is(_, async (result) => {
             log(ctx, 'handleCommonReply(badResult: %o)', result);
             return await terminate(
@@ -289,6 +285,7 @@ async function tryHandleCall(ctx, callbacks, message, from, state) {
             log(ctx, 'tryHandleCall(error: %o)', err.message);
             return t(EXIT, err.name, err.message, err.stack);
         } else {
+            /* istanbul ignore next */
             return t(ok, err);
         }
     }
@@ -320,7 +317,7 @@ async function terminate(ctx, callbacks, type, reason, state, stack = null) {
                 reason,
                 innerReason
             );
-            throw new OTPError(reason);
+            throw new OTPError(innerReason);
         });
         is(_, () => {
             if (reason === normal) {
@@ -341,8 +338,10 @@ async function terminate(ctx, callbacks, type, reason, state, stack = null) {
 
 async function tryTerminate(ctx, callbacks, reason, state) {
     try {
-        if ('terminate' in callbacks) {
-            return callbacks.terminate(ctx, reason, state);
+        if (callbacks.terminate) {
+            log(ctx, 'tryTerminate(callbacks.terminate: %o, reason: %o)', callbacks.terminate, reason);
+            await callbacks.terminate(ctx, reason, state);
+            return ok;
         } else {
             log(
                 ctx,
@@ -395,7 +394,7 @@ export function callbacks(builder) {
         },
         onTerminate(handler) {
             terminate = handler;
-        },
+        }
     });
 
     callHandlers = callHandlers.reverse();
@@ -407,7 +406,7 @@ export function callbacks(builder) {
         handleCall,
         handleCast,
         handleInfo,
-        terminate,
+        terminate
     };
 
     function handleCall(ctx, call, from, state) {
