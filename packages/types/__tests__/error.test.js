@@ -1,7 +1,4 @@
-import '@otpjs/test_utils';
-import crypto from 'crypto';
-import util from 'util';
-
+/* eslint-env jest */
 describe('OTPError', function () {
     test.todo('construction');
 });

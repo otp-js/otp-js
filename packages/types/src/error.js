@@ -19,14 +19,14 @@ export function OTPError(term) {
             return term;
         },
         configurable: false,
-        enumerable: true,
+        enumerable: true
     });
     Object.defineProperty(constructed, 'message', {
         get() {
             return String(term);
         },
         configurable: false,
-        enumerable: true,
+        enumerable: true
     });
 
     return constructed;
@@ -45,7 +45,7 @@ OTPError.prototype[Symbol.for('nodejs.util.inspect.custom')] = function (
 
     const newOptions = {
         ...options,
-        depth: options.depth === null ? null : options.depth - 1,
+        depth: options.depth === null ? null : options.depth - 1
     };
     const stacktrace = this.stack.slice(this.stack.indexOf('\n') + 1);
     return `Error: ${inspect(this.term, newOptions)}\n${stacktrace}`;

@@ -12,35 +12,35 @@ export function Ref(node, id, serial, creation = 1) {
             return node;
         },
         configurable: false,
-        enumerable: true,
+        enumerable: true
     });
     Reflect.defineProperty(this, 'id', {
         get() {
             return id;
         },
         configurable: false,
-        enumerable: true,
+        enumerable: true
     });
     Reflect.defineProperty(this, 'serial', {
         get() {
             return serial;
         },
         configurable: false,
-        enumerable: true,
+        enumerable: true
     });
     Reflect.defineProperty(this, 'creation', {
         get() {
             return creation;
         },
         configurable: false,
-        enumerable: true,
+        enumerable: true
     });
     Reflect.defineProperty(this, 'reference', {
         get() {
             return (BigInt(id) << 32n) + BigInt(serial);
         },
         configurable: true,
-        enumerable: false,
+        enumerable: false
     });
 }
 

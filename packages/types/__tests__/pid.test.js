@@ -1,6 +1,7 @@
+/* eslint-env jest */
+import '@otpjs/test_utils';
 import { Pid } from '../src';
 import inspect from 'inspect-custom-symbol';
-import '@otpjs/test_utils';
 import crypto from 'crypto';
 import util from 'util';
 

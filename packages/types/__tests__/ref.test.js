@@ -1,3 +1,4 @@
+/* eslint-env jest */
 import { Ref } from '../src';
 import inspect from 'inspect-custom-symbol';
 import '@otpjs/test_utils';

@@ -1,3 +1,4 @@
+/* eslint-env jest */
 import { Tuple, t } from '../src';
 import '@otpjs/test_utils';
 import crypto from 'crypto';
@@ -31,7 +32,7 @@ describe('Tuple', function () {
         const tuple = t(1, 2, 3);
         expect(tuple[Symbol.iterator]).not.toBe(undefined);
         expect(function () {
-            for (let value of tuple) {
+            for (const value of tuple) {
                 expect(value).toEqual(expect.any(Number));
             }
         }).not.toThrow();
@@ -156,7 +157,7 @@ describe('Tuple', function () {
         it('encodes as an array with tag and array of items', function () {
             expect(t(1, 2, 3).toJSON()).toMatchPattern([
                 '$otp.tuple',
-                [1, 2, 3],
+                [1, 2, 3]
             ]);
         });
     });

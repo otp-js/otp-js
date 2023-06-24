@@ -1,4 +1,5 @@
-import { List, Tuple, l, il, cons, car, cdr } from '../src';
+/* eslint-env jest */
+import { Tuple, l, il, cons, car, cdr } from '../src';
 import '@otpjs/test_utils';
 import crypto from 'crypto';
 import util from 'util';
@@ -14,14 +15,14 @@ describe('List', function () {
         expect(value).toBe(l.nil);
     });
     it('has a length', function () {
-        let list1 = l();
-        let list2 = l(1, 2, 3);
+        const list1 = l();
+        const list2 = l(1, 2, 3);
 
         expect(list1.length()).toBe(0);
         expect(list2.length()).toBe(3);
     });
     it('can add to the end', function () {
-        let list = l(1, 2, 3);
+        const list = l(1, 2, 3);
         expect(list.push(4)).toMatchPattern(l(1, 2, 3, 4));
         expect(l.nil.push(0)).toMatchPattern(l(0));
     });
@@ -29,12 +30,12 @@ describe('List', function () {
         expect(() => il(1, 2, null).push(3)).toThrow('pushed to improper list');
     });
     it('can add to the head with cons', function () {
-        let list = l(1, 2, 3);
+        const list = l(1, 2, 3);
         expect(cons(0, list)).toMatchPattern(l(0, 1, 2, 3));
     });
     describe('replaceWhere', function () {
         it('substitutes the first value for which the predicate is true', function () {
-            expect(l(1, 2, 3).replaceWhere((n) => n == 2, 4)).toMatchPattern(
+            expect(l(1, 2, 3).replaceWhere((n) => n === 2, 4)).toMatchPattern(
                 l(1, 4, 3)
             );
         });
@@ -186,7 +187,7 @@ describe('List', function () {
         });
     });
     it('can be reversed', function () {
-        let list = l(1, 2, 3);
+        const list = l(1, 2, 3);
         expect(list.reverse()).toMatchPattern(l(3, 2, 1));
     });
     it('accepts an arbitrary number of items', function () {
@@ -200,7 +201,7 @@ describe('List', function () {
         const list = l(1, 2, 3);
         expect(function () {
             let index = 0;
-            for (let item of list) {
+            for (const item of list) {
                 expect(item).toBe(list.nth(index++));
             }
         }).not.toThrow();
