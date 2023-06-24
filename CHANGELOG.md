@@ -1,3 +1,15 @@
+# 0.18.0 (2023-06-24)
+
+
+### Bug Fixes
+
+* **core:** switch #links from Set to List 07a6e96
+
+
+### Features
+
+* **core:** receiveBlock e38ab9b
+
 ## 0.17.10 (2023-06-05)
 
 

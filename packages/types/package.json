@@ -1,6 +1,6 @@
 {
     "name": "@otpjs/types",
-    "version": "0.17.8",
+    "version": "0.18.0",
     "description": "> TODO: description",
     "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
     "homepage": "https://github.com/otp-js/otp-js#readme",
@@ -10,7 +10,10 @@
         "lib": "lib",
         "test": "__tests__"
     },
-    "files": ["lib", "devtools.js"],
+    "files": [
+        "lib",
+        "devtools.js"
+    ],
     "publishConfig": {
         "access": "public"
     },
