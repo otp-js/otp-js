@@ -1,6 +1,3 @@
-import debug from 'debug';
-
-const log = debug('otpjs:types:tuple');
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
 const traps = {
