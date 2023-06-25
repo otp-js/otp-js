@@ -10,10 +10,7 @@
         "lib": "lib",
         "test": "__tests__"
     },
-    "files": [
-        "lib",
-        "devtools.js"
-    ],
+    "files": ["lib", "devtools.js"],
     "publishConfig": {
         "access": "public"
     },
@@ -26,7 +23,7 @@
         "watch": "babel src --out-dir lib --watch",
         "clean": "rimraf lib",
         "prepublish": "npm run build",
-        "test": "echo \"Error: run tests from root\" && exit 1",
+        "test": "jest",
         "lint": "eslint src"
     },
     "bugs": {
