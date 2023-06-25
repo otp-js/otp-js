@@ -20,6 +20,13 @@ describe('Tuple', function () {
             expect(t.isTuple(false)).toBe(false);
         });
     });
+    describe('create', function () {
+        it('creates an empty tuple of the given size', function () {
+            expect(t.create(0).size).toBe(0);
+            expect(t.create(1).size).toBe(1);
+            expect(t.create(2).size).toBe(2);
+        });
+    });
     it('accepts an arbitrary number of items', function () {
         const tuple1 = t(1, 2, 3);
         expect(tuple1.size).toBe(3);
@@ -27,7 +34,6 @@ describe('Tuple', function () {
         const tuple2 = t(...new Array(100));
         expect(tuple2.size).toBe(100);
     });
-
     it('is iterable', function () {
         const tuple = t(1, 2, 3);
         expect(tuple[Symbol.iterator]).not.toBe(undefined);
@@ -37,7 +43,6 @@ describe('Tuple', function () {
             }
         }).not.toThrow();
     });
-
     it('allows read access via get method', function () {
         const buffer = crypto.randomBytes(Math.floor(Math.random() * 128) + 1);
         const tuple1 = t(...buffer);
@@ -49,7 +54,6 @@ describe('Tuple', function () {
 
         expect(() => tuple1.get(buffer.length + 1)).toThrow(RangeError);
     });
-
     it('allows read access via numeric index', function () {
         const buffer = crypto.randomBytes(Math.floor(Math.random() * 128) + 1);
         const tuple1 = t(...buffer);
@@ -61,7 +65,6 @@ describe('Tuple', function () {
 
         expect(() => tuple1[buffer.length + 1]).toThrow(RangeError);
     });
-
     it('allows reading of defined string and symbol properties', function () {
         const tuple1 = t(1, 2, 3);
 
@@ -77,7 +80,6 @@ describe('Tuple', function () {
         expect(tuple1.newProperty).toBe(undefined);
         expect(tuple1[Symbol()]).toBe(undefined);
     });
-
     it('does not allow writing to defined string and symbol properties', function () {
         const tuple1 = t(1, 2, 3);
 
@@ -93,7 +95,6 @@ describe('Tuple', function () {
         expect(() => (tuple1.newProperty = null)).toThrow(RangeError);
         expect(() => (tuple1[Symbol()] = null)).toThrow(RangeError);
     });
-
     it('allows write access via set method', function () {
         const size = Math.floor(Math.random() * 128) + 1;
         const tuple1 = t(...String.fromCharCode(0).repeat(size));
@@ -107,7 +108,6 @@ describe('Tuple', function () {
 
         expect(() => tuple1.set(size + 1, 'any value')).toThrow(RangeError);
     });
-
     it('allows write access via numeric index', function () {
         const size = Math.floor(Math.random() * 128) + 1;
         const tuple1 = t(...String.fromCharCode(0).repeat(size));
@@ -121,7 +121,6 @@ describe('Tuple', function () {
 
         expect(() => (tuple1[size + 1] = 'any value')).toThrow(RangeError);
     });
-
     describe('inspection', function () {
         it('implements a custom inspect function', function () {
             const tuple = t(1, 2, 3);
@@ -152,13 +151,54 @@ describe('Tuple', function () {
             );
         });
     });
-
     describe('toJSON', function () {
         it('encodes as an array with tag and array of items', function () {
             expect(t(1, 2, 3).toJSON()).toMatchPattern([
                 '$otp.tuple',
                 [1, 2, 3]
             ]);
+        });
+    });
+    describe('toString', function () {
+        describe('when depth is 0', function () {
+            it('returns an empty tuple string', function () {
+                expect(t().toString()).toBe('{ }');
+            });
+        });
+        describe('when the length is 1 or more', function () {
+            it('returns a tuple string containing the stringified item', function () {
+                expect(t('foo').toString()).toBe('{ foo }');
+                expect(t(1).toString()).toBe('{ 1 }');
+            });
+            it('uses the toString method of its items', function () {
+                const toString = jest.fn(() => 'foo');
+                const object = { toString };
+                const tuple = t(1, object);
+
+                expect(tuple.toString()).toBe('{ 1, foo }');
+                expect(toString).toHaveBeenCalledTimes(1);
+            });
+        });
+        describe('given a symbol child', function () {
+            describe('of a well-known symbol', function () {
+                it('returns the well-known symbol', function () {
+                    const symbol = Symbol.for('foo');
+                    expect(t(symbol).toString()).toBe('{ Symbol(foo) }');
+                });
+            });
+            describe('of a tagged symbol', function () {
+                it('returns the tagged symbol', function () {
+                    const symbol = Symbol('foo');
+                    expect(t(symbol).toString()).toBe('{ Symbol(foo) }');
+                });
+            });
+            describe('of an anonymous symbol', function () {
+                it('returns the anonymous symbol', function () {
+                    // eslint-disable-next-line symbol-description
+                    const symbol = Symbol();
+                    expect(t(symbol).toString()).toBe('{ Symbol() }');
+                });
+            });
         });
     });
 });
