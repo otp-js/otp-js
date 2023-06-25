@@ -1,4 +1,3 @@
-import inspect from 'inspect-custom-symbol';
 import debug from 'debug';
 import { t } from './tuple';
 
@@ -6,6 +5,7 @@ const log = debug('otpjs:types:list');
 
 const hidden = new WeakMap();
 const nil = Object(Symbol.for('nil'));
+const inspect = Symbol.for('nodejs.util.inspect.custom');
 
 _bind(nil);
 
@@ -331,10 +331,6 @@ List.prototype[inspect] = function inspect(
 ) {
     if (depth < 0) {
         return options.stylize('[List]', 'special');
-    }
-
-    if (typeof inspect !== 'function') {
-        inspect = require('util').inspect;
     }
 
     const newOptions = {
