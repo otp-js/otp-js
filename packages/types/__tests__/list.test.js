@@ -1,5 +1,5 @@
 /* eslint-env jest */
-import { Tuple, l, il, cons, car, cdr } from '../src';
+import { Tuple, List, l, il, cons, car, cdr } from '../src';
 import '@otpjs/test_utils';
 import crypto from 'crypto';
 import util from 'util';
@@ -33,6 +33,22 @@ describe('List', function () {
         const list = l(1, 2, 3);
         expect(cons(0, list)).toMatchPattern(l(0, 1, 2, 3));
     });
+    describe('isEmpty', function () {
+        describe('given nil', function () {
+            it('returns true', function () {
+                expect(l.isEmpty(l.nil)).toBe(true);
+                expect(il.isEmpty(l.nil)).toBe(true);
+                expect(List.isEmpty(l.nil)).toBe(true);
+            });
+        });
+        describe('given a non-nil list', function () {
+            it('returns false', function () {
+                expect(l.isEmpty(l(1, 2, 3))).toBe(false);
+                expect(il.isEmpty(il(1, 2, 3))).toBe(false);
+                expect(List.isEmpty(l(1, 2, 3))).toBe(false);
+            });
+        });
+    });
     describe('replaceWhere', function () {
         it('substitutes the first value for which the predicate is true', function () {
             expect(l(1, 2, 3).replaceWhere((n) => n === 2, 4)).toMatchPattern(
@@ -46,6 +62,16 @@ describe('List', function () {
             expect(
                 l(1, 2, 3).replaceWhere((n) => n === 4, 5, false)
             ).toMatchPattern(l(1, 2, 3));
+        });
+    });
+    describe('deleteWhere', function () {
+        it('deletes the first value for which the predicate is true', function () {
+            expect(l(1, 2, 3).deleteWhere((n) => n === 2)).toMatchPattern(
+                l(1, 3)
+            );
+        });
+        it('does not modify the list if the predicate is never true', function () {
+            expect(l(1, 2, 3).deleteWhere((n) => n === 4)).toMatchPattern(l(1, 2, 3));
         });
     });
     describe('includes', function () {
@@ -125,6 +151,20 @@ describe('List', function () {
             expect(list.nth(5)).toBe(undefined);
         });
     });
+    describe('append', function () {
+        describe('given  another list', function () {
+            it('appends it to this list', function () {
+                const list = l(1, 2, 3);
+                expect(list.append(l(4, 5, 6))).toMatchPattern(l(1, 2, 3, 4, 5, 6));
+            });
+        });
+        describe('given a non-list', function () {
+            it('creates an improper list with the value as the deepest tail', function () {
+                const list = l(1, 2, 3);
+                expect(list.append(4)).toMatchPattern(il(1, 2, 3, 4));
+            });
+        });
+    });
     describe('ImproperList', function () {
         it('is a list node which has a non-list tail', function () {
             const node = il(1, 2);
@@ -184,6 +224,54 @@ describe('List', function () {
             expect(util.inspect(l(1, 2, 3), { depth: null })).toBe(
                 '[ 1, 2, 3 ]'
             );
+        });
+    });
+    describe('toString', function () {
+        it('returns a string', function () {
+            expect(l(1, 2, 3).toString()).toBe('[ 1, 2, 3 ]');
+            expect(il(1, 2, 3).toString()).toBe('[ 1, 2 | 3 ]');
+            expect(l.nil.toString()).toBe('[ ]');
+        });
+
+        describe('with an object child containing a toString method', function () {
+            it('calls the toString method on the object', function () {
+                const toString = jest.fn(() => 'object');
+                const object = { toString };
+                const list = l(1, 2, object);
+                expect(list.toString()).toBe('[ 1, 2, object ]');
+            });
+        });
+
+        describe('with a symbol child', function () {
+            describe('which is a known symbol', function () {
+                it('converts the symbol to its key', function () {
+                    const symbol = Symbol.for('well_known');
+                    const list = l(1, 2, symbol);
+                    expect(list.toString()).toBe('[ 1, 2, Symbol(well_known) ]');
+                });
+            });
+            describe('which is a named symbol', function () {
+                it('converts it to a string representation', function () {
+                    const symbol = Symbol('anonymous');
+                    const list = l(1, 2, symbol);
+                    expect(list.toString()).toBe('[ 1, 2, Symbol(anonymous) ]');
+                });
+            });
+            describe('which is an anonymous symbol', function () {
+                it('converts it to a string representation', function () {
+                    const symbol = Symbol();
+                    const list = l(1, 2, symbol);
+                    expect(list.toString()).toBe('[ 1, 2, Symbol() ]');
+                });
+            });
+        });
+    });
+    describe('toStringTag', function () {
+        describe('when coerced to a string', function () {
+            it('returns the name of the object', function () {
+                const list = l(1, 2, 3);
+                expect(Object.prototype.toString.call(list)).toBe('[object List]');
+            });
         });
     });
     it('can be reversed', function () {
@@ -299,7 +387,6 @@ describe('List', function () {
             }
         });
     });
-
     describe('split', function () {
         describe('on nil', function () {
             it('does not throw', function () {
