@@ -409,9 +409,7 @@ function safeString(value) {
     }
 }
 
-List.prototype[Symbol.toStringTag] = function () {
-    return 'List';
-};
+List.prototype[Symbol.toStringTag] = 'List';
 
 export function l(...items) {
     return List.from(...items);

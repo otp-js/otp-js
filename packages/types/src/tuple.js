@@ -87,7 +87,7 @@ export function Tuple(...elements) {
     return new Proxy(this, traps);
 }
 
-Tuple.prototype[Symbol.iterator] = function * () {
+Tuple.prototype[Symbol.iterator] = function* () {
     for (let i = 0; i < this.size; i++) {
         yield this.get(i);
     }
@@ -156,9 +156,7 @@ Tuple.prototype.toString = function () {
     return result;
 };
 
-Tuple.prototype[Symbol.toStringTag] = function () {
-    return 'Tuple';
-};
+Tuple.prototype[Symbol.toStringTag] = 'Tuple';
 
 Tuple.prototype.$$typeof = 'object';
 Tuple.create = function create(arity) {
