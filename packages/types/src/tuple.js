@@ -1,7 +1,7 @@
-import customInspect from 'inspect-custom-symbol';
 import debug from 'debug';
 
 const log = debug('otpjs:types:tuple');
+const inspect = Symbol.for('nodejs.util.inspect.custom');
 
 const traps = {
     get(object, key, value) {
@@ -94,13 +94,9 @@ Tuple.prototype[Symbol.iterator] = function* () {
 };
 Tuple.prototype.then = undefined;
 
-Tuple.prototype[customInspect] = function (depth, options, inspect) {
+Tuple.prototype[inspect] = function (depth, options, inspect) {
     if (depth < 0) {
         return options.stylize('[Tuple]', 'special');
-    }
-
-    if (typeof inspect !== 'function') {
-        inspect = require('util').inspect;
     }
 
     const newOptions = {
