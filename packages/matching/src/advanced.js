@@ -1,12 +1,54 @@
 import { cons, list, OTPError, tuple } from '@otpjs/types';
 import debug from 'debug';
-import { compile } from './core';
+import { compile, compare } from './core';
 import * as Symbols from './symbols';
 
 const { case_clause, route_clause, skip_matching } = Symbols;
 const badarg = Symbol.for('badarg');
 
 const log = debug('otpjs:matching:advanced');
+
+const matched = Symbol();
+
+export function kase(value) {
+    return {
+        of: (builder) => {
+            const onMatch = {
+                then: (handler) => {
+                    throw t(matched, handler);
+                },
+                when: (condition) => {
+                    if (condition(value)) {
+                        return onMatch;
+                    } else {
+                        return ok;
+                    }
+                },
+            };
+            const checkClause = (pattern) => {
+                if (compare(pattern, value)) {
+                    return onMatch;
+                } else {
+                    return {
+                        then: (_handler) => ok,
+                    };
+                }
+            };
+
+            try {
+                builder(checkClause);
+                throw OTPError(case_clause);
+            } catch (result) {
+                if (result instanceof Error) {
+                    throw result;
+                } else {
+                    const [, handler] = result;
+                    return handler(value);
+                }
+            }
+        },
+    };
+}
 
 export function buildCase(builder) {
     let handlers = list.nil;
@@ -44,7 +86,7 @@ export function buildCase(builder) {
                 }
             }
             throw OTPError(case_clause);
-        }
+        },
     };
 }
 export function clauses(builder, name) {
@@ -58,7 +100,7 @@ export function clauses(builder, name) {
                 } else {
                     throw OTPError(badarg);
                 }
-            }
+            },
         };
     };
     builder(route);
@@ -81,10 +123,14 @@ export function clauses(builder, name) {
                 if (result) {
                     return handler.call(this, ...args);
                 } else {
-                    log('clauses(name: %o, pattern: %o, failed)', name, pattern);
+                    log(
+                        'clauses(name: %o, pattern: %o, failed)',
+                        name,
+                        pattern
+                    );
                 }
             }
             throw OTPError(route_clause);
-        }
+        },
     }[name];
 }
