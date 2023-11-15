@@ -60,7 +60,7 @@ describe('@otpjs/core.Context', () => {
                     pending = false;
                 });
                 expect(timeoutSpy).not.toHaveBeenCalled();
-                await wait(1000);
+                await wait(300);
                 expect(pending).toBe(true);
                 ctxB.send(ctxA.self(), 'finish');
                 await expect(receiving).resolves.toBe('finish');
@@ -93,7 +93,7 @@ describe('@otpjs/core.Context', () => {
                     pending = false;
                 });
                 expect(timeoutSpy).not.toHaveBeenCalled();
-                await wait(1000);
+                await wait(300);
                 expect(pending).toBe(true);
                 ctxB.send(ctxA.self(), 'finish');
                 await expect(receiving).resolves.toBe('finish');
@@ -116,7 +116,7 @@ describe('@otpjs/core.Context', () => {
                 expect(timeoutSpy).toHaveBeenCalled();
             });
             it('throws if the timeout is exceeded', async function () {
-                const sendPromise = ctxA.receive(500);
+                const sendPromise = ctxA.receive(100);
                 sendPromise.catch(() => ok);
                 await wait();
                 expect(timeoutSpy).toHaveBeenCalled();
@@ -151,10 +151,10 @@ describe('@otpjs/core.Context', () => {
             });
 
             it('throws if the timeout is exceeded', async function () {
-                const sendPromise = ctxA.receive(pattern, 500);
+                const sendPromise = ctxA.receive(pattern, 100);
                 sendPromise.catch(() => ok);
                 await wait();
-                expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 500);
+                expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 100);
                 await expect(sendPromise).rejects.toThrowTerm(timeout);
             });
         });

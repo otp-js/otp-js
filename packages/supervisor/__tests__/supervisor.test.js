@@ -11,7 +11,7 @@ import * as gen_server from '@otpjs/gen_server';
 import * as matching from '@otpjs/matching';
 import { t, l } from '@otpjs/types';
 
-const { error, ok, trap_exit, normal, kill, badarg, timeout } = Symbols;
+const { error, ok, trap_exit, normal, kill, badarg, timeout, EXIT } = Symbols;
 const { _, spread } = matching.Symbols;
 const {
     one_for_one,
@@ -20,7 +20,7 @@ const {
     rest_for_one,
     transient,
     permanent,
-    temporary
+    temporary,
 } = supervisor.Symbols;
 const { stop } = gen_server.Symbols;
 
@@ -46,7 +46,7 @@ describe('@otp-js/supervisor', () => {
         callbacks = {
             init: jest.fn(function () {
                 return t(ok, t({ strategy: one_for_one }, l()));
-            })
+            }),
         };
     });
 
@@ -57,14 +57,12 @@ describe('@otp-js/supervisor', () => {
         const start = supervisor.startLink(ctx, callbacks, args);
         await expect(start).resolves.toMatchPattern(pattern);
     });
-
     it('ignores unsupported calls', async function () {
         const [, pid] = await supervisor.startLink(ctx, callbacks, args);
         await expect(
-            gen_server.call(ctx, pid, 'nonsense', 500)
+            gen_server.call(ctx, pid, 'nonsense', 100)
         ).rejects.toThrowTerm(timeout);
     });
-
     it('ignores unsupported casts', async function () {
         const [, pid] = await supervisor.startLink(ctx, callbacks, args);
         await expect(gen_server.cast(ctx, pid, 'nonsense')).resolves.toBe(ok);
@@ -92,7 +90,7 @@ describe('@otp-js/supervisor', () => {
                             log(ctx, 'init(...%o)', args);
                             received = args;
                             return t(ok, null);
-                        })
+                        }),
                     };
                     const [, pid] = await supervisor.startLink(
                         ctx,
@@ -107,7 +105,7 @@ describe('@otp-js/supervisor', () => {
                 });
                 it('may indicate to stop', async function () {
                     const callbacks = {
-                        init: () => t(stop, badarg)
+                        init: () => t(stop, badarg),
                     };
 
                     const startPromise = supervisor.startLink(ctx, callbacks);
@@ -118,7 +116,7 @@ describe('@otp-js/supervisor', () => {
                 });
                 it('may fail to start correctly', async function () {
                     const callbacks = {
-                        init: () => badarg
+                        init: () => badarg,
                     };
 
                     const startPromise = supervisor.startLink(ctx, callbacks);
@@ -154,32 +152,32 @@ describe('@otp-js/supervisor', () => {
                                             {
                                                 id: 'a',
                                                 start: [start, [1, 2, 3]],
-                                                restart: transient
+                                                restart: transient,
                                             },
                                             {
                                                 id: 'b',
                                                 start: [start, [4, 5, 6]],
-                                                restart: transient
+                                                restart: transient,
                                             },
                                             {
                                                 id: 'c',
                                                 start: [startIgnore, []],
-                                                restart: transient
+                                                restart: transient,
                                             },
                                             {
                                                 id: 'd',
                                                 start: [start, [7, 8, 9]],
-                                                restart: transient
+                                                restart: transient,
                                             },
                                             {
                                                 id: 'e',
                                                 start: [start, [10, 11, 12]],
-                                                restart: transient
+                                                restart: transient,
                                             }
                                         )
                                     )
                                 );
-                            })
+                            }),
                         };
                     });
 
@@ -216,35 +214,35 @@ describe('@otp-js/supervisor', () => {
                                                 {
                                                     id: 'a',
                                                     start: [start, [1, 2, 3]],
-                                                    restart: transient
+                                                    restart: transient,
                                                 },
                                                 {
                                                     id: 'b',
                                                     start: [start, [4, 5, 6]],
-                                                    restart: transient
+                                                    restart: transient,
                                                 },
                                                 {
                                                     id: 'c',
                                                     start: [startIgnore, []],
-                                                    restart: temporary
+                                                    restart: temporary,
                                                 },
                                                 {
                                                     id: 'd',
                                                     start: [start, [7, 8, 9]],
-                                                    restart: transient
+                                                    restart: transient,
                                                 },
                                                 {
                                                     id: 'e',
                                                     start: [
                                                         start,
-                                                        [10, 11, 12]
+                                                        [10, 11, 12],
                                                     ],
-                                                    restart: transient
+                                                    restart: transient,
                                                 }
                                             )
                                         )
                                     );
-                                })
+                                }),
                             };
                         });
                         it('removes the child spec', async function () {
@@ -264,7 +262,51 @@ describe('@otp-js/supervisor', () => {
                         });
                     });
                 });
-                describe('due to an error', function () {});
+                describe('due to an unrecognized response', function () {
+                    let start;
+
+                    beforeEach(function () {
+                        node = new Node();
+                        ctx = node.makeContext();
+                        ctx.processFlag(trap_exit, true);
+                        args = [];
+                        start = jest.fn(() => ok);
+                        callbacks = {
+                            init: jest.fn(() => {
+                                return t(
+                                    ok,
+                                    t(
+                                        { strategy: one_for_all },
+                                        l({
+                                            id: 'process',
+                                            start: [start, [10, 11, 12]],
+                                            restart: transient,
+                                        })
+                                    )
+                                );
+                            }),
+                        };
+                    });
+
+                    it('exits from a cannot_start error', async function () {
+                        const startPromise = supervisor.startLink(
+                            ctx,
+                            callbacks
+                        );
+
+                        await expect(startPromise).resolves.toMatchPattern(
+                            t(ok, Pid.isPid)
+                        );
+
+                        const [, pid] = await startPromise;
+                        await expect(ctx.receive()).resolves.toMatchPattern(
+                            t(EXIT, pid, {
+                                term: t('cannot_start', 'process', ok),
+                                [spread]: _,
+                            })
+                        );
+                    });
+                });
             });
             describe('for a one_for_one strategy', function () {
                 let config = null;
@@ -277,18 +319,18 @@ describe('@otp-js/supervisor', () => {
                     subtracter = jest.fn(Subtracter.startLink);
                     config = t(
                         {
-                            strategy: one_for_one
+                            strategy: one_for_one,
                         },
                         l(
                             {
                                 id: 'adder',
                                 start: [adder, [1, 2, 3]],
-                                restart: transient
+                                restart: transient,
                             },
                             {
                                 id: 'subtracter',
                                 start: [subtracter, [1, 2, 3]],
-                                restart: transient
+                                restart: transient,
                             }
                         )
                     );
@@ -297,7 +339,7 @@ describe('@otp-js/supervisor', () => {
                         init: jest.fn((ctx, ...args) => {
                             log(ctx, 'callbacks.init()');
                             return t(ok, config);
-                        })
+                        }),
                     };
                 });
 
@@ -326,7 +368,7 @@ describe('@otp-js/supervisor', () => {
                                 {
                                     id: 'subtracter',
                                     pid: Pid.isPid,
-                                    [spread]: _
+                                    [spread]: _,
                                 }
                             )
                         )
@@ -389,11 +431,11 @@ describe('@otp-js/supervisor', () => {
                                         l({
                                             id: 'a',
                                             start: [start, [1, 2, 3]],
-                                            restart: transient
+                                            restart: transient,
                                         })
                                     )
                                 );
-                            })
+                            }),
                         };
                     });
 
@@ -410,7 +452,7 @@ describe('@otp-js/supervisor', () => {
                                 {
                                     id: 'b',
                                     start: [start, [1, 2, 3]],
-                                    restart: transient
+                                    restart: transient,
                                 }
                             );
                             await expect(
@@ -439,9 +481,9 @@ describe('@otp-js/supervisor', () => {
                                             id: 'b',
                                             start: [
                                                 Failed.startLink,
-                                                [1, 2, 3]
+                                                [1, 2, 3],
                                             ],
-                                            restart: temporary
+                                            restart: temporary,
                                         })
                                     ).resolves.toMatchPattern(t(error, _));
                                 });
@@ -456,9 +498,9 @@ describe('@otp-js/supervisor', () => {
                                             id: 'b',
                                             start: [
                                                 Failed.startLink,
-                                                [1, 2, 3]
+                                                [1, 2, 3],
                                             ],
-                                            restart: temporary
+                                            restart: temporary,
                                         })
                                     ).resolves.toMatchPattern(t(error, _));
 
@@ -481,17 +523,57 @@ describe('@otp-js/supervisor', () => {
                                             id: 'b',
                                             start: [
                                                 Failed.startLink,
-                                                [1, 2, 3]
+                                                [1, 2, 3],
                                             ],
-                                            restart: transient
+                                            restart: transient,
                                         })
-                                    ).rejects.toThrowTerm(
-                                        t('cannot_start', 'b', 'max_retries')
+                                    ).resolves.toMatchPattern(
+                                        t(
+                                            error,
+                                            t(
+                                                'cannot_start',
+                                                'b',
+                                                'max_retries'
+                                            )
+                                        )
                                     );
                                 });
                             });
-                            describe('with a bad response', function () {
-                                it('throws an error', async function () {
+                            describe('from an OTPError', function () {
+                                let pid;
+                                beforeEach(async function () {
+                                    start = jest.fn(Failed.startLink);
+                                    callbacks.init = jest.fn(() => {
+                                        return t(
+                                            ok,
+                                            t({ strategy: one_for_one }, l())
+                                        );
+                                    });
+
+                                    const [, started] =
+                                        await supervisor.startLink(
+                                            ctx,
+                                            callbacks
+                                        );
+                                    pid = started;
+                                });
+                                it('returns an error tuple', async function () {
+                                    await expect(
+                                        supervisor.startChild(ctx, pid, {
+                                            id: 'a',
+                                            start: [start, [badarg]],
+                                            restart: transient,
+                                        })
+                                    ).resolves.toMatchPattern(
+                                        t(
+                                            error,
+                                            t(
+                                                'cannot_start',
+                                                'a',
+                                                'max_retries'
+                                            )
+                                        )
+                                    );
                                 });
                             });
                         });
@@ -516,22 +598,22 @@ describe('@otp-js/supervisor', () => {
                                         {
                                             id: 'a',
                                             start: [start, [1, 2, 3]],
-                                            restart: transient
+                                            restart: transient,
                                         },
                                         {
                                             id: 'b',
                                             start: [start, [4, 5, 6]],
-                                            restart: transient
+                                            restart: transient,
                                         },
                                         {
                                             id: 'c',
                                             start: [start, [7, 8, 9]],
-                                            restart: transient
+                                            restart: transient,
                                         }
                                     )
                                 )
                             );
-                        })
+                        }),
                     };
                 });
 
@@ -611,32 +693,32 @@ describe('@otp-js/supervisor', () => {
                                         {
                                             id: 'a',
                                             start: [start, [1, 2, 3]],
-                                            restart: transient
+                                            restart: transient,
                                         },
                                         {
                                             id: 'b',
                                             start: [start, [4, 5, 6]],
-                                            restart: transient
+                                            restart: transient,
                                         },
                                         {
                                             id: 'c',
                                             start: [start, [7, 8, 9]],
-                                            restart: transient
+                                            restart: transient,
                                         },
                                         {
                                             id: 'd',
                                             start: [start, [7, 8, 9]],
-                                            restart: transient
+                                            restart: transient,
                                         },
                                         {
                                             id: 'e',
                                             start: [start, [7, 8, 9]],
-                                            restart: transient
+                                            restart: transient,
                                         }
                                     )
                                 )
                             );
-                        })
+                        }),
                     };
                 });
 
@@ -674,53 +756,132 @@ describe('@otp-js/supervisor', () => {
                         )
                     );
                 });
-                it('restarts subsequent processes when one dies', async function () {
-                    const [, pid] = await supervisor.startLink(ctx, callbacks);
-                    const [, children] = await supervisor.whichChildren(
-                        ctx,
-                        pid
-                    );
-                    const [
-                        { pid: pidA1 },
-                        { pid: pidB1 },
-                        { pid: pidC1 },
-                        { pid: pidD1 },
-                        { pid: pidE1 }
-                    ] = children;
 
-                    log(ctx, 'CHILDREN: %O', children);
+                describe('when a child process dies', function () {
+                    let failRestart;
+                    it('restarts subsequent processes', async function () {
+                        const [, pid] = await supervisor.startLink(
+                            ctx,
+                            callbacks
+                        );
+                        const [, children] = await supervisor.whichChildren(
+                            ctx,
+                            pid
+                        );
+                        const [
+                            { pid: pidA1 },
+                            { pid: pidB1 },
+                            { pid: pidC1 },
+                            { pid: pidD1 },
+                            { pid: pidE1 },
+                        ] = children;
 
-                    await ctx.exit(pidC1, kill);
-                    await wait(100);
+                        log(ctx, 'CHILDREN: %O', children);
 
-                    const [, nextChildren] = await supervisor.whichChildren(
-                        ctx,
-                        pid
-                    );
-                    const [
-                        { pid: pidA2 },
-                        { pid: pidB2 },
-                        { pid: pidC2 },
-                        { pid: pidD2 },
-                        { pid: pidE2 }
-                    ] = nextChildren;
+                        await ctx.exit(pidC1, kill);
+                        await wait(100);
 
-                    log(ctx, 'NEXT_CHILDREN: %O', nextChildren);
+                        const [, nextChildren] = await supervisor.whichChildren(
+                            ctx,
+                            pid
+                        );
+                        const [
+                            { pid: pidA2 },
+                            { pid: pidB2 },
+                            { pid: pidC2 },
+                            { pid: pidD2 },
+                            { pid: pidE2 },
+                        ] = nextChildren;
 
-                    expect(pidA1).toMatchPattern(pidA2);
-                    expect(pidA2).toMatchPattern(Pid.isPid);
+                        log(ctx, 'NEXT_CHILDREN: %O', nextChildren);
 
-                    expect(pidB1).toMatchPattern(pidB2);
-                    expect(pidB2).toMatchPattern(Pid.isPid);
+                        expect(pidA1).toMatchPattern(pidA2);
+                        expect(pidA2).toMatchPattern(Pid.isPid);
 
-                    expect(pidC1).not.toMatchPattern(pidC2);
-                    expect(pidC2).toMatchPattern(Pid.isPid);
+                        expect(pidB1).toMatchPattern(pidB2);
+                        expect(pidB2).toMatchPattern(Pid.isPid);
 
-                    expect(pidD1).not.toMatchPattern(pidD2);
-                    expect(pidD2).toMatchPattern(Pid.isPid);
+                        expect(pidC1).not.toMatchPattern(pidC2);
+                        expect(pidC2).toMatchPattern(Pid.isPid);
 
-                    expect(pidE1).not.toMatchPattern(pidE2);
-                    expect(pidE2).toMatchPattern(Pid.isPid);
+                        expect(pidD1).not.toMatchPattern(pidD2);
+                        expect(pidD2).toMatchPattern(Pid.isPid);
+
+                        expect(pidE1).not.toMatchPattern(pidE2);
+                        expect(pidE2).toMatchPattern(Pid.isPid);
+                    });
+                    describe('when a child process cannot be restarted', function () {
+                        beforeEach(function () {
+                            start = jest.fn(Adder.startLink);
+                            failRestart = jest.fn(Adder.startLink);
+
+                            callbacks = {
+                                init: jest.fn(() => {
+                                    return t(
+                                        ok,
+                                        t(
+                                            { strategy: rest_for_one },
+                                            l(
+                                                {
+                                                    id: 'a',
+                                                    start: [start, [1, 2, 3]],
+                                                    restart: transient,
+                                                },
+                                                {
+                                                    id: 'b',
+                                                    start: [start, [4, 5, 6]],
+                                                    restart: transient,
+                                                },
+                                                {
+                                                    id: 'c',
+                                                    start: [start, [7, 8, 9]],
+                                                    restart: transient,
+                                                },
+                                                {
+                                                    id: 'd',
+                                                    start: [start, [7, 8, 9]],
+                                                    restart: transient,
+                                                },
+                                                {
+                                                    id: 'e',
+                                                    start: [
+                                                        failRestart,
+                                                        [7, 8, 9],
+                                                    ],
+                                                    restart: transient,
+                                                }
+                                            )
+                                        )
+                                    );
+                                }),
+                            };
+                        });
+
+                        it('terminates the supervisor', async function () {
+                            const [, pid] = await supervisor.startLink(
+                                ctx,
+                                callbacks
+                            );
+                            const [, children] = await supervisor.whichChildren(
+                                ctx,
+                                pid
+                            );
+
+                            expect(children.length()).toEqual(5);
+
+                            failRestart.mockImplementation(Failed.startLink);
+
+                            const [child] = children;
+                            ctx.exit(child.pid, kill);
+
+                            await expect(ctx.receive()).resolves.toMatchPattern(
+                                t(EXIT, pid, {
+                                    term: t('cannot_start', 'e', 'max_retries'),
+                                    [spread]: _,
+                                })
+                            );
+                        });
+                    });
                 });
             });
             describe('for a simple_one_for_one strategy', function () {
@@ -739,11 +900,11 @@ describe('@otp-js/supervisor', () => {
                                     { strategy: simple_one_for_one },
                                     l({
                                         start: [start, [1, 2, 3]],
-                                        restart: transient
+                                        restart: transient,
                                     })
                                 )
                             );
-                        })
+                        }),
                     };
                 });
                 it('spawns no processes after initializing', async function () {
@@ -817,15 +978,15 @@ describe('@otp-js/supervisor', () => {
                                             t(
                                                 {
                                                     strategy:
-                                                        simple_one_for_one
+                                                        simple_one_for_one,
                                                 },
                                                 l({
                                                     start: [startIgnore, []],
-                                                    restart: temporary
+                                                    restart: temporary,
                                                 })
                                             )
                                         );
-                                    })
+                                    }),
                                 };
                             });
 
@@ -846,15 +1007,13 @@ describe('@otp-js/supervisor', () => {
                     describe('with a transient restart', function () {
                         describe('due to an ignore response', function () {
                             let start;
-                            let startIgnore;
 
                             beforeEach(function () {
                                 node = new Node();
                                 ctx = node.makeContext();
                                 ctx.processFlag(trap_exit, true);
                                 args = [];
-                                start = jest.fn(Adder.startLink);
-                                startIgnore = jest.fn(Ignored.startLink);
+                                start = jest.fn(Ignored.startLink);
                                 callbacks = {
                                     init: jest.fn(() => {
                                         return t(
@@ -862,15 +1021,15 @@ describe('@otp-js/supervisor', () => {
                                             t(
                                                 {
                                                     strategy:
-                                                        simple_one_for_one
+                                                        simple_one_for_one,
                                                 },
                                                 l({
-                                                    start: [startIgnore, []],
-                                                    restart: transient
+                                                    start: [start, []],
+                                                    restart: transient,
                                                 })
                                             )
                                         );
-                                    })
+                                    }),
                                 };
                             });
 
@@ -881,26 +1040,75 @@ describe('@otp-js/supervisor', () => {
                                 );
 
                                 await supervisor.startChild(ctx, pid, l());
-                                expect(startIgnore).toHaveBeenCalledTimes(1);
+                                expect(start).toHaveBeenCalledTimes(1);
                                 await expect(
                                     supervisor.whichChildren(ctx, pid)
                                 ).resolves.toMatchPattern(t(ok, l()));
                             });
                         });
+                        describe('due to an error', function () {
+                            let start;
+
+                            beforeEach(function () {
+                                node = new Node();
+                                ctx = node.makeContext();
+                                ctx.processFlag(trap_exit, true);
+                                args = [];
+                                start = jest.fn(Failed.startLink);
+                                callbacks = {
+                                    init: jest.fn(() => {
+                                        return t(
+                                            ok,
+                                            t(
+                                                {
+                                                    strategy:
+                                                        simple_one_for_one,
+                                                },
+                                                l({
+                                                    start: [start, []],
+                                                    restart: transient,
+                                                })
+                                            )
+                                        );
+                                    }),
+                                };
+                            });
+
+                            it('tries up to max_retries times', async function () {
+                                const [, pid] = await supervisor.startLink(
+                                    ctx,
+                                    callbacks
+                                );
+
+                                await expect(
+                                    supervisor.startChild(ctx, pid, l(badarg))
+                                ).resolves.toMatchPattern(
+                                    t(
+                                        error,
+                                        t(
+                                            'cannot_start',
+                                            undefined,
+                                            'max_retries'
+                                        )
+                                    )
+                                );
+
+                                expect(start).toHaveBeenCalledTimes(10);
+                            });
+                        });
                     });
-                    describe('due to an error', function () {});
                 });
                 describe('with transient restarts', function () {
                     let serverCallbacks;
+                    let castHandler;
                     beforeEach(function () {
-                        serverCallbacks = {
-                            init: jest.fn(() => {
-                                return t(ok, null);
-                            }),
-                            handleCast: jest.fn((_ctx, _cast, state) => {
-                                return t(stop, normal, state);
-                            })
-                        };
+                        castHandler = jest.fn((_ctx, [, reason], state) =>
+                            t(stop, reason, state)
+                        );
+                        serverCallbacks = gen_server.callbacks((server) => {
+                            server.onInit(() => t(ok, null));
+                            server.onCast(t(stop, _), castHandler);
+                        });
                         start = jest.fn((ctx, ...args) =>
                             gen_server.startLink(ctx, serverCallbacks, args)
                         );
@@ -912,11 +1120,11 @@ describe('@otp-js/supervisor', () => {
                                         { strategy: simple_one_for_one },
                                         l({
                                             start: [start, [1, 2, 3]],
-                                            restart: transient
+                                            restart: transient,
                                         })
                                     )
                                 );
-                            })
+                            }),
                         };
                     });
                     it('does not restart if the process stops normally', async function () {
@@ -931,16 +1139,51 @@ describe('@otp-js/supervisor', () => {
                         await expect(
                             supervisor.whichChildren(ctx, pid)
                         ).resolves.toMatchPattern(t(ok, l(_)));
+                        expect(start).toHaveBeenCalledTimes(1);
+
+                        jest.clearAllMocks();
 
                         const [, childPid] = await response;
-                        gen_server.cast(ctx, childPid, 'stop');
+                        gen_server.cast(ctx, childPid, t(stop, normal));
 
                         await wait(100);
-                        expect(serverCallbacks.handleCast).toHaveBeenCalled();
+                        expect(castHandler).toHaveBeenCalled();
 
                         await expect(
                             supervisor.whichChildren(ctx, pid)
                         ).resolves.toMatchPattern(t(ok, l()));
+                        expect(start).not.toHaveBeenCalled();
+                    });
+                    it('attempts restarts if the process stops abnormally', async function () {
+                        const [, pid] = await supervisor.startLink(
+                            ctx,
+                            callbacks
+                        );
+                        const response = supervisor.startChild(ctx, pid, l(1));
+                        await expect(response).resolves.toMatchPattern(
+                            t(ok, Pid.isPid)
+                        );
+                        await expect(
+                            supervisor.whichChildren(ctx, pid)
+                        ).resolves.toMatchPattern(t(ok, l(_)));
+                        expect(start).toHaveBeenCalledTimes(1);
+
+                        jest.clearAllMocks();
+
+                        const [, childPid] = await response;
+                        gen_server.cast(ctx, childPid, t(stop, badarg));
+
+                        await wait(100);
+                        expect(castHandler).toHaveBeenCalled();
+
+                        const which = supervisor.whichChildren(ctx, pid);
+                        await expect(which).resolves.toMatchPattern(
+                            t(ok, l(_))
+                        );
+                        expect(start).toHaveBeenCalled();
+
+                        const [, { pid: nextPid }] = await which;
+                        expect(childPid).not.toMatchPattern(nextPid);
                     });
                 });
                 describe('startChild called', function () {
@@ -959,11 +1202,11 @@ describe('@otp-js/supervisor', () => {
                                         { strategy: simple_one_for_one },
                                         l({
                                             start: [start, [1, 2, 3]],
-                                            restart: transient
+                                            restart: transient,
                                         })
                                     )
                                 );
-                            })
+                            }),
                         };
                     });
 
