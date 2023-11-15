@@ -1,10 +1,5 @@
 {
-    "packages": [
-        "packages/*",
-        "serializers/*",
-        "transports/*"
-    ],
-    "useWorkspaces": true,
+    "packages": ["packages/*", "serializers/*", "transports/*"],
     "useNx": true,
     "version": "0.18.0"
 }
