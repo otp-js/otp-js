@@ -15,4 +15,6 @@ export const shutdown = Symbol.for('shutdown');
 export const transient = Symbol.for('transient');
 export const { temporary, permanent } = Symbols;
 
+export const cannot_start = Symbol.for('cannot_start');
+export const max_retries = Symbol.for('max_retries');
 export const failed_to_start_child = Symbol.for('failed_to_start_child');
