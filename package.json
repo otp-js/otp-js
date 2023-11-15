@@ -7,7 +7,7 @@
         "watch": "nx run-many --target=watch --parallel=999 --output-style=stream",
         "lint": "nx run-many --target=lint",
         "clean": "nx reset && nx run-many --target=clean --parallel=5 --nx-ignore-cycles",
-        "test": "jest --coverage --verbose",
+        "test": "jest",
         "prepublish": "npm run build"
     },
     "devDependencies": {
