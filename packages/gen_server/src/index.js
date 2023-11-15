@@ -107,16 +107,8 @@ async function enterLoop(ctx, callbacks, state) {
             timeout = nextTimeout;
         }
     } catch (err) {
-        log(ctx, 'enterLoop() : error : %o', err);
-        const compare = matching.caseOf(err);
-
-        if (compare(t(EXIT, _, _))) {
-            const [_EXIT, _pid, reason] = err;
-            await new Promise((resolve) => setTimeout(resolve));
-            return ctx.die(reason);
-        } else {
-            return ctx.die(err);
-        }
+        log(ctx, 'enterLoop(error : %o)', err);
+        return ctx.die(err);
     }
 }
 
@@ -295,10 +287,13 @@ async function tryDispatch(ctx, callback, message, state) {
     try {
         return t(ok, await callback(ctx, message, state));
     } catch (err) {
-        if (err instanceof Error) {
+        if (err instanceof OTPError) {
+            return t(EXIT, err.name, err.term, err.stack);
+        } else if (err instanceof Error) {
             log(ctx, 'tryDispatch(message: %o, error: %o)', message, err);
             return t(EXIT, err.name, err.message, err.stack);
         } else {
+            /* istanbul ignore next */
             return t(ok, err);
         }
     }
@@ -357,6 +352,7 @@ async function tryTerminate(ctx, callbacks, reason, state) {
             log(ctx, 'tryTerminate(reason: %o, error: %o)', reason, err);
             return t(EXIT, err.name, err.message, err.stack);
         } else {
+            /* istanbul ignore next */
             return err;
         }
     }
