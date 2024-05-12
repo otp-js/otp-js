@@ -29,6 +29,8 @@ module.exports = {
         'packages/gen/jest.config.js',
         'packages/gen_server/jest.config.js',
         'packages/matching/jest.config.js',
+        'packages/net/jest.config.js',
+        'packages/node/jest.config.js',
         'packages/proc_lib/jest.config.js',
         'packages/supervisor/jest.config.js',
         'packages/test_utils/jest.config.js',
