@@ -6,7 +6,6 @@ import * as proc_lib from '@otpjs/proc_lib';
 import * as Symbols from './symbols';
 
 export { Symbols };
-export { call, cast, enterLoop, reply, start, startLink };
 
 function log(ctx, ...args) {
     const logger = ctx.log.extend('gen_server');
@@ -17,7 +16,7 @@ const { ok, error, EXIT, normal } = core.Symbols;
 const { link, nolink, $gen_cast, $gen_call } = gen.Symbols;
 const { _ } = matching.Symbols;
 
-async function start(ctx, name, callbacks, args = t()) {
+export async function start(ctx, name, callbacks, args = t()) {
     if (!t.isTuple(name) && name !== undefined) {
         args = callbacks || args;
         callbacks = name;
@@ -26,7 +25,7 @@ async function start(ctx, name, callbacks, args = t()) {
     return gen.start(ctx, nolink, name, initializer(callbacks, args));
 }
 
-async function startLink(ctx, name, callbacks, args = t()) {
+export async function start_link(ctx, name, callbacks, args = t()) {
     if (!t.isTuple(name) && name !== undefined) {
         args = callbacks || args;
         callbacks = name;
@@ -34,17 +33,18 @@ async function startLink(ctx, name, callbacks, args = t()) {
     }
     return gen.start(ctx, link, name, initializer(callbacks, args));
 }
+export const startLink = start_link;
 
-async function call(ctx, pid, message, timeout = 5000) {
+export async function call(ctx, pid, message, timeout = 5000) {
     return gen.call(ctx, pid, message, timeout);
 }
 
-async function cast(ctx, pid, message) {
+export async function cast(ctx, pid, message) {
     gen.cast(ctx, pid, message);
     return ok;
 }
 
-async function reply(ctx, to, response) {
+export async function reply(ctx, to, response) {
     return gen.reply(ctx, to, response);
 }
 
@@ -58,7 +58,7 @@ function initializer(callbacks, args) {
             const [, initialState] = response;
             const state = initialState;
             proc_lib.initAck(ctx, caller, t(ok, ctx.self()));
-            return enterLoop(ctx, callbacks, state);
+            return enter_loop(ctx, callbacks, state);
         }
 
         function stop(ctx, caller, response) {
@@ -87,7 +87,7 @@ function initializer(callbacks, args) {
     };
 }
 
-async function enterLoop(ctx, callbacks, state) {
+export async function enter_loop(ctx, callbacks, state) {
     let timeout = Infinity;
 
     log(ctx, 'enterLoop(callbacks: %o)', callbacks);
@@ -111,6 +111,7 @@ async function enterLoop(ctx, callbacks, state) {
         return ctx.die(err);
     }
 }
+export const enterLoop = enter_loop;
 
 const loop = matching.clauses(function loop(route) {
     route(_, t($gen_call, t(Pid.isPid, Ref.isRef), _), _).to(call);
@@ -334,7 +335,12 @@ async function terminate(ctx, callbacks, type, reason, state, stack = null) {
 async function tryTerminate(ctx, callbacks, reason, state) {
     try {
         if (callbacks.terminate) {
-            log(ctx, 'tryTerminate(callbacks.terminate: %o, reason: %o)', callbacks.terminate, reason);
+            log(
+                ctx,
+                'tryTerminate(callbacks.terminate: %o, reason: %o)',
+                callbacks.terminate,
+                reason
+            );
             await callbacks.terminate(ctx, reason, state);
             return ok;
         } else {
@@ -390,7 +396,7 @@ export function callbacks(builder) {
         },
         onTerminate(handler) {
             terminate = handler;
-        }
+        },
     });
 
     callHandlers = callHandlers.reverse();
@@ -402,7 +408,7 @@ export function callbacks(builder) {
         handleCall,
         handleCast,
         handleInfo,
-        terminate
+        terminate,
     };
 
     function handleCall(ctx, call, from, state) {
