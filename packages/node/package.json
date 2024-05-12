@@ -1,0 +1,37 @@
+{
+  "name": "@otpjs/node",
+  "version": "0.18.0",
+  "description": "Basic OTPJS Node implementation",
+  "keywords": ["open-telecom", "otpjs"],
+  "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
+  "homepage": "https://github.com/otp-js/otp-js#readme",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "imports": {
+    "#context": "./lib/context/index.js",
+    "#node": "./lib/node/index.js"
+  },
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": ["lib"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/otp-js/otp-js.git"
+  },
+  "scripts": {
+    "build": "babel src --out-dir lib",
+    "watch": "babel src --out-dir lib --watch",
+    "clean": "rimraf lib",
+    "prepublish": "npm run build",
+    "test": "echo \"Error: run tests from root\" && exit 1",
+    "lint": "eslint src"
+  },
+  "bugs": {
+    "url": "https://github.com/otp-js/otp-js/issues"
+  }
+}
