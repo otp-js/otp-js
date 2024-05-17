@@ -1,9 +1,8 @@
-import * as Symbols from './symbols';
+import * as NodeSymbols from '@otpjs/node/symbols';
+import * as MatchingSymbols from '@otpjs/matching/symbols';
 
-export * from '@otpjs/types';
+export * from '@otpjs/node';
 export * from '@otpjs/matching';
+export * from '@otpjs/types';
 
-export * from './node.js';
-export * from './context.js';
-export * from './message-box.js';
-export { Symbols };
+export const Symbols = { ...NodeSymbols, ...MatchingSymbols };

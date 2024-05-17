@@ -5,6 +5,7 @@ import { temporary, permanent, ok, discover, lost, nodedown } from '../symbols';
 function makeLost(router) {
     return t(lost, router.pid);
 }
+
 function makeDiscover(router) {
     return t(
         discover,
@@ -111,13 +112,13 @@ export class Network {
         const existing = this.#bridges.has(pid.toString())
             ? this.#bridges.get(pid.toString())
             : [];
-        const index = existing.indexOf(name);
+        //const index = existing.indexOf(name);
 
-        this.#log('#saveBridge(name: %o, existing: %o)', name, existing);
+        //this.#log('#saveBridge(name: %o, existing: %o)', name, existing);
 
-        if (index < 0) {
-            this.#bridges.set(pid.toString(), [...existing, name]);
-        }
+        //if (index < 0) {
+        //    this.#bridges.set(pid.toString(), [...existing, name]);
+        //}
     }
 
     findBridges(pid) {
@@ -193,13 +194,13 @@ export class Network {
     #applyFeatures(router, oldRouter) {
         if (router.pid) {
             this.#routersByPid.set(router.pid.toString(), router);
-            const parent = this.#routers.get(router.name);
+            const canBridge = router.can('bridge');
             this.#log(
-                '#applyFeatures(pid: %o, canBridge: %o)',
+                '#applyFeatures(router.pid: %o, canBridge: %o)',
                 router.pid,
-                parent.can('bridge')
+                canBridge
             );
-            if (parent.can('bridge')) {
+            if (canBridge) {
                 this.#updatePeers(router, makeDiscover);
                 this.#saveBridge(router.name, router.pid);
             }
@@ -207,9 +208,7 @@ export class Network {
 
         if (oldRouter?.pid) {
             const oldParent = this.#routers.get(oldRouter.name);
-            if (oldParent.can('bridge')) {
-                this.#forgetBridge(oldRouter.pid, router.name);
-            }
+            this.#forgetBridge(oldParent.pid, router.name);
         }
     }
 

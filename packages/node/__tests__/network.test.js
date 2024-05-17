@@ -25,6 +25,10 @@ function makeContext(id) {
 function randomInt() {
     return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 }
+let count = 0;
+function nextInt() {
+    return count++;
+}
 function makeRouter(
     source,
     router,
@@ -34,8 +38,8 @@ function makeRouter(
         type: permanent,
     }
 ) {
-    const { score = 1, suffix = randomInt(), ...forwardOptions } = options;
-    const name = Symbol.for(`test@local.node-${suffix}`);
+    const { score = 1, suffix = nextInt(), ...forwardOptions } = options;
+    const name = Symbol.for(`test-${suffix}@local.node`);
     const id = router.register(
         source,
         score,
@@ -49,7 +53,7 @@ function wait(ms = 10) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-describe('@otpjs/node.Routing', function () {
+describe('@otpjs/node/network', function () {
     let node;
     let contexts;
     let network;
@@ -332,7 +336,7 @@ describe('@otpjs/node.Routing', function () {
                                     ).toMatchPattern(alternateCtx.self());
                                 });
 
-                                it.skip('dissassociates chained bridges', function () {
+                                it('dissassociates chained bridges', function () {
                                     const home = makeRouter(
                                         node.name,
                                         network,
@@ -347,7 +351,7 @@ describe('@otpjs/node.Routing', function () {
                                     const firstBridge = makeRouter(
                                         home.name,
                                         network,
-                                        node.makeContext(),
+                                        home.ctx,
                                         {
                                             bridge: true,
                                             type: permanent,
@@ -372,7 +376,7 @@ describe('@otpjs/node.Routing', function () {
                                     ).toContain(firstBridge.name);
                                     expect(
                                         network.findBridges(home.ctx.self())
-                                    ).toContain();
+                                    ).toContain(secondBridge.name);
                                 });
                             });
                         });
@@ -447,20 +451,19 @@ describe('@otpjs/node.Routing', function () {
     describe('unregister', function () {
         describe('when given a pid', function () {
             describe('to an active router', function () {
+                let routerA;
                 let routerName;
                 let routerCtx;
                 let routerId;
 
                 beforeEach(function () {
-                    routerName = Symbol.for('test@a.local.node');
                     routerCtx = node.makeContext();
-                    routerId = network.register(
-                        node.name,
-                        1,
-                        routerName,
-                        routerCtx.self(),
-                        { bridge: true, type: permanent }
-                    );
+                    routerA = makeRouter(node.name, network, routerCtx, {
+                        suffix: 'a',
+                        type: permanent,
+                    });
+                    routerName = routerA.name;
+                    routerId = routerA.id;
                 });
 
                 describe('which is permanent', function () {
@@ -573,25 +576,40 @@ describe('@otpjs/node.Routing', function () {
                     });
                 });
                 describe('bridging multiple nodes', function () {
-                    beforeEach(initializePresetEnvironment);
-                    it.skip('removes all the bridged nodes from the nodes list', function () {
-                        const ctxD = node.makeContext();
+                    //beforeEach(initializePresetEnvironment);
+                    it('removes all the bridged nodes from the nodes list', function () {
                         const routerB = makeRouter(
-                            node.name,
+                            routerName,
                             network,
-                            routerCtx
+                            node.makeContext(),
+                            { suffix: 'b' }
                         );
                         const routerC = makeRouter(
-                            routerB.name,
+                            routerName,
                             network,
-                            routerCtx
+                            node.makeContext(),
+                            { suffix: 'c' }
                         );
-                        const routerD = makeRouter(node.name, network, ctxD);
-                        const routerE = makeRouter(routerD.name, network, ctxD);
+
+                        const routerD = makeRouter(
+                            node.name,
+                            network,
+                            node.makeContext(),
+                            {
+                                suffix: 'd',
+                            }
+                        );
+                        const routerE = makeRouter(
+                            routerD.name,
+                            network,
+                            node.makeContext(),
+                            { suffix: 'e' }
+                        );
 
                         const nodesBeforeUnregister = Array.from(
                             network.nodes()
                         );
+                        log('nodesBeforeUnregister: %o', nodesBeforeUnregister);
                         expect(nodesBeforeUnregister).toContain(routerB.name);
                         expect(nodesBeforeUnregister).toContain(routerC.name);
                         expect(nodesBeforeUnregister).toContain(routerD.name);
@@ -602,6 +620,7 @@ describe('@otpjs/node.Routing', function () {
                         const nodesAfterUnregister = Array.from(
                             network.nodes()
                         );
+                        log('nodesAfterUnregister: %o', nodesAfterUnregister);
                         expect(nodesAfterUnregister).not.toContain(
                             routerB.name
                         );

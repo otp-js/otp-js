@@ -51,14 +51,13 @@ export class Node {
         return Context;
     }
 
+    #functions;
     #id;
     #log;
-    #processes;
-    #refCount;
-    #registrar;
     #network;
+    #processes;
+    #registrar;
     #systemContext;
-    #functions;
     system;
 
     constructor(id = Symbol.for(`${getNodeId()}@${getNodeHost()}`)) {
@@ -132,7 +131,7 @@ export class Node {
         }
     }
     #signalLocalName(fromPid, signal, toProc, ...args) {
-        const toPid = this.whereis(toProc);
+        const toPid = this.#registrar.whereis(toProc);
         if (toPid) {
             this.#signalLocal(fromPid, signal, toPid, ...args);
         } else {
