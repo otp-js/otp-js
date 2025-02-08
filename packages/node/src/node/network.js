@@ -30,7 +30,7 @@ export class Network {
     #sourcePid;
     constructor(node) {
         this.#node = node;
-        this.#log = node.logger('routing');
+        this.#log = node.logger('network');
         this.#router = {
             id: 0,
             pid: node.system,
@@ -50,12 +50,14 @@ export class Network {
         node.addFunction('unregisterRouter', this.unregister.bind(this));
         node.addFunction('getRouterName', this.getName.bind(this));
         node.addFunction('getRouterId', this.getId.bind(this));
+        node.addFunction('nodes', this.nodes.bind(this));
     }
 
     findById(id) {
         return this.#routersById.get(id);
     }
     findByName(name) {
+        this.#log('findByName(this.#routers: %o)', this.#routers);
         return this.#routers.get(name);
     }
     hasId(id) {
@@ -80,7 +82,7 @@ export class Network {
 
     #updatePeers(router, operation) {
         this.#log(
-            'updatePeers(name: %o, pid: %o, #bridges: %o)',
+            '#updatePeers(name: %o, pid: %o, #bridges: %o)',
             router.name,
             router.pid,
             this.#bridges
@@ -89,36 +91,44 @@ export class Network {
             bridge = Pid.fromString(bridge);
             const message = operation(router);
             this.#log(
-                'updatePeers(bridge: %o, names: %o, message: %o)',
+                '#updatePeers(bridge: %o, names: %o, message: %o)',
                 bridge,
                 names,
                 message
             );
             this.#node.exec('deliver', [this.#sourcePid, bridge, message]);
             for (const name of names) {
-                const message = operation(router);
+                const theirRouter = this.#routers.get(name);
+                const theirMessage = operation(theirRouter);
                 this.#log(
-                    'updatePeers(bridge: %o, name: %o, message: %o)',
-                    bridge,
+                    '#updatePeers(name: %o, theirRouter: %o, theirMessage: %o)',
                     name,
-                    message
+                    theirRouter,
+                    theirMessage
                 );
                 this.#node.exec('deliver', [this.#sourcePid, bridge, message]);
+                this.#node.exec('deliver', [
+                    this.#sourcePid,
+                    router.pid,
+                    theirMessage,
+                ]);
             }
         }
     }
     #saveBridge(name, pid) {
         this.#log('#saveBridge(pid: %o, #bridges: %o)', pid, this.#bridges);
-        const existing = this.#bridges.has(pid.toString())
+        let existing = this.#bridges.has(pid.toString())
             ? this.#bridges.get(pid.toString())
             : [];
-        //const index = existing.indexOf(name);
 
-        //this.#log('#saveBridge(name: %o, existing: %o)', name, existing);
+        const index = existing.indexOf(name);
 
-        //if (index < 0) {
-        //    this.#bridges.set(pid.toString(), [...existing, name]);
-        //}
+        this.#log('#saveBridge(name: %o, existing: %o)', name, existing);
+
+        if (index < 0) {
+            existing.push(name);
+            this.#bridges.set(pid.toString(), existing);
+        }
     }
 
     findBridges(pid) {
@@ -200,6 +210,7 @@ export class Network {
                 router.pid,
                 canBridge
             );
+
             if (canBridge) {
                 this.#updatePeers(router, makeDiscover);
                 this.#saveBridge(router.name, router.pid);
@@ -242,7 +253,7 @@ export class Network {
 
             this.#log('unregister.byPid(pid: %o, router: %o)', pid, router);
             this.#updatePeers(router, makeLost);
-            this.#nodedown(router);
+            this.#nodedown(router.name);
             this.#detach(router);
             this.#burnBridged(router);
 
@@ -259,9 +270,8 @@ export class Network {
         return ok;
     }
 
-    #nodedown(router) {
-        const name = router.name;
-        const monitors = this.#monitors.get(name) ?? [];
+    #nodedown(name, monitors) {
+        if (!monitors) monitors = this.#monitorsFor(name);
         for (const monitor of monitors) {
             this.#node.exec('deliver', [
                 this.#sourcePid,
@@ -269,7 +279,7 @@ export class Network {
                 t(nodedown, name),
             ]);
         }
-        this.#monitors.delete(router.name);
+        this.#monitors.delete(name);
     }
     #detach(router) {
         this.#routersByPid.delete(router.pid.toString());
@@ -342,21 +352,41 @@ export class Network {
             return this.getId(name);
         }
     }
-    monitor(monitor, node) {
-        const exists = this.#routers.has(node);
-
-        if (exists) {
-            const monitors = this.#monitors.get(node) ?? [];
-            monitors.push(monitor);
+    /**
+     * @method #monitorsFor
+     * @private
+     * @param {Symbol} node
+     * @returns {Pid[]}
+     */
+    #monitorsFor(node) {
+        if (this.#monitors.has(node)) {
+            return this.#monitors.get(node);
+        } else {
+            const monitors = [];
             this.#monitors.set(node, monitors);
+            return monitors;
+        }
+    }
+    monitor(monitor, node) {
+        if (this.#routers.has(node)) {
+            const monitors = this.#monitorsFor(node);
+            monitors.push(monitor);
         } else {
             // TODO: attempt connecting to `node`?
             // For now, just trigger the `{nodedown, Node}` signal
-            this.#node.exec('deliver', [
-                this.#sourcePid,
-                monitor,
-                t(nodedown, node),
-            ]);
+            this.#nodedown(node, [monitor]);
+        }
+    }
+    demonitor(monitor, node) {
+        if (this.#routers.has(node)) {
+            const monitors = this.#monitorsFor(node);
+            const index = monitors.findIndex(
+                (pid) => Pid.compare(pid, monitor) === 0
+            );
+
+            if (index >= 0) {
+                monitors.splice(index, 1);
+            }
         }
     }
 }

@@ -60,9 +60,10 @@ export class Node {
     #systemContext;
     system;
 
-    constructor(id = Symbol.for(`${getNodeId()}@${getNodeHost()}`)) {
+    constructor(options = {}) {
+        const { id = Symbol.for(`${getNodeId()}@${getNodeHost()}`) } = options;
         this.#id = id;
-        this.#log = log.extend(this.name.toString());
+        this.#log = debug(`otpjs:core:node<${Symbol.keyFor(this.name)}>`);
 
         this.#functions = new Map();
         this.#processes = new ProcessManager(this, Context);
@@ -79,12 +80,14 @@ export class Node {
         if (this.#functions.has(name)) {
             throw new OTPError(badarg);
         }
+        this[name] = fun;
         this.#functions.set(name, fun);
     }
 
     exec(name, args = []) {
-        const fun = this.#functions.get(name);
-        if (fun) {
+        if (this.#functions.has(name)) {
+            const fun = this.#functions.get(name);
+            this.#log('exec(name: %o, fun: %o)', name, fun);
             return fun(...args);
         } else {
             throw new OTPError(badarg);
@@ -94,12 +97,9 @@ export class Node {
     get name() {
         return this.#id;
     }
+
     get systemPid() {
         return this.system;
-    }
-
-    get nodes() {
-        return this.#network.nodes();
     }
 
     #signal = matching.clauses((route) => {
@@ -110,7 +110,7 @@ export class Node {
     }, 'node.signal');
     signal(...args) {
         try {
-            this.#log('signal(...%o)', args);
+            this.#log('signal(%o)', args);
             return this.#signal(...args);
         } catch (err) {
             return t(error, err);
@@ -132,6 +132,7 @@ export class Node {
     }
     #signalLocalName(fromPid, signal, toProc, ...args) {
         const toPid = this.#registrar.whereis(toProc);
+        this.#log('#signalLocalName(toProc: %o, toPid: %o)', toProc, toPid);
         if (toPid) {
             this.#signalLocal(fromPid, signal, toPid, ...args);
         } else {
@@ -159,10 +160,14 @@ export class Node {
     #signalRemoteName(fromPid, signal, nameNodePair, ...args) {
         const [toProc, toNode] = nameNodePair;
 
+        this.#log('#signalRemoteName(toProc: %o, toNode: %o)', toProc, toNode);
+
         if (toNode === this.name) {
             return this.#signalLocalName(fromPid, signal, toProc, ...args);
         } else {
             const router = this.#network.findByName(toNode);
+
+            this.#log('#signalRemoteName(router: %o)', router);
 
             if (router) {
                 this.signal(

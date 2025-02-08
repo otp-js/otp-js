@@ -5,11 +5,24 @@ const invalid_source = Symbol.for('invalid_source');
 const invalid_name = Symbol.for('invalid_name');
 const invalid_id = Symbol.for('invalid_id');
 
+function notType(value, type) {
+    return !value || typeof value !== type;
+}
+
+function notSymbol(value) {
+    return notType(value, 'symbol');
+}
+
+function notNumber(value) {
+    return notType(value, 'number');
+}
+
 function validateAttributes(attr) {
-    if (!attr.source) throw OTPError(t(error, t(invalid_source, attr.source)));
-    if (!attr.id) throw OTPError(t(error, t(invalid_id, attr.id)));
-    if (!attr.name || typeof attr.name !== 'symbol')
-        throw OTPError(t(invalid_name, attr.name));
+    if (notSymbol(attr.source))
+        throw OTPError(t(error, t(invalid_source, attr.source)));
+    if (notNumber(attr.id)) throw OTPError(t(error, t(invalid_id, attr.id)));
+    if (notSymbol(attr.name))
+        throw OTPError(t(error, t(invalid_name, attr.name)));
 }
 
 export class RemoteNode {

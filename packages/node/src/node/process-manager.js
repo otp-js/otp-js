@@ -1,8 +1,6 @@
 import debug from 'debug';
 import { Pid } from '@otpjs/types';
 
-const log = debug('otpjs:core:node:process-manager');
-
 export class ProcessManager {
     #Context;
     #finalizer;
@@ -10,8 +8,10 @@ export class ProcessManager {
     #node;
     #processes;
     #processesCount;
+    #log;
 
     constructor(node, Context) {
+        this.#log = node.logger('process-manager');
         this.#node = node;
         this.#processes = new Map();
         this.#processesCount = 0;
@@ -19,7 +19,7 @@ export class ProcessManager {
         this.#Context = Context;
 
         this.#finalizer = new FinalizationRegistry((pid) => {
-            log('finalize(pid: %o)', pid);
+            this.#log('finalize(pid: %o)', pid);
             this.#processes.delete(pid.process);
             this.#node.exec('unregister', [pid]);
         });

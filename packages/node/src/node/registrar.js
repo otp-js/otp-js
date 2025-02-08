@@ -1,4 +1,4 @@
-import { OTPError } from '@otpjs/types';
+import { OTPError, Pid } from '@otpjs/types';
 import { isAtom } from './helpers';
 import { badarg, ok } from '../symbols';
 export class Registrar {
