@@ -11,6 +11,10 @@
     "#context": "./lib/context/index.js",
     "#node": "./lib/node/index.js"
   },
+  "exports": {
+    ".": "lib/index.js",
+    "./symbols": "lib/symbols.js"
+  },
   "directories": {
     "lib": "lib",
     "test": "__tests__"
