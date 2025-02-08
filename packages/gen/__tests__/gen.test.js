@@ -1,6 +1,6 @@
 /* eslint-env jest */
 import '@otpjs/test_utils';
-import * as otp from '@otpjs/core';
+import * as otp from '@otpjs/node';
 import * as gen from '../src';
 import * as proc_lib from '@otpjs/proc_lib';
 import { Tuple, t, Pid, Ref, OTPError } from '@otpjs/types';
@@ -92,13 +92,31 @@ describe('start', function () {
 
                 const [responseA, responseB] = await Promise.all([
                     startA,
-                    startB
+                    startB,
                 ]);
+
                 expect(responseA).toMatchPattern(t(ok, Pid.isPid));
                 const [, pid] = responseA;
                 expect(responseB).toMatchPattern(
                     t(error, t(already_started, pid))
                 );
+            });
+        });
+        describe('that is not local', function () {
+            it('will not fail', async function () {
+                const init = jest.fn((ctx, starter) =>
+                    proc_lib.initAck(ctx, starter, t(ok, ctx.self()))
+                );
+                const name = Symbol.for('registered_name');
+                await expect(
+                    gen.start(
+                        ctxClient,
+                        nolink,
+                        t('non-euclidean', name),
+                        init,
+                        {}
+                    )
+                ).resolves.toMatchPattern(t(ok, Pid.isPid));
             });
         });
     });
@@ -128,13 +146,9 @@ describe('start', function () {
                     const spawnLimit = 300;
                     const init = jest.fn((_ctx, _caller) => ok);
                     await expect(
-                        gen.start(
-                            ctxClient,
-                            nolink,
-                            undefined,
-                            init,
-                            { timeout: spawnLimit }
-                        )
+                        gen.start(ctxClient, nolink, undefined, init, {
+                            timeout: spawnLimit,
+                        })
                     ).rejects.toThrowTerm(timeout);
                 });
             });
@@ -164,13 +178,9 @@ describe('start', function () {
                     const spawnLimit = 300;
                     const init = jest.fn((ctx, _caller) => ctx.receive());
                     await expect(
-                        gen.start(
-                            ctxClient,
-                            link,
-                            undefined,
-                            init,
-                            { timeout: spawnLimit }
-                        )
+                        gen.start(ctxClient, link, undefined, init, {
+                            timeout: spawnLimit,
+                        })
                     ).rejects.toThrowTerm(timeout);
                 });
             });
@@ -457,12 +467,7 @@ describe('call', function () {
 
         it('throws a timeout error', async function () {
             await expect(
-                gen.call(
-                    ctx,
-                    pid,
-                    crypto.randomInt(0xffffffff),
-                    timeout
-                )
+                gen.call(ctx, pid, crypto.randomInt(0xffffffff), timeout)
             ).rejects.toThrowTerm(otp.Symbols.timeout);
         });
     });
@@ -590,9 +595,9 @@ describe('cast', function () {
             beforeEach(function () {
                 ctx = node.makeContext();
 
-                const name = Symbol.for('server_name');
+                const serverName = Symbol.for('server_name');
                 nodeName = Symbol.for('noone@nowhere');
-                target = t(name, nodeName);
+                target = t(serverName, nodeName);
             });
 
             it('generates a nodedown EXIT signal', async function () {
