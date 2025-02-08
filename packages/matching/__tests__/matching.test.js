@@ -1,5 +1,5 @@
 /* eslint-env jest */
-import './extend';
+import '#jest';
 import { _, spread } from '../src/symbols';
 import * as match from '../src';
 import { l, il, Pid, Ref } from '@otpjs/types';

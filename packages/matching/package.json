@@ -28,9 +28,13 @@
         "test": "echo \"Error: run tests from root\" && exit 1",
         "lint": "eslint src"
     },
+    "imports": {
+      "#jest": "./jest.js"
+    },
     "exports": {
       ".": "lib/index.js",
       "./symbols": "lib/symbols.js",
+      "./jest": "./jest.js"
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"
