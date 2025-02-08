@@ -58,8 +58,7 @@
                 "packages/types",
                 "packages/cluster",
                 "serializers/json",
-                "transports/socket.io",
-                "packages/net"
+                "transports/socket.io"
         ],
         "dependencies": {
                 "@otpjs/serializer-ertf": "file:serializers/ertf",
