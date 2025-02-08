@@ -15,7 +15,7 @@ const {
     shutdown,
     temporary,
     trap_exit,
-    unlink
+    unlink,
 } = otp.Symbols;
 const { _ } = matching.Symbols;
 
@@ -29,13 +29,13 @@ function log(ctx, ...args) {
 function defaultOptions() {
     return {
         bridge: false,
-        type: temporary
+        type: temporary,
     };
 }
 
 export function register(node, socket, options = defaultOptions()) {
     const { serialize, deserialize } = makeSerializer(node, {
-        stringify: false
+        stringify: false,
     });
     let ctx;
     let running = false;
@@ -167,15 +167,6 @@ export function register(node, socket, options = defaultOptions()) {
         name = serialize(name);
         type = serialize(type);
         pid = serialize(pid);
-        log(
-            ctx,
-            'relayDiscover(source: %o, score: %o, name: %o, type: %o, pid: %o)',
-            source,
-            score,
-            name,
-            type,
-            pid
-        );
         socket.emit('otp-discover', source, score, name, type, pid, ...buffers);
     }
 
@@ -241,15 +232,6 @@ export function register(node, socket, options = defaultOptions()) {
     }
     function handleDiscover(source, score, name, theirType, pid, ...buffers) {
         const deserialize = reviver(buffers);
-        log(
-            ctx,
-            'handleDiscover(source: %o, score: %o, name: %o, type: %o, pid: %o)',
-            source,
-            score,
-            name,
-            theirType,
-            pid
-        );
         source = deserialize(source) ?? node.name;
         name = deserialize(name);
         score = deserialize(score);
@@ -270,7 +252,7 @@ export function register(node, socket, options = defaultOptions()) {
 
         node.registerRouter(source, score, name, pid, {
             bridge,
-            type: theirType
+            type: theirType,
         });
     }
     function handleDisconnect() {
@@ -355,9 +337,6 @@ export function register(node, socket, options = defaultOptions()) {
         node.signal(fromPid, DOWN, toPid, ref, reason);
     }
 
-    function handleQuery() {
-    }
-
     function reviver(buffers) {
         return function revive(value) {
             return deserialize(value, (key, value) => {
@@ -367,7 +346,7 @@ export function register(node, socket, options = defaultOptions()) {
                     matching.compare(
                         {
                             type: '$otp.buffer',
-                            index: Number.isInteger
+                            index: Number.isInteger,
                         },
                         value
                     )
