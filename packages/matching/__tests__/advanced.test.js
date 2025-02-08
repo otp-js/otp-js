@@ -1,12 +1,9 @@
 /* eslint-env jest */
+import { ok } from '@otpjs/core/symbols';
 import { OTPError, t } from '@otpjs/types';
 import * as matching from '../src';
-import {
-    case_clause,
-    route_clause,
-    skip_matching, _
-} from '../src/symbols';
 import './extend';
+import { case_clause, route_clause, skip_matching, _ } from '../src/symbols';
 
 describe('@otpjs/matching/advanced', function () {
     describe('buildCase', function () {
@@ -273,6 +270,103 @@ describe('@otpjs/matching/advanced', function () {
                         expect(error).toBeInstanceOf(OTPError);
                         expect(error.term).toBe(route_clause);
                     });
+                });
+            });
+        });
+    });
+    describe('kase', function () {
+        it('returns a kase block', function () {
+            expect(() => matching.kase()).not.toThrow();
+            const blockBuilder = matching.kase();
+            expect(blockBuilder).toBeInstanceOf(Object);
+            expect(blockBuilder.of).toBeInstanceOf(Function);
+        });
+
+        describe('block', function () {
+            let block;
+            beforeEach(function () {
+                block = matching.kase();
+            });
+            it('runs a provided builder function', function () {
+                const block = matching.kase();
+                const result = block.of((builder) => {
+                    expect(builder).toBeInstanceOf(Function);
+                    const clause = builder(_);
+                    expect(clause).toBeInstanceOf(Object);
+                    expect(clause.then).toBeInstanceOf(Function);
+                    expect(clause.when).toBeInstanceOf(Function);
+                    clause.then(() => ok);
+                });
+                expect(result).toBe(ok);
+            });
+            describe('with a matching clause', function () {
+                describe('with no guards', function () {
+                    it('returns the result of that clause', function () {
+                        const payload = 123;
+                        const isNumber = jest.fn((id) => id);
+                        const isArray = jest.fn((id) => id);
+                        const result = matching.kase(payload).of((match) => {
+                            match(Array.isArray).then(isArray);
+                            match(Number.isInteger).then(isNumber);
+                        });
+                        expect(result).toBe(payload);
+                        expect(isNumber).toHaveBeenCalledWith(payload);
+                        expect(isArray).not.toHaveBeenCalled();
+                    });
+                });
+                describe('with passing guards', function () {
+                    it('returns the result of that clause', function () {
+                        const payload = 123;
+                        const isNumber = jest.fn((id) => id);
+                        const isArray = jest.fn((id) => id);
+                        const result = matching.kase(payload).of((match) => {
+                            match(Array.isArray)
+                                .when((value) => value.length > 100)
+                                .then(isArray);
+                            match(Number.isInteger)
+                                .when((value) => value > 100)
+                                .then(isNumber);
+                        });
+                        expect(result).toBe(payload);
+                        expect(isNumber).toHaveBeenCalledWith(payload);
+                        expect(isArray).not.toHaveBeenCalled();
+                    });
+                });
+                describe('with failing guards', function () {
+                    it('throws a case_clause error', function () {
+                        const payload = 123;
+                        const isNumber = jest.fn();
+                        const isArray = jest.fn();
+
+                        expect(() => {
+                            matching.kase(payload).of((match) => {
+                                match(Number.isInteger)
+                                    .when((value) => value < 100)
+                                    .then(isNumber);
+                                match(Array.isArray)
+                                    .when((value) => value.length < 1)
+                                    .then(isArray);
+                            });
+                        }).toThrowTerm(case_clause);
+                        expect(isNumber).not.toHaveBeenCalled();
+                        expect(isArray).not.toHaveBeenCalled();
+                    });
+                });
+            });
+            describe('without a matching clause', function () {
+                it('throws a case_clause error', function () {
+                    const payload = '123';
+                    const isNumber = jest.fn();
+                    const isArray = jest.fn();
+
+                    expect(function () {
+                        matching.kase(payload).of((match) => {
+                            match(Number.isInteger).then(isNumber);
+                            match(Array.isArray).then(isArray);
+                        });
+                    }).toThrowTerm(case_clause);
+                    expect(isNumber).not.toHaveBeenCalled();
+                    expect(isArray).not.toHaveBeenCalled();
                 });
             });
         });

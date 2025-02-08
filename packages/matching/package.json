@@ -28,6 +28,10 @@
         "test": "echo \"Error: run tests from root\" && exit 1",
         "lint": "eslint src"
     },
+    "exports": {
+      ".": "lib/index.js",
+      "./symbols": "lib/symbols.js",
+    },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"
     },

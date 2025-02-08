@@ -22,7 +22,7 @@ describe('@otpjs/matching/core/compile', function () {
             ['undefined', undefined],
             ['bigint', BigInt(10000)],
             ['symbol', Symbol('test_symbol')],
-            ['object', null]
+            ['object', null],
         ];
         tests.forEach(([type, value]) => {
             it(`strictly compares ${type}`, function () {
@@ -223,15 +223,18 @@ describe('@otpjs/matching/core/compare', function () {
             expect(match.compare(/^test_regex$/, 'test_regexes')).toBe(false);
             expect(match.compare(_, Infinity)).toBe(true);
             expect(match.compare(Number.isFinite, Infinity)).toBe(false);
-            expect(match.compare({ a: 1, [spread]: _ }, { a: 1, b: 2, c: '3' })).toBe(
-                true
-            );
             expect(
-                match.compare({ a: 1, [spread]: Number.isInteger }, {
-                    a: 1,
-                    b: 2,
-                    c: '3'
-                })
+                match.compare({ a: 1, [spread]: _ }, { a: 1, b: 2, c: '3' })
+            ).toBe(true);
+            expect(
+                match.compare(
+                    { a: 1, [spread]: Number.isInteger },
+                    {
+                        a: 1,
+                        b: 2,
+                        c: '3',
+                    }
+                )
             ).toBe(false);
         });
     });
