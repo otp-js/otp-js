@@ -1,4 +1,5 @@
-import { cons, list, OTPError, tuple } from '@otpjs/types';
+import { ok } from '@otpjs/core/symbols';
+import { cons, list, OTPError, tuple, t } from '@otpjs/types';
 import debug from 'debug';
 import { compile, compare } from './core';
 import * as Symbols from './symbols';
@@ -21,17 +22,19 @@ export function kase(value) {
                     if (condition(value)) {
                         return onMatch;
                     } else {
-                        return ok;
+                        return onMismatch;
                     }
                 },
+            };
+            const onMismatch = {
+                then: (_handler) => onMismatch,
+                when: (_condition) => onMismatch,
             };
             const checkClause = (pattern) => {
                 if (compare(pattern, value)) {
                     return onMatch;
                 } else {
-                    return {
-                        then: (_handler) => ok,
-                    };
+                    return onMismatch;
                 }
             };
 
