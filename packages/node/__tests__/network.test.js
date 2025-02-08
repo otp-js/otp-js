@@ -1,6 +1,7 @@
 /* eslint-env jest */
 import debug from 'debug';
 import '@otpjs/test_utils';
+import { RemoteNode } from '../src/node/remote-node.js';
 import * as matching from '@otpjs/matching';
 import { t, l, Pid, Ref } from '@otpjs/types';
 import {
@@ -250,7 +251,7 @@ describe('@otpjs/node/network', function () {
                                     )
                                 ).toBe(routerId);
                                 await wait();
-                                expect(node.exec).toHaveBeenCalledTimes(2);
+                                expect(node.exec).toHaveBeenCalledTimes(3);
                                 expect(node.exec.mock.calls[1]).toMatchPattern([
                                     'deliver',
                                     [
@@ -668,15 +669,12 @@ describe('@otpjs/node/network', function () {
                     it('notifies the monitor', async function () {
                         const ctx = node.makeContext();
                         network.monitor(ctx.self(), routerName);
-                        network.unregister(routerCtx.self());
+                        expect(node.exec).not.toHaveBeenCalled();
 
+                        network.unregister(routerCtx.self());
                         expect(node.exec).toHaveBeenCalledWithPattern(
                             'deliver',
-                            [
-                                node.system,
-                                ctx.self(),
-                                t(nodedown, routerCtx.self()),
-                            ]
+                            [node.system, ctx.self(), t(nodedown, routerName)]
                         );
                     });
                 });
@@ -770,6 +768,128 @@ describe('@otpjs/node/network', function () {
                         ctx.self(),
                         t(nodedown, routerName),
                     ]);
+                });
+            });
+            describe('that is registered', function () {
+                describe('when the monitored node is lost', function () {
+                    it('notifies the monitor', function () {
+                        const router = makeRouter(
+                            node.name,
+                            network,
+                            node.makeContext(),
+                            {}
+                        );
+                        const ctxA = node.makeContext();
+                        const ctxB = node.makeContext();
+
+                        expect(function () {
+                            network.monitor(ctxA.self(), router.name);
+                            network.monitor(ctxB.self(), router.name);
+                        }).not.toThrow();
+
+                        network.unregister(router.ctx.self());
+                        expect(node.exec).toHaveBeenCalledTimes(2);
+                        expect(node.exec).toHaveBeenCalledWithPattern(
+                            'deliver',
+                            [node.system, ctxA.self(), t(nodedown, router.name)]
+                        );
+                        expect(node.exec).toHaveBeenCalledWithPattern(
+                            'deliver',
+                            [node.system, ctxB.self(), t(nodedown, router.name)]
+                        );
+                    });
+                });
+            });
+        });
+    });
+    describe('demonitor', function () {
+        describe('when given a node name', function () {
+            describe('that is registered', function () {
+                describe('when given a pid', function () {
+                    describe('that is not monitoring', function () {
+                        it('does nothing', function () {
+                            const router = makeRouter(
+                                node.name,
+                                network,
+                                node.makeContext(),
+                                {}
+                            );
+                            const ctxA = node.makeContext();
+                            const ctxB = node.makeContext();
+                            network.monitor(ctxA.self(), router.name);
+
+                            network.unregister(router.ctx.self());
+                            expect(node.exec).toHaveBeenCalledTimes(1);
+                            expect(node.exec).toHaveBeenCalledWithPattern(
+                                'deliver',
+                                [
+                                    node.system,
+                                    ctxA.self(),
+                                    t(nodedown, router.name),
+                                ]
+                            );
+                            expect(node.exec).not.toHaveBeenCalledWithPattern(
+                                'deliver',
+                                [
+                                    node.system,
+                                    ctxB.self(),
+                                    t(nodedown, router.name),
+                                ]
+                            );
+                        });
+                    });
+                    describe('that is monitoring', function () {
+                        describe('when the monitored node is lost', function () {
+                            it('does not notify the removed monitor', function () {
+                                const router = makeRouter(
+                                    node.name,
+                                    network,
+                                    node.makeContext(),
+                                    {}
+                                );
+                                const ctxA = node.makeContext();
+                                const ctxB = node.makeContext();
+                                network.monitor(ctxA.self(), router.name);
+                                network.monitor(ctxB.self(), router.name);
+
+                                expect(function () {
+                                    network.demonitor(ctxB.self(), router.name);
+                                }).not.toThrow();
+
+                                network.unregister(router.ctx.self());
+                                expect(node.exec).toHaveBeenCalledTimes(1);
+                                expect(node.exec).toHaveBeenCalledWithPattern(
+                                    'deliver',
+                                    [
+                                        node.system,
+                                        ctxA.self(),
+                                        t(nodedown, router.name),
+                                    ]
+                                );
+                                expect(
+                                    node.exec
+                                ).not.toHaveBeenCalledWithPattern('deliver', [
+                                    node.system,
+                                    ctxB.self(),
+                                    t(nodedown, router.name),
+                                ]);
+                            });
+                        });
+                    });
+                });
+            });
+            describe('that is not registered', function () {
+                it('does not fail', function () {
+                    const ctx = node.makeContext();
+                    const router = makeRouter(
+                        node.name,
+                        network,
+                        node.makeContext(),
+                        {}
+                    );
+                    expect(function () {
+                        network.demonitor(ctx.self(), router.name);
+                    }).not.toThrow();
                 });
             });
         });
