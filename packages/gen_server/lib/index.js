@@ -3,7 +3,7 @@ import { OTPError, Pid, Ref, t, l, cons } from '@otpjs/types';
 import * as matching from '@otpjs/matching';
 import * as gen from '@otpjs/gen';
 import * as proc_lib from '@otpjs/proc_lib';
-import * as Symbols from './symbols';
+import * as Symbols from './symbols.js';
 
 export { Symbols };
 
