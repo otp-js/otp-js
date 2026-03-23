@@ -1,6 +1,6 @@
 import * as otp from "@otpjs/core";
 import * as supervisor from "@otpjs/supervisor";
-import * as client from './client';
+import * as client from './client.js';
 
 const { ok, _ } = otp.Symbols;
 const { simple_one_for_one } = supervisor.Symbols;

@@ -1,18 +1,10 @@
 /* eslint-env jest */
+import { describe, it, expect, jest } from '@jest/globals';
 import debug from 'debug';
-import '@otpjs/test_utils';
-import { RemoteNode } from '../src/node/remote-node.js';
-import * as matching from '@otpjs/matching';
-import { t, l, Pid, Ref } from '@otpjs/types';
-import {
-    permanent,
-    temporary,
-    ok,
-    discover,
-    lost,
-    nodedown,
-} from '../src/symbols';
-import { Network } from '../src/node/network.js';
+import '@otpjs/matching/jest';
+import { t, l, Pid } from '@otpjs/types';
+import { permanent, temporary, ok, discover, lost, nodedown } from '#symbols';
+import { Network } from '#node/network';
 import * as util from 'node:util';
 
 const log = debug('otpjs:node:tests:routing');

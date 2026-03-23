@@ -1,7 +1,8 @@
 /* eslint-env jest */
 import '#jest';
-import { _, spread } from '../src/symbols';
-import * as match from '../src';
+import { describe, it, expect, jest } from '@jest/globals';
+import { _, spread } from '#symbols';
+import * as match from '../lib';
 import { l, il, Pid, Ref } from '@otpjs/types';
 
 describe('@otpjs/matching/core/compile', function () {

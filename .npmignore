@@ -3,8 +3,4 @@
 .log
 tsfmt.json
 coverage
-src
-packages/*/src
-transports/*/src
-serializers/*/src
 package-lock.json

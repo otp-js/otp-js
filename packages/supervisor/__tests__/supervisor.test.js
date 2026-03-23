@@ -1,15 +1,16 @@
 /* eslint-env jest */
 
+import { describe, expect, it, jest } from '@jest/globals';
 import { Node, Pid, Symbols } from '@otpjs/core';
-import '@otpjs/test_utils';
-import * as supervisor from '../src';
-import * as Adder from './adder';
-import * as Subtracter from './subtracter';
-import * as Ignored from './ignored';
-import * as Failed from './failed';
 import * as gen_server from '@otpjs/gen_server';
 import * as matching from '@otpjs/matching';
-import { t, l } from '@otpjs/types';
+import '@otpjs/matching/jest';
+import { l, t } from '@otpjs/types';
+import * as supervisor from '../lib';
+import * as Adder from './adder';
+import * as Failed from './failed';
+import * as Ignored from './ignored';
+import * as Subtracter from './subtracter';
 
 const { error, ok, trap_exit, normal, kill, badarg, timeout, EXIT } = Symbols;
 const { _, spread } = matching.Symbols;

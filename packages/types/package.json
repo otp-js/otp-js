@@ -3,6 +3,7 @@
     "version": "0.18.0",
     "description": "> TODO: description",
     "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
+    "type": "module",
     "homepage": "https://github.com/otp-js/otp-js#readme",
     "license": "ISC",
     "main": "lib/index.js",
@@ -10,7 +11,10 @@
         "lib": "lib",
         "test": "__tests__"
     },
-    "files": ["lib", "devtools.js"],
+    "files": [
+        "lib",
+        "devtools.js"
+    ],
     "publishConfig": {
         "access": "public"
     },
@@ -19,10 +23,6 @@
         "url": "git+https://github.com/otp-js/otp-js.git"
     },
     "scripts": {
-        "build": "babel src --out-dir lib",
-        "watch": "babel src --out-dir lib --watch",
-        "clean": "rimraf lib",
-        "prepublish": "npm run build",
         "test": "jest",
         "lint": "eslint src"
     },

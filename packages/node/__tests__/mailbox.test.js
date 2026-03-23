@@ -1,9 +1,9 @@
 /* eslint-env jest */
-import { Mailbox } from '../src/context/mailbox';
+import { Mailbox } from '#context/mailbox';
 import * as matching from '@otpjs/matching';
 import { t } from '@otpjs/types';
-import '@otpjs/test_utils';
-import * as Symbols from '../src/symbols';
+import '@otpjs/matching/jest';
+import * as Symbols from '#symbols';
 
 const { ok, timeout, already_receiving } = Symbols;
 const { _, spread } = matching.Symbols;
@@ -12,15 +12,15 @@ function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-describe('@otpjs/Mailbox', function() {
-    it('is a type of array', function() {
+describe('@otpjs/Mailbox', function () {
+    it('is a type of array', function () {
         const mb = new Mailbox();
         expect(Array.isArray(mb)).toBe(true);
     });
 
-    describe('after pushing', function() {
-        describe('when there is no predicate pending', function() {
-            it('increases its length by 1', function() {
+    describe('after pushing', function () {
+        describe('when there is no predicate pending', function () {
+            it('increases its length by 1', function () {
                 const mb = new Mailbox();
                 expect(mb.length).toBe(0);
 
@@ -31,9 +31,9 @@ describe('@otpjs/Mailbox', function() {
                 }
             });
         });
-        describe('when there is a predicate pending', function() {
-            describe('which matches the message', function() {
-                it('should have no contents', async function() {
+        describe('when there is a predicate pending', function () {
+            describe('which matches the message', function () {
+                it('should have no contents', async function () {
                     const mb = new Mailbox();
                     expect(mb.pending).toBe(0);
                     expect(mb.length).toBe(0);
@@ -51,8 +51,8 @@ describe('@otpjs/Mailbox', function() {
                     );
                 });
             });
-            describe('which does not match the message', function() {
-                it('increases its length by 1', function() {
+            describe('which does not match the message', function () {
+                it('increases its length by 1', function () {
                     const mb = new Mailbox();
                     mb.pop(() => false);
                     expect(mb.length).toBe(0);
@@ -66,9 +66,9 @@ describe('@otpjs/Mailbox', function() {
             });
         });
     });
-    describe('pop', function() {
-        describe('when already receiving', function() {
-            it('throws an error', async function() {
+    describe('pop', function () {
+        describe('when already receiving', function () {
+            it('throws an error', async function () {
                 const mb = new Mailbox();
                 mb.pop();
 
@@ -77,10 +77,10 @@ describe('@otpjs/Mailbox', function() {
                 );
             });
         });
-        describe('with a timeout', function() {
-            describe('with no predicate', function() {
-                describe('when there are available messages', function() {
-                    it('takes messages in the order they were inserted', async function() {
+        describe('with a timeout', function () {
+            describe('with no predicate', function () {
+                describe('when there are available messages', function () {
+                    it('takes messages in the order they were inserted', async function () {
                         const mb = new Mailbox();
                         mb.push('test');
                         mb.push('test2');
@@ -94,14 +94,14 @@ describe('@otpjs/Mailbox', function() {
                             t(ok, 'test3')
                         );
                     });
-                    it('only takes messages that match the specified pattern', async function() {
+                    it('only takes messages that match the specified pattern', async function () {
                         const mb = new Mailbox();
                         mb.push('test');
                         mb.push('test2');
                         mb.push('test3');
 
-                        const match = (predicate) =>
-                            (message) => predicate(message)
+                        const match = (predicate) => (message) =>
+                            predicate(message)
                                 ? Promise.resolve(t(ok, message))
                                 : false;
 
@@ -116,15 +116,15 @@ describe('@otpjs/Mailbox', function() {
                         ).resolves.toMatchPattern(t(ok, 'test'));
                     });
                 });
-                describe('when there are no available messages', function() {
-                    it('throws a timeout error if its timer expires', async function() {
+                describe('when there are no available messages', function () {
+                    it('throws a timeout error if its timer expires', async function () {
                         const mb = new Mailbox();
                         await expect(mb.pop(100)).rejects.toThrowTerm(timeout);
                     });
                 });
             });
-            describe('with a predicate', function() {
-                it('will not throw given an incompatible message', async function() {
+            describe('with a predicate', function () {
+                it('will not throw given an incompatible message', async function () {
                     const mb = new Mailbox();
                     mb.push({ iam: 'not_iterable' });
                     const promise = mb.pop(() => {
@@ -133,19 +133,25 @@ describe('@otpjs/Mailbox', function() {
                     mb.push({ iam: 'not_iterable' });
                     await expect(promise).rejects.toThrowTerm(timeout);
                 });
-                describe('when there are available messages', function() {
-                    it('returns the first matching message', async function() {
+                describe('when there are available messages', function () {
+                    it('returns the first matching message', async function () {
                         const mb = new Mailbox();
                         mb.push('test');
                         mb.push('test2');
                         mb.push('test3');
                         await expect(
-                            mb.pop((message) => message === 'test2' ? Promise.resolve(t(ok, message)) : false, 100)
+                            mb.pop(
+                                (message) =>
+                                    message === 'test2'
+                                        ? Promise.resolve(t(ok, message))
+                                        : false,
+                                100
+                            )
                         ).resolves.toMatchPattern(t(ok, 'test2'));
                         expect(mb.length).toBe(2);
                     });
 
-                    it('will wait if none of the messages match', async function() {
+                    it('will wait if none of the messages match', async function () {
                         const mb = new Mailbox();
                         mb.push('test');
                         mb.push('test2');
@@ -158,8 +164,8 @@ describe('@otpjs/Mailbox', function() {
                         expect(mb.isReceiving).toBe(false);
                     });
                 });
-                describe('when there are no available messages', function() {
-                    it('times out if no message is received', async function() {
+                describe('when there are no available messages', function () {
+                    it('times out if no message is received', async function () {
                         const mb = new Mailbox();
                         const request = mb.pop((m) => m === 'test', 100);
                         const expectation =
@@ -168,11 +174,15 @@ describe('@otpjs/Mailbox', function() {
                         await expectation;
                         expect(mb.isReceiving).toBe(false);
                     });
-                    it('does not time out if a matching message is received', async function() {
+                    it('does not time out if a matching message is received', async function () {
                         const mb = new Mailbox();
-                        const request = mb.pop((m) => m === 'test'
-                            ? Promise.resolve(t(ok, m))
-                            : false, 100);
+                        const request = mb.pop(
+                            (m) =>
+                                m === 'test'
+                                    ? Promise.resolve(t(ok, m))
+                                    : false,
+                            100
+                        );
                         const expectation = expect(
                             request
                         ).resolves.toMatchPattern(t(ok, 'test'));
@@ -187,9 +197,9 @@ describe('@otpjs/Mailbox', function() {
                 });
             });
         });
-        describe('without a timeout', function() {
-            describe('with no predicate', function() {
-                it('returns the first message available', async function() {
+        describe('without a timeout', function () {
+            describe('with no predicate', function () {
+                it('returns the first message available', async function () {
                     const mb = new Mailbox();
                     mb.push('first');
                     mb.push('second');
@@ -205,15 +215,14 @@ describe('@otpjs/Mailbox', function() {
                     );
                 });
             });
-            describe('with a predicate', function() {
-                it('returns the result of the predicate', function() {
-                });
+            describe('with a predicate', function () {
+                it('returns the result of the predicate', function () {});
             });
         });
     });
-    describe('clear', function() {
-        describe('when there are pending messages', function() {
-            it('discards the messages', function() {
+    describe('clear', function () {
+        describe('when there are pending messages', function () {
+            it('discards the messages', function () {
                 const mb = new Mailbox();
                 mb.push('test1');
                 mb.push('test2');
@@ -224,8 +233,8 @@ describe('@otpjs/Mailbox', function() {
             });
         });
 
-        describe('when there is a pending resolvers', function() {
-            it('rejects the receiver', async function() {
+        describe('when there is a pending resolvers', function () {
+            it('rejects the receiver', async function () {
                 const mb = new Mailbox();
                 const promise = mb.pop();
                 expect(mb.isReceiving).toBe(true);

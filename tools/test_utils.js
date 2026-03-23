@@ -1,2 +1,2 @@
 /* eslint-env jest */
-import '@otpjs/test_utils';
+import '@otpjs/matching/jest';

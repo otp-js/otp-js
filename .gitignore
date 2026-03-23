@@ -103,8 +103,4 @@ dist
 
 # TernJS port file
 .tern-port
-
-dnp/*/lib/
-packages/*/lib/
-transports/*/lib/
-serializers/*/lib/
+.aider*

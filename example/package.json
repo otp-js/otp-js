@@ -4,13 +4,9 @@
   "description": "",
   "main": "lib/index.js",
   "scripts": {
-    "build-client": "webpack --config webpack.config.js",
-    "build-server": "babel server/src --out-dir server/lib",
-    "build": "concurrently \"npm run build-client\" \"npm run build-server\"",
-    "watch-client": "webpack --config webpack.config.js --watch",
-    "watch-server": "babel server/src --out-dir server/lib --watch",
-    "watch": "concurrently \"npm run watch-client\" \"npm run watch-server\"",
-    "start": "node server/lib/index.js"
+    "build": "webpack --config webpack.config.js",
+    "watch": "webpack --config webpack.config.js --watch",
+    "start": "node server/src/index.js"
   },
   "author": "",
   "license": "MIT",

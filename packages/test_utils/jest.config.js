@@ -1,10 +1,6 @@
-module.exports = {
+export default {
     automock: false,
     testRegex: '(/test/.*|(\\.|/)(test|spec))\\.(jsx?)$',
-    transform: {
-        '\\.jsx?$': ['babel-jest', { rootMode: 'upward', sourceMaps: 'both' }]
-    },
-    moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
+    transform: {},
     testEnvironment: 'node',
-    testPathIgnorePatterns: ['lib/']
 };

@@ -1,4 +1,4 @@
-import { ignore } from '../src/symbols';
+import { ignore } from '#symbols';
 
 export function startLink(ctx) {
     return ignore;

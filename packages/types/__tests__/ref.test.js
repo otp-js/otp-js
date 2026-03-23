@@ -1,9 +1,10 @@
 /* eslint-env jest */
-import { Ref } from '../src';
-import inspect from 'inspect-custom-symbol';
-import '@otpjs/test_utils';
+import { describe, expect, it, jest } from '@jest/globals';
+import '@otpjs/matching/jest';
 import crypto from 'crypto';
+import inspect from 'inspect-custom-symbol';
 import util from 'util';
+import { Ref } from '../lib';
 
 describe('Ref', function () {
     it('can be made from thin air', function () {

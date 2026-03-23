@@ -1,7 +1,7 @@
 import * as otp from '@otpjs/core';
 import * as supervisor from '@otpjs/supervisor';
-import * as rooms from './rooms';
-import * as clients from './clients';
+import * as rooms from './rooms.js';
+import * as clients from './clients.js';
 
 const { ok, _ } = otp.Symbols;
 const { one_for_one } = supervisor.Symbols;

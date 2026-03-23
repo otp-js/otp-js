@@ -1,12 +1,12 @@
 'use strict';
 
-require('@otpjs/test_utils');
+import { describe, expect, it } from '@jest/globals';
+import '@otpjs/matching/jest';
 
-const { Node, Symbols, shutdown } = require('@otpjs/core');
-const { Pid, Ref, l, t } = require('@otpjs/types');
-const serializerJson = require('../src/');
-
-const { ok } = Symbols;
+import { Node } from '@otpjs/node';
+import { ok, shutdown } from '@otpjs/node/symbols';
+import { l, Pid, t } from '@otpjs/types';
+import * as serializerJson from '../lib';
 
 describe('@otpjs/serializer-json', () => {
     let node, ctx;

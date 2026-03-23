@@ -3,6 +3,7 @@
     "version": "0.18.0",
     "description": "> TODO: description",
     "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
+    "type": "module",
     "homepage": "https://github.com/otp-js/otp-js#readme",
     "license": "ISC",
     "main": "lib/index.js",
@@ -21,25 +22,22 @@
         "url": "git+https://github.com/otp-js/otp-js.git"
     },
     "scripts": {
-        "build": "babel src --out-dir lib",
-        "watch": "babel src --out-dir lib --watch",
-        "clean": "rimraf lib",
-        "prepublish": "npm run build",
         "test": "echo \"Error: run tests from root\" && exit 1",
         "lint": "eslint src"
     },
     "imports": {
-      "#jest": "./jest.js"
+        "#jest": "./jest.js",
+        "#symbols": "./lib/symbols.js"
     },
     "exports": {
-      ".": "lib/index.js",
-      "./symbols": "lib/symbols.js",
-      "./jest": "./jest.js"
+        ".": "./lib/index.js",
+        "./symbols": "./lib/symbols.js",
+        "./jest": "./jest.js"
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"
     },
     "devDependencies": {
-        "jest": "^29.5.0"
+        "jest": "^30.3.0"
     }
 }

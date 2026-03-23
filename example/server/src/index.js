@@ -4,7 +4,7 @@ import Koa from 'koa';
 import koaStatic from 'koa-static';
 import koaLogger from 'koa-logger';
 import * as otp from '@otpjs/core';
-import * as supervisor from './supervisor';
+import * as supervisor from './supervisor.js';
 import path from 'path';
 
 const PORT = process.env.PORT || 8080;

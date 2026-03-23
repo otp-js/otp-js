@@ -1,10 +1,8 @@
 /** eslint-env jest */
-import '@otpjs/test_utils';
-import * as matching from '@otpjs/matching';
+import '@otpjs/matching/jest';
+import { describe, it, expect, jest } from '@jest/globals';
 import { Pid } from '@otpjs/types';
-import * as Symbols from '../src/symbols';
-import { Registrar } from '../src/node/registrar.js';
-const { ok } = Symbols;
+import { Registrar } from '#node/registrar';
 
 describe('@otpjs/node.Registrar', function () {
     let registrar;

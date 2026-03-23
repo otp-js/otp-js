@@ -1,9 +1,10 @@
 /* eslint-env jest */
-import '@otpjs/test_utils';
-import { Pid } from '../src';
-import inspect from 'inspect-custom-symbol';
+import { describe, expect, it, jest } from '@jest/globals';
+import '@otpjs/matching/jest';
 import crypto from 'crypto';
+import inspect from 'inspect-custom-symbol';
 import util from 'util';
+import { Pid } from '../lib';
 
 describe('Pid', function () {
     it('cannot identify Pids from strings', function () {

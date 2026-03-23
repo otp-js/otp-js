@@ -1,10 +1,11 @@
 /* eslint-env jest */
+import { describe, it, expect, jest } from '@jest/globals';
 import crypto from 'crypto';
 import { Node, Symbols } from '@otpjs/core';
 import * as matching from '@otpjs/matching';
 import { OTPError, Pid, t, l } from '@otpjs/types';
-import '@otpjs/test_utils';
-import * as gen_server from '../src';
+import '@otpjs/matching/jest';
+import * as gen_server from '../lib';
 
 function log(ctx, ...args) {
     const d = ctx.log.extend('gen_server:__tests__');
@@ -72,7 +73,7 @@ const callbacks = {
     init,
     handleCall,
     handleCast,
-    handleInfo
+    handleInfo,
 };
 
 describe('gen_server', describeGenServer);
@@ -105,7 +106,7 @@ function describeGenServer() {
         it('fails if the init callback errors', async function () {
             const response = await gen_server.start(ctx, {
                 ...callbacks,
-                init
+                init,
             });
 
             expect(response).toMatchPattern(
@@ -120,7 +121,7 @@ function describeGenServer() {
         it('fails if the init callback indicates stopping', async function () {
             const response = await gen_server.start(ctx, {
                 ...callbacks,
-                init
+                init,
             });
 
             expect(response).toMatchPattern(t(error, 'init_failed'));
@@ -143,22 +144,26 @@ function describeGenServer() {
 
         it('sends an exit signal if the init callback fails', async function () {
             let resolvePid;
-            const promisedPid = new Promise((resolve) => (resolvePid = resolve));
+            const promisedPid = new Promise(
+                (resolve) => (resolvePid = resolve)
+            );
             const response = await gen_server.startLink(ctx, {
                 ...callbacks,
-                init
+                init,
             });
 
             expect(response).toMatchPattern(
                 t(error, {
                     term: 'init_failed',
-                    [spread]: _
+                    [spread]: _,
                 })
             );
 
             const pid = await promisedPid;
             const message = await ctx.receive();
-            expect(message).toMatchPattern(t(EXIT, pid, t(error, 'init_failed')));
+            expect(message).toMatchPattern(
+                t(EXIT, pid, t(error, 'init_failed'))
+            );
 
             function init(ctx) {
                 resolvePid(ctx.self());
@@ -211,7 +216,7 @@ function describeGenServer() {
         it('does not throw an error if stopped normally', async function () {
             const response = await gen_server.start(ctx, {
                 ...callbacks,
-                init
+                init,
             });
 
             expect(response).toMatchPattern(t(error, normal));
@@ -224,7 +229,7 @@ function describeGenServer() {
         it('throws an error if it responds abnormally', async function () {
             const [, pid] = await gen_server.startLink(ctx, {
                 ...callbacks,
-                handleCast
+                handleCast,
             });
 
             gen_server.cast(ctx, pid, 'die');
@@ -232,7 +237,7 @@ function describeGenServer() {
             await expect(ctx.receive()).resolves.toMatchPattern(
                 t(EXIT, pid, {
                     term: t('bad_return_value', l.isList),
-                    [spread]: _
+                    [spread]: _,
                 })
             );
 
@@ -250,9 +255,7 @@ function describeGenServer() {
                         Math.random() * Number.MAX_SAFE_INTEGER
                     );
                     const handleInfo = jest.fn((ctx, info, state) => {
-                        expect(info).toMatchPattern(
-                            t(EXIT, Pid.isPid, reason)
-                        );
+                        expect(info).toMatchPattern(t(EXIT, Pid.isPid, reason));
                         return t(noreply, state);
                     });
                     const init = jest.fn(async (ctx) => {
@@ -265,7 +268,7 @@ function describeGenServer() {
                     const [, pid] = await gen_server.startLink(ctx, {
                         ...callbacks,
                         init,
-                        handleInfo
+                        handleInfo,
                     });
 
                     await wait(50);
@@ -284,8 +287,12 @@ function describeGenServer() {
                     let serverCtx;
 
                     beforeEach(async function () {
-                        handleInfo = jest.fn((_ctx, _info, state) => t(noreply, state));
-                        handleCall = jest.fn((_ctx, _call, _from, state) => t(reply, 'call reply', state, 100));
+                        handleInfo = jest.fn((_ctx, _info, state) =>
+                            t(noreply, state)
+                        );
+                        handleCall = jest.fn((_ctx, _call, _from, state) =>
+                            t(reply, 'call reply', state, 100)
+                        );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCall(_, handleCall);
                             server.onInfo(_, handleInfo);
@@ -300,15 +307,17 @@ function describeGenServer() {
                     it('sends the reply to the caller', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call')
-                        ).resolves.toMatchPattern(
-                            'call reply'
-                        );
+                        ).resolves.toMatchPattern('call reply');
                         expect(handleCall).toHaveBeenCalled();
                     });
                     it('sends itself a message when timeout expires', async function () {
                         await gen_server.call(ctx, server, 'call');
                         await wait(100);
-                        expect(handleInfo).toHaveBeenCalledWithPattern(_, timeout, _);
+                        expect(handleInfo).toHaveBeenCalledWithPattern(
+                            _,
+                            timeout,
+                            _
+                        );
                     });
                 });
                 describe('given a reply with no timeout', function () {
@@ -319,8 +328,12 @@ function describeGenServer() {
                     let serverCtx;
 
                     beforeEach(async function () {
-                        handleInfo = jest.fn((_ctx, _info, state) => t(noreply, state));
-                        handleCall = jest.fn((_ctx, _call, _from, state) => t(reply, 'call reply', state));
+                        handleInfo = jest.fn((_ctx, _info, state) =>
+                            t(noreply, state)
+                        );
+                        handleCall = jest.fn((_ctx, _call, _from, state) =>
+                            t(reply, 'call reply', state)
+                        );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCall(_, handleCall);
                             server.onInfo(_, handleInfo);
@@ -335,9 +348,7 @@ function describeGenServer() {
                     it('sends the reply to the caller', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call')
-                        ).resolves.toMatchPattern(
-                            'call reply'
-                        );
+                        ).resolves.toMatchPattern('call reply');
                         expect(handleCall).toHaveBeenCalled();
                     });
                 });
@@ -349,8 +360,12 @@ function describeGenServer() {
                     let serverCtx;
 
                     beforeEach(async function () {
-                        handleInfo = jest.fn((_ctx, _info, state) => t(noreply, state));
-                        handleCall = jest.fn((_ctx, _call, _from, state) => t(noreply, state));
+                        handleInfo = jest.fn((_ctx, _info, state) =>
+                            t(noreply, state)
+                        );
+                        handleCall = jest.fn((_ctx, _call, _from, state) =>
+                            t(noreply, state)
+                        );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCall(_, handleCall);
                             server.onInfo(_, handleInfo);
@@ -363,7 +378,9 @@ function describeGenServer() {
                     });
 
                     it('waits for the next message', async function () {
-                        await expect(gen_server.call(ctx, server, 'without', 100)).rejects.toThrowTerm(timeout);
+                        await expect(
+                            gen_server.call(ctx, server, 'without', 100)
+                        ).rejects.toThrowTerm(timeout);
                         expect(handleCall).toHaveBeenCalled();
                         expect(handleInfo).not.toHaveBeenCalled();
                     });
@@ -376,8 +393,12 @@ function describeGenServer() {
                     let serverCtx;
 
                     beforeEach(async function () {
-                        handleInfo = jest.fn((_ctx, _info, state) => t(noreply, state));
-                        handleCall = jest.fn((_ctx, _call, _from, state) => t(noreply, state, 100));
+                        handleInfo = jest.fn((_ctx, _info, state) =>
+                            t(noreply, state)
+                        );
+                        handleCall = jest.fn((_ctx, _call, _from, state) =>
+                            t(noreply, state, 100)
+                        );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCall(_, handleCall);
                             server.onInfo(_, handleInfo);
@@ -390,13 +411,21 @@ function describeGenServer() {
                     });
 
                     it('waits for the next message', async function () {
-                        await expect(gen_server.call(ctx, server, 'without', 100)).rejects.toThrowTerm(timeout);
+                        await expect(
+                            gen_server.call(ctx, server, 'without', 100)
+                        ).rejects.toThrowTerm(timeout);
                         expect(handleCall).toHaveBeenCalled();
                     });
                     it('sends itself a message when timeout expires', async function () {
-                        await expect(gen_server.call(ctx, server, 'call', 100)).rejects.toThrowTerm(timeout);
+                        await expect(
+                            gen_server.call(ctx, server, 'call', 100)
+                        ).rejects.toThrowTerm(timeout);
                         await wait(200);
-                        expect(handleInfo).toHaveBeenCalledWithPattern(_, timeout, _);
+                        expect(handleInfo).toHaveBeenCalledWithPattern(
+                            _,
+                            timeout,
+                            _
+                        );
                     });
                 });
                 describe('given stop with a reply', function () {
@@ -408,9 +437,15 @@ function describeGenServer() {
                     let serverCtx;
 
                     beforeEach(async function () {
-                        handleInfo = jest.fn((_ctx, _info, state) => t(noreply, state));
-                        handleCall = jest.fn((_ctx, _call, _from, state) => t(stop, normal, 'call reply', state));
-                        handleTerminate = jest.fn((_ctx, _reason, _state) => ok);
+                        handleInfo = jest.fn((_ctx, _info, state) =>
+                            t(noreply, state)
+                        );
+                        handleCall = jest.fn((_ctx, _call, _from, state) =>
+                            t(stop, normal, 'call reply', state)
+                        );
+                        handleTerminate = jest.fn(
+                            (_ctx, _reason, _state) => ok
+                        );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCall(_, handleCall);
                             server.onInfo(_, handleInfo);
@@ -427,16 +462,18 @@ function describeGenServer() {
                     it('sends the reply to the caller', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call')
-                        ).resolves.toMatchPattern(
-                            'call reply'
-                        );
+                        ).resolves.toMatchPattern('call reply');
                         expect(handleCall).toHaveBeenCalled();
                     });
                     it('terminates the server', async function () {
                         await gen_server.call(ctx, server, 'call');
                         expect(handleCall).toHaveBeenCalled();
                         await wait(50);
-                        expect(handleTerminate).toHaveBeenCalledWithPattern(_, normal, _);
+                        expect(handleTerminate).toHaveBeenCalledWithPattern(
+                            _,
+                            normal,
+                            _
+                        );
                     });
                 });
                 describe('throwing an Error instance', function () {
@@ -450,7 +487,9 @@ function describeGenServer() {
                         handleCall = jest.fn((_ctx, _call, _from, state) => {
                             throw Error('test error');
                         });
-                        handleTerminate = jest.fn((_ctx, _reason, _state) => ok);
+                        handleTerminate = jest.fn(
+                            (_ctx, _reason, _state) => ok
+                        );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCall(_, handleCall);
                             server.onInfo(_, handleInfo);
@@ -467,20 +506,20 @@ function describeGenServer() {
                     it('exits the caller for the same reason', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call', 500)
-                        ).rejects.toThrowTerm(
-                            'test error'
-                        );
+                        ).rejects.toThrowTerm('test error');
                         expect(handleCall).toHaveBeenCalled();
                     });
                     it('terminates the server', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call', 500)
-                        ).rejects.toThrowTerm(
-                            _
-                        );
+                        ).rejects.toThrowTerm(_);
                         expect(handleCall).toHaveBeenCalled();
                         await wait(50);
-                        expect(handleTerminate).toHaveBeenCalledWithPattern(_, 'test error', _);
+                        expect(handleTerminate).toHaveBeenCalledWithPattern(
+                            _,
+                            'test error',
+                            _
+                        );
                     });
                 });
             });
@@ -493,8 +532,12 @@ function describeGenServer() {
                     let serverCtx;
 
                     beforeEach(async function () {
-                        handleInfo = jest.fn((_ctx, _info, state) => t(noreply, state));
-                        handleCast = jest.fn((_ctx, _call, _from, state) => t(noreply, state));
+                        handleInfo = jest.fn((_ctx, _info, state) =>
+                            t(noreply, state)
+                        );
+                        handleCast = jest.fn((_ctx, _call, _from, state) =>
+                            t(noreply, state)
+                        );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCast(_, handleCast);
                             server.onInfo(_, handleInfo);
@@ -507,7 +550,9 @@ function describeGenServer() {
                     });
 
                     it('waits for the next message', async function () {
-                        await expect(gen_server.cast(ctx, server, 'without')).resolves.toBe(ok);
+                        await expect(
+                            gen_server.cast(ctx, server, 'without')
+                        ).resolves.toBe(ok);
                         await wait();
                         expect(handleCast).toHaveBeenCalled();
                         expect(handleInfo).not.toHaveBeenCalled();
@@ -521,8 +566,12 @@ function describeGenServer() {
                     let serverCtx;
 
                     beforeEach(async function () {
-                        handleInfo = jest.fn((_ctx, _info, state) => t(noreply, state));
-                        handleCast = jest.fn((_ctx, _call, state) => t(noreply, state, 100));
+                        handleInfo = jest.fn((_ctx, _info, state) =>
+                            t(noreply, state)
+                        );
+                        handleCast = jest.fn((_ctx, _call, state) =>
+                            t(noreply, state, 100)
+                        );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCast(_, handleCast);
                             server.onInfo(_, handleInfo);
@@ -535,14 +584,22 @@ function describeGenServer() {
                     });
 
                     it('waits for the next message', async function () {
-                        await expect(gen_server.cast(ctx, server, 'without', 100)).resolves.toBe(ok);
+                        await expect(
+                            gen_server.cast(ctx, server, 'without', 100)
+                        ).resolves.toBe(ok);
                         await wait(200);
                         expect(handleCast).toHaveBeenCalled();
                     });
                     it('sends itself a message when timeout expires', async function () {
-                        await expect(gen_server.cast(ctx, server, 'call', 100)).resolves.toBe(ok);
+                        await expect(
+                            gen_server.cast(ctx, server, 'call', 100)
+                        ).resolves.toBe(ok);
                         await wait(200);
-                        expect(handleInfo).toHaveBeenCalledWithPattern(_, timeout, _);
+                        expect(handleInfo).toHaveBeenCalledWithPattern(
+                            _,
+                            timeout,
+                            _
+                        );
                     });
                 });
                 describe('given stop with no reply', function () {
@@ -554,9 +611,15 @@ function describeGenServer() {
                     let serverCtx;
 
                     beforeEach(async function () {
-                        handleInfo = jest.fn((_ctx, _info, state) => t(noreply, state));
-                        handleCast = jest.fn((_ctx, _call, state) => t(stop, normal, state));
-                        handleTerminate = jest.fn((_ctx, _reason, _state) => ok);
+                        handleInfo = jest.fn((_ctx, _info, state) =>
+                            t(noreply, state)
+                        );
+                        handleCast = jest.fn((_ctx, _call, state) =>
+                            t(stop, normal, state)
+                        );
+                        handleTerminate = jest.fn(
+                            (_ctx, _reason, _state) => ok
+                        );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCast(_, handleCast);
                             server.onInfo(_, handleInfo);
@@ -575,7 +638,11 @@ function describeGenServer() {
                         await wait();
                         expect(handleCast).toHaveBeenCalled();
                         await wait(50);
-                        expect(handleTerminate).toHaveBeenCalledWithPattern(_, normal, _);
+                        expect(handleTerminate).toHaveBeenCalledWithPattern(
+                            _,
+                            normal,
+                            _
+                        );
                     });
                 });
                 describe('throwing an Error instance', function () {
@@ -589,7 +656,9 @@ function describeGenServer() {
                         handleCast = jest.fn((_ctx, _cast, _state) => {
                             throw Error('test error');
                         });
-                        handleTerminate = jest.fn((_ctx, _reason, _state) => ok);
+                        handleTerminate = jest.fn(
+                            (_ctx, _reason, _state) => ok
+                        );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCast(_, handleCast);
                             server.onInfo(_, handleInfo);
@@ -606,13 +675,15 @@ function describeGenServer() {
                     it('terminates the server', async function () {
                         await expect(
                             gen_server.cast(ctx, server, 'cast')
-                        ).resolves.toBe(
-                            ok
-                        );
+                        ).resolves.toBe(ok);
                         await wait();
                         expect(handleCast).toHaveBeenCalled();
                         await wait(50);
-                        expect(handleTerminate).toHaveBeenCalledWithPattern(_, 'test error', _);
+                        expect(handleTerminate).toHaveBeenCalledWithPattern(
+                            _,
+                            'test error',
+                            _
+                        );
                     });
                 });
             });
@@ -648,10 +719,19 @@ function describeGenServer() {
                 });
 
                 it('exits with the termination error', async function () {
-                    await expect(gen_server.call(ctx, pid, 'fake')).rejects.toThrowTerm('bad terminate');
+                    await expect(
+                        gen_server.call(ctx, pid, 'fake')
+                    ).rejects.toThrowTerm('bad terminate');
                     await wait(50);
-                    expect(terminate).toHaveBeenCalledWithPattern(_, 'bad call', _);
-                    await expect(serverCtx.death).resolves.toMatchPattern({ term: 'bad terminate', [spread]: _ });
+                    expect(terminate).toHaveBeenCalledWithPattern(
+                        _,
+                        'bad call',
+                        _
+                    );
+                    await expect(serverCtx.death).resolves.toMatchPattern({
+                        term: 'bad terminate',
+                        [spread]: _,
+                    });
                 });
             });
             describe('which throws an Error', function () {
@@ -682,10 +762,19 @@ function describeGenServer() {
                 });
 
                 it('exits with the termination error', async function () {
-                    await expect(gen_server.call(ctx, pid, 'fake')).rejects.toThrowTerm('bad terminate');
+                    await expect(
+                        gen_server.call(ctx, pid, 'fake')
+                    ).rejects.toThrowTerm('bad terminate');
                     await wait(50);
-                    expect(terminate).toHaveBeenCalledWithPattern(_, 'bad call', _);
-                    await expect(serverCtx.death).resolves.toMatchPattern({ term: 'bad terminate', [spread]: _ });
+                    expect(terminate).toHaveBeenCalledWithPattern(
+                        _,
+                        'bad call',
+                        _
+                    );
+                    await expect(serverCtx.death).resolves.toMatchPattern({
+                        term: 'bad terminate',
+                        [spread]: _,
+                    });
                 });
             });
             it('invokes the callback and terminates the server', async function () {});
@@ -708,17 +797,17 @@ function describeGenServer() {
                         gen_server.call(ctx, pid, message, Infinity)
                     ).rejects.toThrowTerm(String(reason));
                 }
-            }
+            },
         ],
         [
             'cast',
             (ctx, pid, message) =>
-                expect(gen_server.cast(ctx, pid, message)).resolves.toBe(ok)
+                expect(gen_server.cast(ctx, pid, message)).resolves.toBe(ok),
         ],
         [
             'info',
-            (ctx, pid, message) => expect(ctx.send(pid, message)).toBe(ok)
-        ]
+            (ctx, pid, message) => expect(ctx.send(pid, message)).toBe(ok),
+        ],
     ];
 
     // Use these if testing a single method instead of the foreach wrapper
@@ -779,7 +868,9 @@ function describeGenServer() {
         });
         it('produces a server callback interface', function () {
             const init = jest.fn((_ctx) => t(ok, {}));
-            const calls = jest.fn((_ctx, _call, _from, state) => t(noreply, state));
+            const calls = jest.fn((_ctx, _call, _from, state) =>
+                t(noreply, state)
+            );
             const casts = jest.fn((_ctx, _cast, state) => t(noreply, state));
             const info = jest.fn((_ctx, _info, state) => t(noreply, state));
             const terminate = jest.fn((_ctx, _reason, _state) => ok);
@@ -813,9 +904,9 @@ function describeGenServer() {
                             args
                         );
 
-                        await expect(
-                            startPromise
-                        ).resolves.toMatchPattern(t(ok, Pid.isPid));
+                        await expect(startPromise).resolves.toMatchPattern(
+                            t(ok, Pid.isPid)
+                        );
 
                         const [, pid] = await startPromise;
                         expect(ctx.whereis(name)).toMatchPattern(pid);
@@ -824,11 +915,15 @@ function describeGenServer() {
                 describe('ctx, name, callbacks, and args', function () {
                     it('registers the server under that name', async function () {
                         const name = Symbol.for('test_server');
-                        const startPromise = gen_server.start(ctx, t('local', name), callbacks);
+                        const startPromise = gen_server.start(
+                            ctx,
+                            t('local', name),
+                            callbacks
+                        );
 
-                        await expect(
-                            startPromise
-                        ).resolves.toMatchPattern(t(ok, Pid.isPid));
+                        await expect(startPromise).resolves.toMatchPattern(
+                            t(ok, Pid.isPid)
+                        );
 
                         const [, pid] = await startPromise;
                         expect(ctx.whereis(name)).toMatchPattern(pid);
@@ -837,34 +932,38 @@ function describeGenServer() {
                 describe('ctx, callbacks, and args', function () {
                     it('starts the process', async function () {
                         const args = l(1, 2, 3);
-                        const startPromise = gen_server.start(ctx, callbacks, args);
+                        const startPromise = gen_server.start(
+                            ctx,
+                            callbacks,
+                            args
+                        );
 
-                        await expect(
-                            startPromise
-                        ).resolves.toMatchPattern(t(ok, Pid.isPid));
+                        await expect(startPromise).resolves.toMatchPattern(
+                            t(ok, Pid.isPid)
+                        );
                     });
                 });
                 describe('ctx and callbacks', function () {
                     it('starts the process', async function () {
                         const startPromise = gen_server.start(ctx, callbacks);
 
-                        await expect(
-                            startPromise
-                        ).resolves.toMatchPattern(t(ok, Pid.isPid));
+                        await expect(startPromise).resolves.toMatchPattern(
+                            t(ok, Pid.isPid)
+                        );
                     });
                 });
                 describe('ctx only', function () {
                     it('fails horribly', async function () {
-                        await expect(gen_server.start(ctx)).resolves.toMatchPattern(
-                            t(error, _)
-                        );
+                        await expect(
+                            gen_server.start(ctx)
+                        ).resolves.toMatchPattern(t(error, _));
                     });
                 });
                 describe('ctx and an explicit undefined', function () {
                     it('fails horribly', async function () {
-                        await expect(gen_server.start(ctx, undefined)).resolves.toMatchPattern(
-                            t(error, _)
-                        );
+                        await expect(
+                            gen_server.start(ctx, undefined)
+                        ).resolves.toMatchPattern(t(error, _));
                     });
                 });
             });

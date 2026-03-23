@@ -1,8 +1,9 @@
 /* eslint-env jest */
+import { describe, it, expect, jest } from '@jest/globals';
 import { ok } from '@otpjs/core/symbols';
 import { OTPError, t } from '@otpjs/types';
-import * as matching from '../src';
-import { case_clause, route_clause, skip_matching, _ } from '../src/symbols';
+import * as matching from '../lib';
+import { case_clause, route_clause, skip_matching, _ } from '#symbols';
 import '#jest';
 
 describe('@otpjs/matching/advanced', function () {

@@ -1,6 +1,7 @@
 /* eslint-env jest */
-import { Tuple, List, l, il, cons, car, cdr } from '../src';
-import '@otpjs/test_utils';
+import { jest, expect, describe, it } from '@jest/globals';
+import { Tuple, List, l, il, cons, car, cdr } from '../lib';
+import '@otpjs/matching/jest';
 import crypto from 'crypto';
 import util from 'util';
 import debug from 'debug';
@@ -71,7 +72,9 @@ describe('List', function () {
             );
         });
         it('does not modify the list if the predicate is never true', function () {
-            expect(l(1, 2, 3).deleteWhere((n) => n === 4)).toMatchPattern(l(1, 2, 3));
+            expect(l(1, 2, 3).deleteWhere((n) => n === 4)).toMatchPattern(
+                l(1, 2, 3)
+            );
         });
     });
     describe('includes', function () {
@@ -155,7 +158,9 @@ describe('List', function () {
         describe('given  another list', function () {
             it('appends it to this list', function () {
                 const list = l(1, 2, 3);
-                expect(list.append(l(4, 5, 6))).toMatchPattern(l(1, 2, 3, 4, 5, 6));
+                expect(list.append(l(4, 5, 6))).toMatchPattern(
+                    l(1, 2, 3, 4, 5, 6)
+                );
             });
         });
         describe('given a non-list', function () {
@@ -247,7 +252,9 @@ describe('List', function () {
                 it('converts the symbol to its key', function () {
                     const symbol = Symbol.for('well_known');
                     const list = l(1, 2, symbol);
-                    expect(list.toString()).toBe('[ 1, 2, Symbol(well_known) ]');
+                    expect(list.toString()).toBe(
+                        '[ 1, 2, Symbol(well_known) ]'
+                    );
                 });
             });
             describe('which is a named symbol', function () {
@@ -270,7 +277,9 @@ describe('List', function () {
         describe('when coerced to a string', function () {
             it('returns the name of the object', function () {
                 const list = l(1, 2, 3);
-                expect(Object.prototype.toString.call(list)).toBe('[object List]');
+                expect(Object.prototype.toString.call(list)).toBe(
+                    '[object List]'
+                );
             });
         });
     });

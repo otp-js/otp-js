@@ -1,13 +1,15 @@
 /* eslint-env jest */
-import '@otpjs/test_utils';
+import debug from 'debug';
+import { describe, expect, it, jest } from '@jest/globals';
 import * as otp from '@otpjs/core';
-import { OTPError, Pid, Ref, t, l } from '@otpjs/types';
 import * as match from '@otpjs/matching';
+import '@otpjs/matching/jest';
+import { l, OTPError, Pid, Ref, t } from '@otpjs/types';
 import { createServer } from 'http';
-import io from 'socket.io';
-import clientIO from 'socket.io-client';
+import { Server as SocketIO } from 'socket.io';
+import ClientIO from 'socket.io-client';
 
-import { register as useSocketIO } from '../src';
+import { register as useSocketIO } from '../lib';
 
 const { _, spread } = match.Symbols;
 const { ok, DOWN, error, kill, killed, normal, timeout } = otp.Symbols;
@@ -18,6 +20,7 @@ function log(ctx, ...args) {
 }
 
 const wait = (ms = 10) => new Promise((resolve) => setTimeout(resolve, ms));
+const blog = debug('otp:transports:socket.io:test')
 
 let serverNode = null;
 let clientNode = null;
@@ -26,29 +29,53 @@ let serverManager = null;
 let serverSocket = null;
 let clientSocket = null;
 
-beforeEach(async function () {
+beforeEach(async function() {
     serverNode = new otp.Node();
     clientNode = new otp.Node();
 
-    server = createServer();
-    server.listen(0);
-    serverManager = io(server);
+    blog('beforeEach(created_nodes)')
 
-    const loadServerSocket = new Promise((resolve, _reject) => {
-        serverManager.once('connection', resolve);
+    server = createServer();
+    serverManager = new SocketIO();
+    const loadServerSocket = new Promise((resolve, reject) => {
+        server.on('error', (err) => {
+            log('serverManager.error: %o', err)
+            reject(err);
+        });
+        serverManager.on('connection', socket => {
+            blog('beforeEach(connection_received, socket: %o)', socket);
+            resolve(socket)
+        });
     });
+    serverManager.attach(server);
+    server.listen(3000)
+
+    blog('beforeEach(created_server)')
+
+
+    await new Promise((resolve) => server.on('listening', resolve));
+
+    blog('beforeEach(server_listening)')
 
     const port = server.address().port;
-    clientSocket = clientIO(`http://localhost:${port}`);
+    clientSocket = ClientIO(`http://127.0.0.1:${port}`);
+    clientSocket.on('error', (err) => {
+        blog('serverManager.error: %o', err);
+    })
+    clientSocket.connect();
+
+    blog('beforeEach(created_client, server_port: %o)', port)
 
     serverSocket = await loadServerSocket;
+
+    blog('beforeEach(connection_established)')
 });
 
-afterEach(function () {
-    serverSocket.disconnect();
+afterEach(function() {
+    serverSocket?.disconnect();
     serverSocket = null;
 
-    clientSocket.disconnect();
+    clientSocket?.disconnect();
     clientSocket = null;
 
     server.close();
@@ -59,8 +86,8 @@ afterEach(function () {
     clientNode = null;
 });
 
-describe('@otpjs/transports-socket.io', function () {
-    it('can register from both sides', async function () {
+describe('@otpjs/transports-socket.io', function() {
+    it('can register from both sides', async function() {
         useSocketIO(clientNode, clientSocket);
         useSocketIO(serverNode, serverSocket);
 
@@ -69,7 +96,7 @@ describe('@otpjs/transports-socket.io', function () {
         expect(Array.from(serverNode.nodes())).toContain(clientNode.name);
         expect(Array.from(clientNode.nodes())).toContain(serverNode.name);
     });
-    it('can route to named remote processes', async function () {
+    it('can route to named remote processes', async function() {
         useSocketIO(clientNode, clientSocket);
         useSocketIO(serverNode, serverSocket);
 
@@ -101,7 +128,7 @@ describe('@otpjs/transports-socket.io', function () {
 
         clientNode.deliver(clientNode.system, pid, 'die');
     });
-    it('supports monitoring over the transport', async function () {
+    it('supports monitoring over the transport', async function() {
         useSocketIO(clientNode, clientSocket);
         useSocketIO(serverNode, serverSocket);
 
@@ -128,7 +155,7 @@ describe('@otpjs/transports-socket.io', function () {
             t(DOWN, Ref.isRef, 'process', Pid.isPid, normal)
         );
     });
-    it('supports demonitoring over the transport', async function () {
+    it('supports demonitoring over the transport', async function() {
         useSocketIO(clientNode, clientSocket);
         useSocketIO(serverNode, serverSocket);
 
@@ -143,7 +170,7 @@ describe('@otpjs/transports-socket.io', function () {
         await wait(100);
         const ctx = clientNode.makeContext();
         const mref = ctx.monitor(t(test_name, serverNode.name));
-        expect(function () {
+        expect(function() {
             ctx.demonitor(mref);
         }).not.toThrow();
         await wait(100);
@@ -151,7 +178,7 @@ describe('@otpjs/transports-socket.io', function () {
         ctx.send(t(test_name, serverNode.name), 'die');
         await expect(ctx.receive(100)).rejects.toThrow('timeout');
     });
-    it('can be unregistered', async function () {
+    it('can be unregistered', async function() {
         const destroyClient = useSocketIO(clientNode, clientSocket);
         const destroyServer = useSocketIO(serverNode, serverSocket);
 
@@ -168,18 +195,18 @@ describe('@otpjs/transports-socket.io', function () {
         expect(Array.from(serverNode.nodes())).not.toContain(clientNode.name);
         expect(Array.from(clientNode.nodes())).not.toContain(serverNode.name);
     });
-    describe('when bridged over another node', function () {
+    describe('when bridged over another node', function() {
         let clientNodeB, clientSocketB, serverSocketB;
         let destroyClientA, destroyServerA, destroyClientB, destroyServerB;
 
-        beforeEach(async function () {
+        beforeEach(async function() {
             const loadServerSocket = new Promise((resolve) => {
                 serverManager.once('connection', resolve);
             });
 
             clientNodeB = new otp.Node();
             const port = server.address().port;
-            clientSocketB = clientIO(`http://localhost:${port}`);
+            clientSocketB = ClientIO(`http://localhost:${port}`);
             serverSocketB = await loadServerSocket;
 
             destroyClientA = useSocketIO(clientNode, clientSocket, {
@@ -199,7 +226,7 @@ describe('@otpjs/transports-socket.io', function () {
             await wait(100);
         });
 
-        afterEach(function () {
+        afterEach(function() {
             if (clientSocketB.connected) {
                 clientSocketB.disconnect();
             }
@@ -210,7 +237,7 @@ describe('@otpjs/transports-socket.io', function () {
             destroyServerB?.();
         });
 
-        it('can route messages', async function () {
+        it('can route messages', async function() {
             const payload = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
             const resultA = new Promise((resolve) => {
                 clientNode.spawn(async (ctx) => {
@@ -234,8 +261,8 @@ describe('@otpjs/transports-socket.io', function () {
             await expect(resultA).resolves.toBe(payload);
         });
 
-        describe('when disconnected', function () {
-            it("gets removed from others' node lists", async function () {
+        describe('when disconnected', function() {
+            it("gets removed from others' node lists", async function() {
                 const ctxA = clientNode.makeContext();
                 const ctxB = clientNodeB.makeContext();
 
@@ -257,7 +284,7 @@ describe('@otpjs/transports-socket.io', function () {
                 ctxB.exit(ctxB.self(), kill);
             });
 
-            it('is not discovered by new nodes', async function () {
+            it('is not discovered by new nodes', async function() {
                 const port = server.address().port;
                 const clientNodeC = new otp.Node();
 
@@ -285,7 +312,7 @@ describe('@otpjs/transports-socket.io', function () {
                 expect(Array.from(ctxC.nodes())).not.toContain(ctxB.node());
                 expect(Array.from(ctxC.nodes())).not.toContain(ctxA.node());
 
-                const clientSocketC = clientIO(`http://localhost:${port}`);
+                const clientSocketC = ClientIO(`http://localhost:${port}`);
                 const loadServerSocket = new Promise((resolve, reject) => {
                     serverManager.once('connection', resolve);
                 });
@@ -315,7 +342,7 @@ describe('@otpjs/transports-socket.io', function () {
             });
         });
     });
-    describe('supports signal federation', function () {
+    describe('supports signal federation', function() {
         const serverName = Symbol.for('server');
         const clientName = Symbol.for('client');
         let clientCtx;
@@ -323,7 +350,7 @@ describe('@otpjs/transports-socket.io', function () {
         let destroyClient;
         let destroyServer;
 
-        beforeEach(async function () {
+        beforeEach(async function() {
             clientCtx = clientNode.makeContext();
             clientCtx.register(clientName);
 
@@ -336,13 +363,13 @@ describe('@otpjs/transports-socket.io', function () {
             await wait(100);
         });
 
-        afterEach(function () {
+        afterEach(function() {
             destroyClient();
             destroyServer();
         });
 
-        describe('given a relay signal', function () {
-            it('passes the signal to the remote node', async function () {
+        describe('given a relay signal', function() {
+            it('passes the signal to the remote node', async function() {
                 const buildBlock = (given, after) => {
                     given(_).then((incoming) => {
                         expect(incoming).toBe(message);
@@ -367,9 +394,9 @@ describe('@otpjs/transports-socket.io', function () {
                     ok
                 );
             });
-            describe('with buffer types', function () {
+            describe('with buffer types', function() {
                 let buffA, buffB;
-                beforeEach(function () {
+                beforeEach(function() {
                     buffA = Buffer.from(
                         'buffer A is a Buffer instance, which is a view of an ArrayBuffer',
                         'utf8'
@@ -379,9 +406,9 @@ describe('@otpjs/transports-socket.io', function () {
                         'utf8'
                     );
                 });
-                it('sends them seperately', async function () {
+                it('sends them seperately', async function() {
                     const name = Symbol.for('receiver');
-                    const listener = jest.fn(function (
+                    const listener = jest.fn(function(
                         fromPid,
                         toPid,
                         message,
@@ -425,8 +452,8 @@ describe('@otpjs/transports-socket.io', function () {
             });
         });
 
-        describe('given a link signal', function () {
-            it('passes the signal to the remote node', async function () {
+        describe('given a link signal', function() {
+            it('passes the signal to the remote node', async function() {
                 serverCtx.send(
                     t(clientName, clientNode.name),
                     serverCtx.self()
@@ -447,8 +474,8 @@ describe('@otpjs/transports-socket.io', function () {
                 expect(clientCtx.node(remotePid)).toBe(serverNode.name);
             });
         });
-        describe('given an unlink signal', function () {
-            it('passes the signal to the remote node', async function () {
+        describe('given an unlink signal', function() {
+            it('passes the signal to the remote node', async function() {
                 serverCtx.send(
                     t(clientName, clientNode.name),
                     serverCtx.self()
@@ -491,8 +518,8 @@ describe('@otpjs/transports-socket.io', function () {
                 });
             });
         });
-        describe('given an exit signal', function () {
-            it('passes the signal to the remote node', async function () {
+        describe('given an exit signal', function() {
+            it('passes the signal to the remote node', async function() {
                 serverCtx.send(
                     t(clientName, clientNode.name),
                     serverCtx.self()
@@ -508,7 +535,7 @@ describe('@otpjs/transports-socket.io', function () {
             });
         });
     });
-    describe('when destroyed', function () {
+    describe('when destroyed', function() {
         const serverName = Symbol.for('server');
         const clientName = Symbol.for('client');
         let clientCtx;
@@ -516,7 +543,7 @@ describe('@otpjs/transports-socket.io', function () {
         let destroyClient;
         let destroyServer;
 
-        beforeEach(async function () {
+        beforeEach(async function() {
             clientCtx = clientNode.makeContext();
             clientCtx.register(clientName);
 
@@ -529,7 +556,7 @@ describe('@otpjs/transports-socket.io', function () {
             await wait(100);
         });
 
-        afterEach(function () {
+        afterEach(function() {
             try {
                 destroyClient();
                 /* eslint-disable-next-line no-empty */
@@ -543,7 +570,7 @@ describe('@otpjs/transports-socket.io', function () {
             }
         });
 
-        it('stops federating signals', async function () {
+        it('stops federating signals', async function() {
             serverCtx.send(t(clientName, clientNode.name), serverCtx.self());
             const pid = await clientCtx.receive(Pid.isPid);
 

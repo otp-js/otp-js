@@ -1,5 +1,4 @@
-module.exports = {
+export default {
     displayName: '@otpjs/node',
     testEnvironment: 'node',
-    testPathIgnorePatterns: ['lib/'],
 };

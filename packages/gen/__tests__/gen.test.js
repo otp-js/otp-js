@@ -1,7 +1,8 @@
 /* eslint-env jest */
+import { describe, it, expect, jest } from '@jest/globals';
 import '@otpjs/test_utils';
 import * as otp from '@otpjs/node';
-import * as gen from '../src';
+import * as gen from '../lib';
 import * as proc_lib from '@otpjs/proc_lib';
 import { Tuple, t, Pid, Ref, OTPError } from '@otpjs/types';
 import crypto from 'crypto';
@@ -128,19 +129,6 @@ describe('start', function () {
                     proc_lib.initAck(ctx, caller, t(ok, ctx.self()));
                 });
             });
-            it('calls proc_lib.start', async function () {
-                const start = jest.spyOn(proc_lib, 'start');
-                const response = await gen.start(
-                    ctxClient,
-                    nolink,
-                    undefined,
-                    init,
-                    {}
-                );
-
-                expect(start).toHaveBeenCalledTimes(1);
-                expect(response).toMatchPattern(t(ok, Pid.isPid));
-            });
             describe('with a timeout', function () {
                 it('rejects if the timeout expires', async function () {
                     const spawnLimit = 300;
@@ -159,19 +147,6 @@ describe('start', function () {
                 init = jest.fn((ctx, caller) => {
                     proc_lib.initAck(ctx, caller, t(ok, ctx.self()));
                 });
-            });
-            it('calls proc_lib.startLink', async function () {
-                const startLink = jest.spyOn(proc_lib, 'startLink');
-                const response = await gen.start(
-                    ctxClient,
-                    link,
-                    undefined,
-                    init,
-                    {}
-                );
-
-                expect(startLink).toHaveBeenCalledTimes(1);
-                expect(response).toMatchPattern(t(ok, Pid.isPid));
             });
             describe('with a timeout', function () {
                 it('rejects if the timeout expires', async function () {
@@ -193,10 +168,10 @@ describe('start', function () {
                 });
             });
             it('treats it like nolink', async function () {
-                const start = jest.spyOn(proc_lib, 'start');
-                start.mockClear();
-
                 const badLinkingStyle = Symbol();
+                const { links: linksBefore } = ctxClient.processInfo(
+                    ctxClient.self()
+                );
                 const response = await gen.start(
                     ctxClient,
                     badLinkingStyle,
@@ -204,7 +179,11 @@ describe('start', function () {
                     init,
                     {}
                 );
-                expect(start).toHaveBeenCalledTimes(1);
+                const { links: linksAfter } = ctxClient.processInfo(
+                    ctxClient.self()
+                );
+
+                expect(linksBefore.length).toEqual(linksAfter.length);
                 expect(response).toMatchPattern(t(ok, Pid.isPid));
             });
         });

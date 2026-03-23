@@ -1,8 +1,9 @@
 /* eslint-env jest */
-import { Tuple, t } from '../src';
-import '@otpjs/test_utils';
+import { describe, expect, it, jest } from '@jest/globals';
+import '@otpjs/matching/jest';
 import crypto from 'crypto';
 import util from 'util';
+import { t } from '../lib';
 
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
@@ -155,7 +156,7 @@ describe('Tuple', function () {
         it('encodes as an array with tag and array of items', function () {
             expect(t(1, 2, 3).toJSON()).toMatchPattern([
                 '$otp.tuple',
-                [1, 2, 3]
+                [1, 2, 3],
             ]);
         });
     });

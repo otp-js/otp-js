@@ -1,4 +1,5 @@
-import '../src';
+import { jest, expect, describe, it } from '@jest/globals';
+import '../lib';
 
 describe('@otpjs/test_utils', function () {
     describe('toHaveBeenNthCalledWithPattern', function () {

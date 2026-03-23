@@ -1,26 +1,27 @@
-import '@otpjs/test_utils';
+import { describe, expect, it } from '@jest/globals';
+import '@otpjs/matching/jest';
 
 import * as OTP from '@otpjs/core';
-import { Pid, t, l } from '@otpjs/types';
 import * as matching from '@otpjs/matching';
-import * as proc_lib from '../src';
+import { Pid, t } from '@otpjs/types';
+import * as proc_lib from '../lib';
 
 Error.stackTraceLimit = Infinity;
 const { ok, trap_exit, EXIT } = OTP.Symbols;
 const { _ } = matching.Symbols;
 
-describe('ProcLib', function () {
+describe('ProcLib', function() {
     let node = null;
     let ctx = null;
     let pid = null;
 
-    beforeEach(function () {
+    beforeEach(function() {
         node = new OTP.Node();
         ctx = node.makeContext();
         pid = ctx.self();
     });
 
-    it('can start processes', async function () {
+    it('can start processes', async function() {
         expect(proc_lib).toHaveProperty('start');
         expect(proc_lib.start).toBeInstanceOf(Function);
 
@@ -35,7 +36,7 @@ describe('ProcLib', function () {
         ctx.send(pid, 'stop');
     });
 
-    it('can start and link processes', async function () {
+    it('can start and link processes', async function() {
         expect(proc_lib).toHaveProperty('startLink');
         expect(proc_lib.startLink).toBeInstanceOf(Function);
 
@@ -49,6 +50,6 @@ describe('ProcLib', function () {
 
         const exitMessage = await ctx.receive();
 
-        expect(exitMessage).toMatchPattern(t(EXIT, Pid.isPid, _, _));
+        expect(exitMessage).toMatchPattern(t(EXIT, Pid.isPid, _));
     });
 });

@@ -1,6 +1,6 @@
 import * as otp from '@otpjs/core';
 import * as gen_server from '@otpjs/gen_server';
-import * as rooms from './rooms';
+import * as rooms from './rooms.js';
 
 const { ok, _ } = otp.Symbols;
 const { reply, noreply } = gen_server.Symbols;
@@ -10,7 +10,8 @@ const callbacks = gen_server.callbacks((server) => {
     server.onCast(['join', _], _join);
     server.onCast(['leave', _], _leave);
 });
-function _join(ctx, cast, state) {
+
+async function _join(ctx, cast, state) {
     const [, name] = cast;
     if (state.subscriptions.includes(name)) {
         return [noreply, state];
@@ -23,6 +24,7 @@ function _join(ctx, cast, state) {
         return [noreply, nextState];
     }
 }
+
 function _leave(ctx, cast, state) {
     const [, name] = cast;
     const index = state.subscriptions.indexOf(name);
@@ -47,22 +49,23 @@ function _installHandlers(ctx, socket) {
     );
     socket.on('disconnect', () => ctx.exit(ctx.self(), 'disconnected'));
     socket.emit('who_are_you');
-}
 
-function _join(ctx, roomName) {
-    return gen_server.cast(ctx, ctx.self(), ['join', roomName]);
-}
+    function _join(ctx, roomName) {
+        return gen_server.cast(ctx, ctx.self(), ['join', roomName]);
+    }
 
-function _leave(ctx, roomName) {
-    return gen_server.cast(ctx, ctx.self(), ['leave', roomName]);
-}
+    function _leave(ctx, roomName) {
+        return gen_server.cast(ctx, ctx.self(), ['leave', roomName]);
+    }
 
-function _setFrom(ctx, from) {
-    return gen_server.cast(ctx, ctx.self(), ['set_from', from]);
-}
+    function _setFrom(ctx, from) {
+        return gen_server.cast(ctx, ctx.self(), ['set_from', from]);
+    }
 
-function _message(ctx, roomName, message) {
-    return gen_server.cast(ctx, ctx.self(), ['message', roomName, message]);
+    function _message(ctx, roomName, message) {
+        return gen_server.cast(ctx, ctx.self(), ['message', roomName, message]);
+    }
+
 }
 
 export function startLink(ctx, socket) {
