@@ -5,7 +5,7 @@ import { clauses, kase } from '@otpjs/matching';
 import { _ } from '@otpjs/matching/symbols';
 import { OTPError, Pid, t, l } from '@otpjs/types';
 import * as proc_lib from '@otpjs/proc_lib';
-import * as Symbols from './symbols';
+import * as Symbols from './symbols.js';
 
 export { Symbols };
 
