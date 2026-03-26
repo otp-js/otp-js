@@ -27,12 +27,14 @@
     },
     "imports": {
         "#jest": "./jest.js",
+        "#chai": "./chai.js",
         "#symbols": "./lib/symbols.js"
     },
     "exports": {
         ".": "./lib/index.js",
         "./symbols": "./lib/symbols.js",
-        "./jest": "./jest.js"
+        "./jest": "./jest.js",
+        "./chai": "./chai.js"
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"
