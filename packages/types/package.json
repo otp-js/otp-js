@@ -23,10 +23,17 @@
         "url": "git+https://github.com/otp-js/otp-js.git"
     },
     "scripts": {
-        "test": "jest",
+        "test": "mocha '__tests__/**/*.test.js'",
         "lint": "eslint src"
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"
+    },
+    "devDependencies": {
+        "chai": "^6.2.2",
+        "chai-as-promised": "^8.0.2",
+        "mocha": "^11.7.5",
+        "sinon": "^21.0.3",
+        "sinon-chai": "^4.0.1"
     }
 }

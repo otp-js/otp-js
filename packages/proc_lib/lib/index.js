@@ -1,6 +1,6 @@
 import { t } from '@otpjs/types';
 import * as matching from '@otpjs/matching';
-import * as Symbols from './symbols';
+import * as Symbols from './symbols.js';
 
 export { Symbols };
 

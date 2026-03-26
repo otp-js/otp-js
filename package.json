@@ -8,7 +8,7 @@
                 "test": "jest"
         },
         "devDependencies": {
-                "@nrwl/nx-cloud": "^15.3.5",
+                "@nrwl/nx-cloud": "^19.1.0",
                 "@otpjs/core": "file:packages/core",
                 "@otpjs/gen": "file:packages/gen",
                 "@otpjs/gen_server": "file:packages/gen_server",
@@ -18,12 +18,17 @@
                 "@semantic-release/changelog": "^6.0.3",
                 "@semantic-release/git": "^10.0.1",
                 "@semantic-release/npm": "^13.1.5",
+                "chai": "^6.2.2",
+                "chai-as-promised": "^8.0.2",
                 "coveralls": "^3.1.1",
-                "jest": "^30.3.0",
                 "lerna": "^9.0.7",
+                "mocha": "^11.7.5",
+                "monocart-coverage-reports": "^2.12.9",
                 "nx": "^22.6.1",
                 "semantic-release": "^25.0.3",
                 "semantic-release-lerna": "^2.18.1",
+                "sinon": "^21.0.3",
+                "sinon-chai": "^4.0.1",
                 "socket.io": "^4.8.3",
                 "socket.io-client": "^4.8.3",
                 "source-map-support": "^0.5.21"

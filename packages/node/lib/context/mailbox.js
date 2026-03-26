@@ -40,8 +40,8 @@ export class Mailbox extends Array {
     }
 
     push(message) {
+        this.#log('push(message: %o, #pending: %o)', message, this.#pending);
         if (this.#pending) {
-            this.#log('push(message: %o, #pending: %o)', message, this.#pending);
             const [resolve, _reject, evaluator] = this.#pending;
             try {
                 const result = evaluator(message);
@@ -139,7 +139,7 @@ export class Mailbox extends Array {
             };
 
             timer = setTimeout(() => {
-                this.#log('#defer(timeout)');
+                this.#log('#defer(timeout_triggered)');
                 reject(OTPError(Symbols.timeout));
             }, timeout);
 

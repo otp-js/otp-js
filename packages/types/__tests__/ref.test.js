@@ -1,147 +1,160 @@
-/* eslint-env jest */
-import { describe, expect, it, jest } from '@jest/globals';
-import '@otpjs/matching/jest';
+/* eslint-env mocha */
+import * as chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import * as sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import chaiMatching from '@otpjs/matching/chai';
 import crypto from 'crypto';
 import inspect from 'inspect-custom-symbol';
 import util from 'util';
-import { Ref } from '../lib';
+import { Ref } from '../lib/index.js';
 
-describe('Ref', function () {
-    it('can be made from thin air', function () {
+chai.use(chaiMatching);
+chai.use(sinonChai);
+chai.use(chaiAsPromised);
+
+const { expect } = chai;
+
+afterEach(function() {
+    sinon.restore();
+})
+
+describe('Ref', function() {
+    it('can be made from thin air', function() {
         let result;
-        expect(function () {
+        expect(function() {
             result = Ref.for(0, 0, 0);
-        }).not.toThrow();
-        expect(result).toBeInstanceOf(Ref);
+        }).not.to.throw();
+        expect(result).to.be.an.instanceOf(Ref);
     });
-    it('cannot identify Refs from strings', function () {
-        expect(Ref.isRef('Ref<0.0.0>')).toBe(false);
+    it('cannot identify Refs from strings', function() {
+        expect(Ref.isRef('Ref<0.0.0>')).to.equal(false);
     });
-    it('can identify Refs from Refs', function () {
-        expect(Ref.isRef(Ref.for(0, 0, 0, 0))).toBe(true);
+    it('can identify Refs from Refs', function() {
+        expect(Ref.isRef(Ref.for(0, 0, 0, 0))).to.equal(true);
     });
-    it('can be converted into a string', function () {
-        expect(Ref.for(0, 0, 0, 0).toString()).toBe('Ref<0.0.0>');
+    it('can be converted into a string', function() {
+        expect(Ref.for(0, 0, 0, 0).toString()).to.equal('Ref<0.0.0>');
     });
-    describe('Symbol.toPrimitive', function () {
-        it('can be coerced into a string', function () {
+    describe('Symbol.toPrimitive', function() {
+        it('can be coerced into a string', function() {
             const ref = Ref.for(0, 0, 0, 0);
-            const spy = jest.spyOn(ref, Symbol.toPrimitive);
-            expect(`${ref}`).toBe('Ref<0.0.0>');
-            expect(spy).toHaveBeenCalledTimes(1);
+            const spy = sinon.spy(ref, Symbol.toPrimitive);
+            expect(`${ref}`).to.equal('Ref<0.0.0>');
+            expect(spy).to.have.callCount(1);
         });
-        it('cannot be coerced into a number', function () {
+        it('cannot be coerced into a number', function() {
             const ref = Ref.for(0, 0, 0, 0);
-            const spy = jest.spyOn(ref, Symbol.toPrimitive);
-            expect(+ref).toBe(0);
-            expect(spy).toHaveBeenCalledTimes(1);
-            expect(spy.mock.calls[0][0]).toBe('number');
-            expect(spy.mock.results[0].value).toBe(null);
+            const spy = sinon.spy(ref, Symbol.toPrimitive);
+            expect(+ref).to.equal(0);
+            expect(spy).to.have.callCount(1);
+            expect(spy.getCall(0).args[0]).to.equal('number');
+            expect(spy.getCall(0).returnValue).to.equal(null);
         });
     });
-    describe('inspect', function () {
-        it('can be used by node:util', function () {
+    describe('inspect', function() {
+        it('can be used by node:util', function() {
             const ref = Ref.for(0, 0, 0, 0);
-            expect(ref[inspect]).toBeInstanceOf(Function);
-            const mock = jest.spyOn(ref, inspect);
-            expect(util.inspect(ref, false, 2, false)).toBe('Ref<0.0.0>');
-            expect(mock).toHaveBeenCalledTimes(1);
+            expect(ref[inspect]).to.be.an.instanceOf(Function);
+            const mock = sinon.spy(ref, inspect);
+            expect(util.inspect(ref, false, 2, false)).to.equal('Ref<0.0.0>');
+            expect(mock).to.have.callCount(1);
         });
-        it('uses a short form below 0 depth', function () {
+        it('uses a short form below 0 depth', function() {
             const ref = Ref.for(0, 0, 0, 0);
-            expect(ref[inspect]).toBeInstanceOf(Function);
-            const mock = jest.spyOn(ref, inspect);
+            expect(ref[inspect]).to.be.an.instanceOf(Function);
+            const mock = sinon.spy(ref, inspect);
             util.inspect(ref, false, -1, false);
-            expect(mock).toHaveBeenCalledTimes(1);
-            expect(mock.mock.calls[0][0]).toBe(-1);
-            expect(mock.mock.results[0].value).toBe('[Ref]');
+            expect(mock).to.have.callCount(1);
+            expect(mock.getCall(0).args[0]).to.equal(-1);
+            expect(mock.getCall(0).returnValue).to.equal('[Ref]');
         });
     });
-    describe('fromString', function () {
-        it('accepts the format: Ref<#.#.#>', function () {
-            expect(function () {
+    describe('fromString', function() {
+        it('accepts the format: Ref<#.#.#>', function() {
+            expect(function() {
                 Ref.fromString('Ref<0.0.0>');
-            }).not.toThrow();
+            }).not.to.throw();
         });
-        it('returns an instance of Ref', function () {
-            expect(Ref.fromString('Ref<0.0.0>')).toBeInstanceOf(Ref);
+        it('returns an instance of Ref', function() {
+            expect(Ref.fromString('Ref<0.0.0>')).to.be.an.instanceOf(Ref);
         });
-        it('populates node, id, and serial from the string', function () {
+        it('populates node, id, and serial from the string', function() {
             const node = crypto.randomInt(0xffff);
             const id = crypto.randomInt(0xffffffff);
             const serial = crypto.randomInt(0xffffffff);
             const ref = Ref.fromString(`Ref<${node}.${id}.${serial}>`);
 
-            expect(ref.node).toBe(node);
-            expect(ref.id).toBe(id);
-            expect(ref.serial).toBe(serial);
+            expect(ref.node).to.equal(node);
+            expect(ref.id).to.equal(id);
+            expect(ref.serial).to.equal(serial);
         });
-        it('assumes creation to be 1', function () {
+        it('assumes creation to be 1', function() {
             const ref = Ref.fromString('Ref<0.0.0>');
-            expect(ref.creation).toBe(1);
+            expect(ref.creation).to.equal(1);
         });
     });
-    describe('compare', function () {
-        describe('compares two refs', function () {
-            describe('when node', function () {
-                describe('is less than the other node', function () {
-                    it('returns -1', function () {
+    describe('compare', function() {
+        describe('compares two refs', function() {
+            describe('when node', function() {
+                describe('is less than the other node', function() {
+                    it('returns -1', function() {
                         const refA = Ref.for(0, 0, 0, 0);
                         const refB = Ref.for(1, 0, 0, 0);
 
-                        expect(Ref.compare(refA, refB)).toBe(-1);
+                        expect(Ref.compare(refA, refB)).to.equal(-1);
                     });
                 });
-                describe('is more than the other node', function () {
-                    it('returns 1', function () {
+                describe('is more than the other node', function() {
+                    it('returns 1', function() {
                         const refA = Ref.for(1, 0, 0, 0);
                         const refB = Ref.for(0, 0, 0, 0);
 
-                        expect(Ref.compare(refA, refB)).toBe(1);
+                        expect(Ref.compare(refA, refB)).to.equal(1);
                     });
                 });
-                describe('is the same as the other node', function () {
-                    describe('when id', function () {
-                        describe('is less than the other node', function () {
-                            it('returns -1', function () {
+                describe('is the same as the other node', function() {
+                    describe('when id', function() {
+                        describe('is less than the other node', function() {
+                            it('returns -1', function() {
                                 const refA = Ref.for(1, 0, 0, 0);
                                 const refB = Ref.for(1, 1, 0, 0);
 
-                                expect(Ref.compare(refA, refB)).toBe(-1);
+                                expect(Ref.compare(refA, refB)).to.equal(-1);
                             });
                         });
-                        describe('is more than the other node', function () {
-                            it('returns 1', function () {
+                        describe('is more than the other node', function() {
+                            it('returns 1', function() {
                                 const refA = Ref.for(1, 1, 0, 0);
                                 const refB = Ref.for(1, 0, 0, 0);
 
-                                expect(Ref.compare(refA, refB)).toBe(1);
+                                expect(Ref.compare(refA, refB)).to.equal(1);
                             });
                         });
-                        describe('is the same as the other node', function () {
-                            describe('when serial', function () {
-                                describe('is less than the other node', function () {
-                                    it('returns -1', function () {
+                        describe('is the same as the other node', function() {
+                            describe('when serial', function() {
+                                describe('is less than the other node', function() {
+                                    it('returns -1', function() {
                                         const refA = Ref.for(1, 1, 0, 0);
                                         const refB = Ref.for(1, 1, 1, 0);
 
-                                        expect(Ref.compare(refA, refB)).toBe(
+                                        expect(Ref.compare(refA, refB)).to.equal(
                                             -1
                                         );
                                     });
                                 });
-                                describe('is more than the other node', function () {
-                                    it('returns 1', function () {
+                                describe('is more than the other node', function() {
+                                    it('returns 1', function() {
                                         const refA = Ref.for(1, 1, 1, 0);
                                         const refB = Ref.for(1, 1, 0, 0);
 
-                                        expect(Ref.compare(refA, refB)).toBe(1);
+                                        expect(Ref.compare(refA, refB)).to.equal(1);
                                     });
                                 });
-                                describe('is the same as the other node', function () {
-                                    describe('when serial', function () {
-                                        describe('is less than the other node', function () {
-                                            it('returns -1', function () {
+                                describe('is the same as the other node', function() {
+                                    describe('when serial', function() {
+                                        describe('is less than the other node', function() {
+                                            it('returns -1', function() {
                                                 const refA = Ref.for(
                                                     1,
                                                     1,
@@ -157,11 +170,11 @@ describe('Ref', function () {
 
                                                 expect(
                                                     Ref.compare(refA, refB)
-                                                ).toBe(-1);
+                                                ).to.equal(-1);
                                             });
                                         });
-                                        describe('is more than the other node', function () {
-                                            it('returns 1', function () {
+                                        describe('is more than the other node', function() {
+                                            it('returns 1', function() {
                                                 const refA = Ref.for(
                                                     1,
                                                     1,
@@ -177,11 +190,11 @@ describe('Ref', function () {
 
                                                 expect(
                                                     Ref.compare(refA, refB)
-                                                ).toBe(1);
+                                                ).to.equal(1);
                                             });
                                         });
-                                        describe('is the same as the other node', function () {
-                                            it('returns 0', function () {
+                                        describe('is the same as the other node', function() {
+                                            it('returns 0', function() {
                                                 const refA = Ref.for(
                                                     1,
                                                     1,
@@ -197,7 +210,7 @@ describe('Ref', function () {
 
                                                 expect(
                                                     Ref.compare(refA, refB)
-                                                ).toBe(0);
+                                                ).to.equal(0);
                                             });
                                         });
                                     });
@@ -209,11 +222,11 @@ describe('Ref', function () {
             });
         });
     });
-    describe('has properties', function () {
+    describe('has properties', function() {
         let ref;
         let expected;
 
-        beforeEach(function () {
+        beforeEach(function() {
             const node = crypto.randomInt(0xffff);
             const id = crypto.randomInt(0xffffffff);
             const serial = crypto.randomInt(0xffffffff);
@@ -224,38 +237,38 @@ describe('Ref', function () {
             ref = Ref.for(node, id, serial, creation);
         });
 
-        describe('node', function () {
-            it('is an integer', function () {
-                expect(typeof ref.node).toBe('number');
-                expect(ref.node).toBe(expected.node);
-                expect(Number.isInteger(ref.node)).toBe(true);
+        describe('node', function() {
+            it('is an integer', function() {
+                expect(typeof ref.node).to.equal('number');
+                expect(ref.node).to.equal(expected.node);
+                expect(Number.isInteger(ref.node)).to.equal(true);
             });
         });
-        describe('id', function () {
-            it('is an integer', function () {
-                expect(typeof ref.id).toBe('number');
-                expect(ref.id).toBe(expected.id);
-                expect(Number.isInteger(ref.id)).toBe(true);
+        describe('id', function() {
+            it('is an integer', function() {
+                expect(typeof ref.id).to.equal('number');
+                expect(ref.id).to.equal(expected.id);
+                expect(Number.isInteger(ref.id)).to.equal(true);
             });
         });
-        describe('serial', function () {
-            it('is an integer', function () {
-                expect(typeof ref.serial).toBe('number');
-                expect(ref.serial).toBe(expected.serial);
-                expect(Number.isInteger(ref.serial)).toBe(true);
+        describe('serial', function() {
+            it('is an integer', function() {
+                expect(typeof ref.serial).to.equal('number');
+                expect(ref.serial).to.equal(expected.serial);
+                expect(Number.isInteger(ref.serial)).to.equal(true);
             });
         });
-        describe('creation', function () {
-            it('is an integer', function () {
-                expect(typeof ref.creation).toBe('number');
-                expect(ref.creation).toBe(expected.creation);
-                expect(Number.isInteger(ref.creation)).toBe(true);
+        describe('creation', function() {
+            it('is an integer', function() {
+                expect(typeof ref.creation).to.equal('number');
+                expect(ref.creation).to.equal(expected.creation);
+                expect(Number.isInteger(ref.creation)).to.equal(true);
             });
         });
-        describe('reference', function () {
-            it('is a big integer', function () {
-                expect(typeof ref.reference).toBe('bigint');
-                expect(ref.reference).toBe(expected.reference);
+        describe('reference', function() {
+            it('is a big integer', function() {
+                expect(typeof ref.reference).to.equal('bigint');
+                expect(ref.reference).to.equal(expected.reference);
             });
         });
     });

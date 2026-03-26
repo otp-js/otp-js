@@ -1,6 +1,6 @@
 import inspect from 'inspect-custom-symbol';
-import { OTPError } from '../lib/error';
-import { t } from './tuple';
+import { OTPError } from './error.js';
+import { t } from './tuple.js';
 
 const invalid_ref_spec = Symbol.for('invalid_ref_spec');
 
@@ -68,16 +68,16 @@ Ref.compare = (a, b) => {
     else if (a.creation > b.creation) return 1;
     else return 0;
 };
-Ref.prototype.toString = function () {
+Ref.prototype.toString = function() {
     return `Ref<${this.node}.${this.id}.${this.serial}>`;
 };
-Ref.prototype[Symbol.toPrimitive] = function (hint) {
+Ref.prototype[Symbol.toPrimitive] = function(hint) {
     if (hint === 'string') {
         return this.toString();
     }
     return null;
 };
-Ref.prototype[inspect] = function (depth, options, inspect) {
+Ref.prototype[inspect] = function(depth, options, inspect) {
     if (depth < 0) {
         return options.stylize('[Ref]', 'special');
     }

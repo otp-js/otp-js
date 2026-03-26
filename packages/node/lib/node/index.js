@@ -108,10 +108,11 @@ export class Node {
     #signalLocal(fromPid, signal, toPid, ...args) {
         const toCtx = this.#processes.find(toPid);
         this.#log(
-            '#signalLocal(fromPid: %o, signal: %o, toPid: %o)',
+            '#signalLocal(fromPid: %o, signal: %o, toPid: %o, toCtx: %o)',
             fromPid,
             signal,
-            toPid
+            toPid,
+            toCtx && !toCtx.dead
         );
         if (toCtx && !toCtx.dead) {
             return toCtx.signal(signal, fromPid, ...args);

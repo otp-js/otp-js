@@ -320,7 +320,7 @@ export class Context {
             } catch (err) {
                 return t(error, err);
             }
-        });
+        }, 0);
         return ok;
     }
 

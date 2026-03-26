@@ -22,7 +22,7 @@
         "url": "git+https://github.com/otp-js/otp-js.git"
     },
     "scripts": {
-        "test": "echo \"Error: run tests from root\" && exit 1",
+        "test": "mocha '__tests__/**/*.test.js'",
         "lint": "eslint src"
     },
     "imports": {
@@ -40,6 +40,10 @@
         "url": "https://github.com/otp-js/otp-js/issues"
     },
     "devDependencies": {
-        "jest": "^30.3.0"
+        "chai": "^6.2.2",
+        "chai-as-promised": "^8.0.2",
+        "mocha": "^11.7.5",
+        "sinon": "^21.0.3",
+        "sinon-chai": "^4.0.1"
     }
 }

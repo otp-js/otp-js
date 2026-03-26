@@ -31,14 +31,11 @@
         "url": "git+https://github.com/otp-js/otp-js.git"
     },
     "scripts": {
-        "test": "jest --coverage --verbose",
+        "test": "mocha '__tests__/**/*.test.js'",
         "lint": "eslint src"
     },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"
-    },
-    "devDependencies": {
-        "jest": "^30.3.0"
     },
     "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e",
     "dependencies": {
@@ -47,5 +44,12 @@
         "@otpjs/types": "file:../types",
         "inspect-custom-symbol": "^1.1.1",
         "nanoid": "^5.1.7"
+    },
+    "devDependencies": {
+        "chai": "^6.2.2",
+        "chai-as-promised": "^8.0.2",
+        "mocha": "^11.7.5",
+        "sinon": "^21.0.3",
+        "sinon-chai": "^4.0.1"
     }
 }

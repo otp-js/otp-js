@@ -1,5 +1,5 @@
 /* eslint-env mocha */
-import patternMatching from '@otpjs/test_utils/chai';
+import patternMatching from '@otpjs/matching/chai';
 import * as chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import * as sinon from 'sinon';

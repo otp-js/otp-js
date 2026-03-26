@@ -1,15 +1,18 @@
-/* eslint-env jest */
+/* eslint-env mocha */
+import * as chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import * as sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import chaiMatching from '@otpjs/matching/chai';
 import debug from 'debug';
-import { describe, expect, it, jest } from '@jest/globals';
 import * as otp from '@otpjs/core';
 import * as match from '@otpjs/matching';
-import '@otpjs/matching/jest';
 import { l, OTPError, Pid, Ref, t } from '@otpjs/types';
 import { createServer } from 'http';
 import { Server as SocketIO } from 'socket.io';
 import ClientIO from 'socket.io-client';
 
-import { register as useSocketIO } from '../lib';
+import { register as useSocketIO } from '../lib/index.js';
 
 const { _, spread } = match.Symbols;
 const { ok, DOWN, error, kill, killed, normal, timeout } = otp.Symbols;
@@ -28,6 +31,12 @@ let server = null;
 let serverManager = null;
 let serverSocket = null;
 let clientSocket = null;
+
+chai.use(chaiMatching);
+chai.use(sinonChai);
+chai.use(chaiAsPromised);
+
+const { expect } = chai;
 
 beforeEach(async function() {
     serverNode = new otp.Node();
@@ -84,6 +93,8 @@ afterEach(function() {
 
     serverNode = null;
     clientNode = null;
+
+    sinon.restore();
 });
 
 describe('@otpjs/transports-socket.io', function() {
@@ -93,8 +104,8 @@ describe('@otpjs/transports-socket.io', function() {
 
         await wait(100);
 
-        expect(Array.from(serverNode.nodes())).toContain(clientNode.name);
-        expect(Array.from(clientNode.nodes())).toContain(serverNode.name);
+        expect(Array.from(serverNode.nodes())).to.include(clientNode.name);
+        expect(Array.from(clientNode.nodes())).to.include(serverNode.name);
     });
     it('can route to named remote processes', async function() {
         useSocketIO(clientNode, clientSocket);
@@ -109,7 +120,7 @@ describe('@otpjs/transports-socket.io', function() {
                     log(ctx, 'spawned');
                     ctx.register(test_name);
                     const message = await ctx.receive(500);
-                    expect(message).toBe('test');
+                    expect(message).to.equal('test');
                     resolve();
                 } catch (err) {
                     reject(err);
@@ -151,7 +162,7 @@ describe('@otpjs/transports-socket.io', function() {
                     resolve(await ctx.receive());
                 });
             })
-        ).resolves.toMatchPattern(
+        ).to.eventually.matchPattern(
             t(DOWN, Ref.isRef, 'process', Pid.isPid, normal)
         );
     });
@@ -172,11 +183,11 @@ describe('@otpjs/transports-socket.io', function() {
         const mref = ctx.monitor(t(test_name, serverNode.name));
         expect(function() {
             ctx.demonitor(mref);
-        }).not.toThrow();
+        }).not.to.throw();
         await wait(100);
 
         ctx.send(t(test_name, serverNode.name), 'die');
-        await expect(ctx.receive(100)).rejects.toThrow('timeout');
+        await expect(ctx.receive(100)).to.be.rejectedWith('timeout');
     });
     it('can be unregistered', async function() {
         const destroyClient = useSocketIO(clientNode, clientSocket);
@@ -184,16 +195,16 @@ describe('@otpjs/transports-socket.io', function() {
 
         await wait(100);
 
-        expect(Array.from(serverNode.nodes())).toContain(clientNode.name);
-        expect(Array.from(clientNode.nodes())).toContain(serverNode.name);
+        expect(Array.from(serverNode.nodes())).to.include(clientNode.name);
+        expect(Array.from(clientNode.nodes())).to.include(serverNode.name);
 
         destroyClient();
         destroyServer();
 
         await wait(100);
 
-        expect(Array.from(serverNode.nodes())).not.toContain(clientNode.name);
-        expect(Array.from(clientNode.nodes())).not.toContain(serverNode.name);
+        expect(Array.from(serverNode.nodes())).not.to.include(clientNode.name);
+        expect(Array.from(clientNode.nodes())).not.to.include(serverNode.name);
     });
     describe('when bridged over another node', function() {
         let clientNodeB, clientSocketB, serverSocketB;
@@ -255,10 +266,10 @@ describe('@otpjs/transports-socket.io', function() {
                     t(test_name, clientNode.name),
                     t(payload, ctx.self(), 'it can route messages')
                 );
-                await expect(ctx.receive()).resolves.toBe('received');
+                await expect(ctx.receive()).to.eventually.equal('received');
             });
 
-            await expect(resultA).resolves.toBe(payload);
+            await expect(resultA).to.eventually.equal(payload);
         });
 
         describe('when disconnected', function() {
@@ -266,8 +277,8 @@ describe('@otpjs/transports-socket.io', function() {
                 const ctxA = clientNode.makeContext();
                 const ctxB = clientNodeB.makeContext();
 
-                expect(Array.from(ctxA.nodes())).toContain(ctxB.node());
-                expect(Array.from(ctxB.nodes())).toContain(ctxA.node());
+                expect(Array.from(ctxA.nodes())).to.include(ctxB.node());
+                expect(Array.from(ctxB.nodes())).to.include(ctxA.node());
 
                 destroyClientB();
                 destroyClientB = null;
@@ -277,8 +288,8 @@ describe('@otpjs/transports-socket.io', function() {
                 log(ctxA, 'testA(nodes: %o)', Array.from(ctxA.nodes()));
                 log(ctxB, 'testB(nodes: %o)', Array.from(ctxB.nodes()));
 
-                expect(Array.from(ctxA.nodes())).not.toContain(ctxB.node());
-                expect(Array.from(ctxB.nodes())).not.toContain(ctxA.node());
+                expect(Array.from(ctxA.nodes())).not.to.include(ctxB.node());
+                expect(Array.from(ctxB.nodes())).not.to.include(ctxA.node());
 
                 ctxA.exit(ctxA.self(), kill);
                 ctxB.exit(ctxB.self(), kill);
@@ -294,10 +305,10 @@ describe('@otpjs/transports-socket.io', function() {
 
                 await wait(100);
 
-                expect(Array.from(ctxA.nodes())).toContain(ctxB.node());
-                expect(Array.from(ctxB.nodes())).toContain(ctxA.node());
-                expect(Array.from(ctxC.nodes())).not.toContain(ctxB.node());
-                expect(Array.from(ctxC.nodes())).not.toContain(ctxA.node());
+                expect(Array.from(ctxA.nodes())).to.include(ctxB.node());
+                expect(Array.from(ctxB.nodes())).to.include(ctxA.node());
+                expect(Array.from(ctxC.nodes())).not.to.include(ctxB.node());
+                expect(Array.from(ctxC.nodes())).not.to.include(ctxA.node());
 
                 destroyClientB();
                 destroyClientB = null;
@@ -307,10 +318,10 @@ describe('@otpjs/transports-socket.io', function() {
                 log(ctxA, 'testA(nodes: %o)', Array.from(ctxA.nodes()));
                 log(ctxB, 'testB(nodes: %o)', Array.from(ctxB.nodes()));
 
-                expect(Array.from(ctxA.nodes())).not.toContain(ctxB.node());
-                expect(Array.from(ctxB.nodes())).not.toContain(ctxA.node());
-                expect(Array.from(ctxC.nodes())).not.toContain(ctxB.node());
-                expect(Array.from(ctxC.nodes())).not.toContain(ctxA.node());
+                expect(Array.from(ctxA.nodes())).not.to.include(ctxB.node());
+                expect(Array.from(ctxB.nodes())).not.to.include(ctxA.node());
+                expect(Array.from(ctxC.nodes())).not.to.include(ctxB.node());
+                expect(Array.from(ctxC.nodes())).not.to.include(ctxA.node());
 
                 const clientSocketC = ClientIO(`http://localhost:${port}`);
                 const loadServerSocket = new Promise((resolve, reject) => {
@@ -326,12 +337,12 @@ describe('@otpjs/transports-socket.io', function() {
                 });
 
                 await wait(100);
-                expect(Array.from(ctxA.nodes())).not.toContain(ctxB.node());
-                expect(Array.from(ctxA.nodes())).toContain(ctxC.node());
-                expect(Array.from(ctxB.nodes())).not.toContain(ctxA.node());
-                expect(Array.from(ctxB.nodes())).not.toContain(ctxC.node());
-                expect(Array.from(ctxC.nodes())).not.toContain(ctxB.node());
-                expect(Array.from(ctxC.nodes())).toContain(ctxA.node());
+                expect(Array.from(ctxA.nodes())).not.to.include(ctxB.node());
+                expect(Array.from(ctxA.nodes())).to.include(ctxC.node());
+                expect(Array.from(ctxB.nodes())).not.to.include(ctxA.node());
+                expect(Array.from(ctxB.nodes())).not.to.include(ctxC.node());
+                expect(Array.from(ctxC.nodes())).not.to.include(ctxB.node());
+                expect(Array.from(ctxC.nodes())).to.include(ctxA.node());
 
                 ctxA.exit(ctxA.self(), kill);
                 ctxB.exit(ctxB.self(), kill);
@@ -372,7 +383,7 @@ describe('@otpjs/transports-socket.io', function() {
             it('passes the signal to the remote node', async function() {
                 const buildBlock = (given, after) => {
                     given(_).then((incoming) => {
-                        expect(incoming).toBe(message);
+                        expect(incoming).to.equal(message);
                         return ok;
                     });
                     after(2000).then(() => {
@@ -385,12 +396,12 @@ describe('@otpjs/transports-socket.io', function() {
                 );
 
                 clientCtx.send(t(serverName, serverNode.name), message);
-                await expect(serverCtx.receiveBlock(buildBlock)).resolves.toBe(
+                await expect(serverCtx.receiveBlock(buildBlock)).to.eventually.equal(
                     ok
                 );
 
                 serverCtx.send(t(clientName, clientNode.name), message);
-                await expect(clientCtx.receiveBlock(buildBlock)).resolves.toBe(
+                await expect(clientCtx.receiveBlock(buildBlock)).to.eventually.equal(
                     ok
                 );
             });
@@ -408,7 +419,7 @@ describe('@otpjs/transports-socket.io', function() {
                 });
                 it('sends them seperately', async function() {
                     const name = Symbol.for('receiver');
-                    const listener = jest.fn(function(
+                    const listener = sinon.spy(function(
                         fromPid,
                         toPid,
                         message,
@@ -419,7 +430,7 @@ describe('@otpjs/transports-socket.io', function() {
                             'transportSocketIO(buffers: %o)',
                             buffers
                         );
-                        expect(buffers.length).toBe(2);
+                        expect(buffers.length).to.equal(2);
                     });
 
                     clientSocket.on('otp-message', listener);
@@ -447,7 +458,7 @@ describe('@otpjs/transports-socket.io', function() {
 
                     await wait(100);
 
-                    expect(listener).toHaveBeenCalled();
+                    expect(listener).to.have.been.called;
                 });
             });
         });
@@ -464,14 +475,14 @@ describe('@otpjs/transports-socket.io', function() {
                 await wait(100);
 
                 const clientInfo = clientCtx.processInfo(clientCtx.self());
-                expect(clientInfo).toMatchPattern({
+                expect(clientInfo).to.matchPattern({
                     links: [_],
                     [spread]: _,
                 });
 
                 const [remotePid] = clientInfo.links;
-                expect(remotePid).toBeInstanceOf(Pid);
-                expect(clientCtx.node(remotePid)).toBe(serverNode.name);
+                expect(remotePid).to.be.an.instanceOf(Pid);
+                expect(clientCtx.node(remotePid)).to.equal(serverNode.name);
             });
         });
         describe('given an unlink signal', function() {
@@ -488,13 +499,13 @@ describe('@otpjs/transports-socket.io', function() {
                 await wait(100);
 
                 const clientInfoA = clientCtx.processInfo(clientCtx.self());
-                expect(clientInfoA).toMatchPattern({
+                expect(clientInfoA).to.matchPattern({
                     links: [_],
                     [spread]: _,
                 });
 
                 const serverInfoA = serverCtx.processInfo(serverCtx.self());
-                expect(serverInfoA).toMatchPattern({
+                expect(serverInfoA).to.matchPattern({
                     links: [_],
                     [spread]: _,
                 });
@@ -507,12 +518,12 @@ describe('@otpjs/transports-socket.io', function() {
                 log(clientCtx, 'unlink(unlinked)');
 
                 const clientInfoB = clientCtx.processInfo(clientCtx.self());
-                expect(clientInfoB).toMatchPattern({
+                expect(clientInfoB).to.matchPattern({
                     links: [],
                     [spread]: _,
                 });
                 const serverInfoB = serverCtx.processInfo(serverCtx.self());
-                expect(serverInfoB).toMatchPattern({
+                expect(serverInfoB).to.matchPattern({
                     links: [],
                     [spread]: _,
                 });
@@ -530,8 +541,8 @@ describe('@otpjs/transports-socket.io', function() {
 
                 await wait(100);
 
-                expect(serverCtx.processInfo(serverCtx.self())).toBeUndefined();
-                await expect(serverCtx.death).resolves.toBe(killed);
+                expect(serverCtx.processInfo(serverCtx.self())).to.be.undefined;
+                await expect(serverCtx.death).to.eventually.equal(killed);
             });
         });
     });
@@ -574,14 +585,14 @@ describe('@otpjs/transports-socket.io', function() {
             serverCtx.send(t(clientName, clientNode.name), serverCtx.self());
             const pid = await clientCtx.receive(Pid.isPid);
 
-            expect(destroyClient).not.toThrow();
+            expect(destroyClient).not.to.throw();
 
             await wait(100);
 
-            expect(clientSocket.connected).toBe(false);
-            expect(serverSocket.connected).toBe(false);
-            expect(clientCtx.send(pid, 'message')).toBe(ok);
-            expect(serverCtx.receive(_, 500)).rejects.toThrowTerm(timeout);
+            expect(clientSocket.connected).to.equal(false);
+            expect(serverSocket.connected).to.equal(false);
+            expect(clientCtx.send(pid, 'message')).to.equal(ok);
+            expect(serverCtx.receive(_, 500)).to.be.rejectedWithTerm(timeout);
         });
     });
 });
