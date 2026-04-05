@@ -23,17 +23,17 @@ function _bind(obj, head, tail, empty = false) {
         get() {
             return head;
         },
-        configurable: false
+        configurable: false,
     });
     Reflect.defineProperty(obj, 'tail', {
         get() {
             return tail;
         },
-        configurable: false
+        configurable: false,
     });
 }
 
-List.prototype.length = function() {
+List.prototype.length = function () {
     let c = 0;
     let node = this;
     while (List.isList(node) && node != nil) {
@@ -43,7 +43,7 @@ List.prototype.length = function() {
     return c;
 };
 
-List.prototype.map = async function(operation) {
+List.prototype.map = async function (operation) {
     let node = this;
     let copy = nil;
 
@@ -55,7 +55,7 @@ List.prototype.map = async function(operation) {
     return copy.reverse();
 };
 
-List.prototype.deleteWhere = function(predicate) {
+List.prototype.deleteWhere = function (predicate) {
     let it = this;
     let stack = nil;
     let removed = false;
@@ -81,7 +81,7 @@ List.prototype.deleteWhere = function(predicate) {
     return it;
 };
 
-List.prototype.filter = async function(operation) {
+List.prototype.filter = async function (operation) {
     let node = this;
     let copy = nil;
 
@@ -98,7 +98,7 @@ List.prototype.filter = async function(operation) {
     return copy.reverse();
 };
 
-List.prototype.push = function(value) {
+List.prototype.push = function (value) {
     if (this === nil) {
         return cons(value, nil);
     }
@@ -122,7 +122,7 @@ List.prototype.push = function(value) {
     return stack.reverse();
 };
 
-List.prototype.reverse = function() {
+List.prototype.reverse = function () {
     let reversed = nil;
     let node = this;
 
@@ -134,7 +134,7 @@ List.prototype.reverse = function() {
     return reversed;
 };
 
-List.prototype.replaceWhere = function(predicate, nextValue, insert = false) {
+List.prototype.replaceWhere = function (predicate, nextValue, insert = false) {
     let node = this;
     let stack = nil;
     let replaced = false;
@@ -179,7 +179,7 @@ List.prototype.replaceWhere = function(predicate, nextValue, insert = false) {
     return node;
 };
 
-List.prototype.includes = function(value) {
+List.prototype.includes = function (value) {
     let node = this;
 
     while (l.isList(node) && node != nil) {
@@ -193,7 +193,7 @@ List.prototype.includes = function(value) {
     return false;
 };
 
-List.prototype.find = function(predicate) {
+List.prototype.find = function (predicate) {
     let node = this;
 
     while (List.isList(node) && node != nil) {
@@ -207,7 +207,19 @@ List.prototype.find = function(predicate) {
     return undefined;
 };
 
-List.prototype.slice = function(start = 0, end = Infinity) {
+List.prototype.findIndex = function (predicate) {
+    let node = this;
+    let index = 0;
+
+    while (List.isList(node) && node != nil) {
+        if (predicate(car(node))) return index;
+        else node = cdr(node);
+    }
+
+    return -1;
+};
+
+List.prototype.slice = function (start = 0, end = Infinity) {
     let node = this;
     let index = 0;
     let stack = nil;
@@ -230,11 +242,16 @@ List.prototype.slice = function(start = 0, end = Infinity) {
     return stack.reverse();
 };
 
-List.prototype.split = function(predicate) {
+List.prototype.split = function (predicate) {
     let after = this;
     let before = l.nil;
+    let index = 0;
 
-    while (List.isList(after) && after != l.nil && !predicate(car(after))) {
+    while (
+        List.isList(after) &&
+        after != l.nil &&
+        !predicate(car(after), index++)
+    ) {
         before = cons(car(after), before);
         after = cdr(after);
     }
@@ -242,7 +259,7 @@ List.prototype.split = function(predicate) {
     return t(before.reverse(), after);
 };
 
-List.prototype.deleteIndex = function(deleteIndex) {
+List.prototype.deleteIndex = function (deleteIndex) {
     let node = this;
     let stack = nil;
 
@@ -267,7 +284,7 @@ List.prototype.deleteIndex = function(deleteIndex) {
     return node;
 };
 
-List.prototype.delete = function(value) {
+List.prototype.delete = function (value) {
     let node = this;
     let stack = nil;
 
@@ -289,7 +306,7 @@ List.prototype.delete = function(value) {
     return node;
 };
 
-List.prototype.append = function(tail) {
+List.prototype.append = function (tail) {
     let copy = this.reverse();
 
     while (List.isList(copy) && copy != nil) {
@@ -300,7 +317,7 @@ List.prototype.append = function(tail) {
     return tail;
 };
 
-List.prototype.nth = function(index) {
+List.prototype.nth = function (index) {
     let node = this;
     let current = 0;
 
@@ -316,7 +333,7 @@ List.prototype.nth = function(index) {
     }
 };
 
-List.prototype[Symbol.iterator] = function*() {
+List.prototype[Symbol.iterator] = function* () {
     let node = this;
     while (node instanceof List && node != nil) {
         yield node.head;
@@ -336,7 +353,7 @@ List.prototype[inspect] = function inspect(
     const newOptions = {
         ...options,
         drewPrefix: false,
-        depth: options.depth === null ? null : options.depth - 1
+        depth: options.depth === null ? null : options.depth - 1,
     };
 
     const prefix = '[';
@@ -372,7 +389,7 @@ List.prototype[inspect] = function inspect(
 
     return result;
 };
-List.prototype.toString = function() {
+List.prototype.toString = function () {
     const prefix = '[';
     const postfix = ' ]';
 
@@ -436,69 +453,69 @@ export const improperList = il;
 Reflect.defineProperty(list, 'nil', {
     configurable: false,
     writable: false,
-    value: nil
+    value: nil,
 });
 
 Reflect.defineProperty(list, 'isList', {
     configurable: false,
     writable: false,
-    value: function(value) {
+    value: function (value) {
         return value instanceof List || value === nil;
-    }
+    },
 });
 
 Reflect.defineProperty(list, 'isEmpty', {
     configurable: false,
     writable: false,
-    value: function(value) {
+    value: function (value) {
         return value === nil;
-    }
+    },
 });
 
 Reflect.defineProperty(improperList, 'nil', {
     configurable: false,
     writable: false,
-    value: nil
+    value: nil,
 });
 
 Reflect.defineProperty(improperList, 'isList', {
     configurable: false,
     writable: false,
-    value: function(value) {
+    value: function (value) {
         return value instanceof List || value === nil;
-    }
+    },
 });
 Reflect.defineProperty(improperList, 'isEmpty', {
     configurable: false,
     writable: false,
-    value: function(value) {
+    value: function (value) {
         return value === nil;
-    }
+    },
 });
 
 Reflect.defineProperty(List, 'nil', {
     configurable: false,
     writable: false,
-    value: nil
+    value: nil,
 });
 Reflect.defineProperty(List, 'isList', {
     configurable: false,
     writable: false,
-    value: function(value) {
+    value: function (value) {
         return value instanceof List || value === nil;
-    }
+    },
 });
 Reflect.defineProperty(List, 'isEmpty', {
     configurable: false,
     writable: false,
-    value: function(value) {
+    value: function (value) {
         return value === nil;
-    }
+    },
 });
 Reflect.defineProperty(List, 'from', {
     configurable: false,
     writable: false,
-    value: function(...items) {
+    value: function (...items) {
         if (items.length === 0) {
             return nil;
         } else {
@@ -509,5 +526,5 @@ Reflect.defineProperty(List, 'from', {
             }
             return tail;
         }
-    }
+    },
 });
