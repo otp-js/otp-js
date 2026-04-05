@@ -132,11 +132,19 @@ function restart(ctx, pid, reason, state) {
         index++;
     }
 
+    log(ctx, 'restart(node: %o)', node);
+
     if (node !== l.nil) {
         const child = car(node);
         if (isPermanent(child) || (isTransient(child) && !isNormal(reason))) {
+            log(
+                ctx,
+                'restart(permanent_or_abnormal_transient, child: %o)',
+                child
+            );
             return strategy.restart(ctx, state, child.id, pid);
         } else {
+            log(ctx, 'restart(temporary_cleanup, child: %o)', child);
             return strategy.cleanup(ctx, state, index);
         }
     } else {

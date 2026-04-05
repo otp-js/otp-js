@@ -146,53 +146,61 @@ describe('@otp-js/supervisor', () => {
         });
     });
     describe('implements api methods', function () {
-        const callbacks = {
-            init: sinon.spy(() => {
-                return t(
-                    { strategy: one_for_one },
-                    l(
-                        {
-                            id: 'a',
-                            start: [start, [1, 2, 3]],
-                            restart: transient,
-                        },
-                        {
-                            id: 'b',
-                            start: [start, [4, 5, 6]],
-                            restart: transient,
-                        },
-                        {
-                            id: 'c',
-                            start: [startIgnore, []],
-                            restart: transient,
-                        },
-                        {
-                            id: 'd',
-                            start: [start, [7, 8, 9]],
-                            restart: transient,
-                        },
-                        {
-                            id: 'e',
-                            start: [start, [10, 11, 12]],
-                            restart: transient,
-                        }
-                    )
-                );
-            }),
-        };
+        let start;
+        let startIgnore;
+        let callbacks;
         let pid;
         beforeEach(async function () {
+            start = sinon.spy(Adder.startLink);
+            startIgnore = sinon.spy(Ignored.startLink);
+            callbacks = {
+                init: sinon.spy(() => {
+                    return t(
+                        ok,
+                        t(
+                            { strategy: one_for_one },
+                            l(
+                                {
+                                    id: 'a',
+                                    start: [start, [1, 2, 3]],
+                                    restart: transient,
+                                },
+                                {
+                                    id: 'b',
+                                    start: [start, [4, 5, 6]],
+                                    restart: transient,
+                                },
+                                {
+                                    id: 'c',
+                                    start: [startIgnore, []],
+                                    restart: transient,
+                                },
+                                {
+                                    id: 'd',
+                                    start: [start, [7, 8, 9]],
+                                    restart: transient,
+                                },
+                                {
+                                    id: 'e',
+                                    start: [start, [10, 11, 12]],
+                                    restart: transient,
+                                }
+                            )
+                        )
+                    );
+                }),
+            };
             [, pid] = await supervisor.startLink(ctx, callbacks, l());
         });
 
         describe('restartChild', function () {
-            it.only('terminates and restarts the specified child', async function () {
+            it('terminates and restarts the specified child', async function () {
                 const [, children] = await supervisor.whichChildren(ctx, pid);
                 const [target] = children;
                 const { pid: childPid, id: childId } = target;
                 let promise = supervisor.restartChild(ctx, pid, childId);
                 await expect(promise).to.eventually.matchPattern(
-                    t(ok, Pid.isPid)
+                    t(ok, { pid: Pid.isPid, [spread]: _ })
                 );
                 const [, nextChildPid] = await promise;
                 expect(nextChildPid).not.to.matchPattern(childPid);

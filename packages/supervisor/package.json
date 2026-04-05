@@ -19,7 +19,8 @@
         "./symbols": "./lib/symbols.js"
     },
     "imports": {
-        "#symbols": "./lib/symbols.js"
+        "#symbols": "./lib/symbols.js",
+        "#strategy/*": "./lib/strategy/*.js"
     },
     "publishConfig": {
         "access": "public"

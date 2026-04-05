@@ -1,7 +1,11 @@
 import { t } from '@otpjs/types';
 import { restartMultipleChildren, splitChild } from './common.js';
 export { rest_for_one as name } from '#symbols';
-export { standardStartChild as startChild, startChildren } from './common.js';
+export {
+    standardStartChild as startChild,
+    startChildren,
+    cleanup,
+} from './common.js';
 
 function log(ctx, ...formatters) {
     ctx.log.extend('rest_for_one')(...formatters);

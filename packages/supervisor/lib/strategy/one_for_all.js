@@ -1,7 +1,11 @@
 import * as matching from '@otpjs/matching';
 import { car, cdr, cons, l, List, t } from '@otpjs/types';
 import { isTemporary, restartMultipleChildren } from './common.js';
-export { standardStartChild as startChild, startChildren } from './common.js';
+export {
+    standardStartChild as startChild,
+    startChildren,
+    cleanup,
+} from './common.js';
 export { one_for_all as name } from '#symbols';
 
 const { _, spread } = matching.Symbols;
@@ -9,7 +13,7 @@ const { _, spread } = matching.Symbols;
 export async function restart(ctx, state, id, pid) {
     let { name, children } = state;
     const child = findChildById(id, children);
-    children = deleteChild(ctx, id, children);
+    //children = deleteChild(ctx, id, children);
 
     const [result, nextChildren] = await restartMultipleChildren(
         ctx,

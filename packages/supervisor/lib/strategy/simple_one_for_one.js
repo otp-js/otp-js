@@ -13,15 +13,21 @@ const { _, spread } = matching.Symbols;
 const { noreply } = gen_server.Symbols;
 const { kase } = matching;
 
+function log(ctx, ...args) {
+    return ctx.log.extend('supervisor:simple_one_for_one')(...args);
+}
+
 export async function restart(ctx, state, id, pid) {
     const child = state.children.find((child) => child.id === id);
     const { args } = child;
 
     const base = state.childSpecs.nth(0);
     const spec = { ...base, start: t(base.start[0], args) };
-    const [, newSpec] = await doStartChild(ctx, spec);
+    const startResult = await doStartChild(ctx, spec);
+    log(ctx, 'restart(startResult: %o)', startResult);
+    const [, newSpec] = startResult;
 
-    return t(ok, newSpec.pid, updatePid(state, id, newSpec.pid));
+    return t(ok, updatePid(state, id, newSpec.pid));
 }
 export function cleanup(ctx, state, index) {
     const { children } = state;

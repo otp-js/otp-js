@@ -3,8 +3,8 @@ import { _ } from '@otpjs/matching/symbols';
 import { noreply } from '@otpjs/gen_server/symbols';
 import { kase } from '@otpjs/matching';
 import { car, cdr, cons, t, list } from '@otpjs/types';
-import { updatePid, splitChild, startChild as doStartChild } from './common.js';
-export { standardStartChild as startChild } from './common.js';
+import { updatePid, startChild as doStartChild } from './common.js';
+export { standardStartChild as startChild, cleanup } from './common.js';
 export { one_for_one as name } from '#symbols';
 import { remove } from '#symbols';
 
