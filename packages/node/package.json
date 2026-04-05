@@ -40,7 +40,7 @@
     "url": "git+https://github.com/otp-js/otp-js.git"
   },
   "scripts": {
-    "test": "echo \"Error: run tests from root\" && exit 1",
+    "test": "mocha '__tests__/**/*.js'",
     "lint": "eslint src"
   },
   "bugs": {
