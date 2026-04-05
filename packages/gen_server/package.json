@@ -34,6 +34,13 @@
         "test": "mocha '__tests__/**/*.test.js'",
         "lint": "eslint src"
     },
+    "imports": {
+        "#symbols": "./lib/symbols.js"
+    },
+    "exports": {
+        ".": "./lib/index.js",
+        "./symbols": "./lib/symbols.js"
+    },
     "bugs": {
         "url": "https://github.com/otp-js/otp-js/issues"
     },
