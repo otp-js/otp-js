@@ -23,6 +23,9 @@ importers:
       '@otpjs/gen_server':
         specifier: file:packages/gen_server
         version: link:packages/gen_server
+      '@otpjs/matching':
+        specifier: link:packages/matching
+        version: link:packages/matching
       '@otpjs/proc_lib':
         specifier: file:packages/proc_lib
         version: link:packages/proc_lib
@@ -77,6 +80,9 @@ importers:
       '@otpjs/matching':
         specifier: file:../matching
         version: link:../matching
+      '@otpjs/node':
+        specifier: file:../node
+        version: link:../node
       '@otpjs/types':
         specifier: file:../types
         version: link:../types
@@ -108,6 +114,12 @@ importers:
       '@otpjs/proc_lib':
         specifier: file:../proc_lib
         version: link:../proc_lib
+      '@otpjs/types':
+        specifier: file:../types
+        version: link:../types
+      debug:
+        specifier: ^4.4.3
+        version: 4.4.3(supports-color@8.1.1)
     devDependencies:
       '@otpjs/node':
         specifier: file:../node
@@ -136,6 +148,9 @@ importers:
       '@otpjs/proc_lib':
         specifier: file:../proc_lib
         version: link:../proc_lib
+      '@otpjs/types':
+        specifier: file:../types
+        version: link:../types
     devDependencies:
       chai:
         specifier: ^6.2.2
@@ -154,6 +169,13 @@ importers:
         version: 4.0.1(chai@6.2.2)(sinon@21.0.3)
 
   packages/matching:
+    dependencies:
+      '@otpjs/types':
+        specifier: file:../types
+        version: link:../types
+      debug:
+        specifier: ^4.4.3
+        version: 4.4.3(supports-color@8.1.1)
     devDependencies:
       chai:
         specifier: ^6.2.2
@@ -172,6 +194,13 @@ importers:
         version: 4.0.1(chai@6.2.2)(sinon@21.0.3)
 
   packages/node:
+    dependencies:
+      '@otpjs/types':
+        specifier: file:../types
+        version: link:../types
+      debug:
+        specifier: ^4.4.3
+        version: 4.4.3(supports-color@8.1.1)
     devDependencies:
       chai:
         specifier: ^6.2.2
@@ -194,6 +223,9 @@ importers:
       '@otpjs/core':
         specifier: file:../core
         version: link:../core
+      '@otpjs/types':
+        specifier: file:../types
+        version: link:../types
     devDependencies:
       chai:
         specifier: ^6.2.2
@@ -216,10 +248,19 @@ importers:
       '@otpjs/gen_server':
         specifier: file:../gen_server
         version: link:../gen_server
+      '@otpjs/types':
+        specifier: file:../types
+        version: link:../types
+      debug:
+        specifier: ^4.4.3
+        version: 4.4.3(supports-color@8.1.1)
     devDependencies:
       '@otpjs/core':
         specifier: file:../core
         version: link:../core
+      '@otpjs/node':
+        specifier: file:../node
+        version: link:../node
       chai:
         specifier: ^6.2.2
         version: 6.2.2
@@ -237,6 +278,10 @@ importers:
         version: 4.0.1(chai@6.2.2)(sinon@21.0.3)
 
   packages/types:
+    dependencies:
+      debug:
+        specifier: ^4.4.3
+        version: 4.4.3(supports-color@8.1.1)
     devDependencies:
       chai:
         specifier: ^6.2.2
@@ -263,6 +308,9 @@ importers:
         specifier: file:../../packages/types
         version: link:../../packages/types
     devDependencies:
+      '@otpjs/node':
+        specifier: file:../../packages/node
+        version: link:../../packages/node
       chai:
         specifier: ^6.2.2
         version: 6.2.2
@@ -287,6 +335,12 @@ importers:
       '@otpjs/serializer-json':
         specifier: file:../../serializers/json
         version: link:../../serializers/json
+      '@otpjs/types':
+        specifier: file:../../packages/types
+        version: link:../../packages/types
+      debug:
+        specifier: ^4.4.3
+        version: 4.4.3(supports-color@8.1.1)
       socket.io:
         specifier: ^3.1.0||^4.0.0
         version: 4.8.3
