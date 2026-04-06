@@ -13,6 +13,7 @@
         "@otpjs/core": "file:packages/core",
         "@otpjs/gen": "file:packages/gen",
         "@otpjs/gen_server": "file:packages/gen_server",
+        "@otpjs/matching": "link:packages/matching",
         "@otpjs/proc_lib": "file:packages/proc_lib",
         "@otpjs/supervisor": "file:packages/supervisor",
         "@otpjs/transports-socket.io": "file:transports/socket.io",
