@@ -1,54 +1,54 @@
 {
-    "name": "@otpjs/core",
-    "version": "0.18.0",
-    "description": "Open Telecom Platform",
-    "keywords": [
-        "otp",
-        "erlang",
-        "javascript"
-    ],
-    "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
-    "type": "module",
-    "homepage": "https://github.com/otp-js/otp-js#readme",
-    "license": "MIT",
-    "main": "lib/index.js",
-    "exports": {
-        ".": "./lib/index.js",
-        "./symbols": "./lib/symbols.js"
-    },
-    "directories": {
-        "lib": "lib",
-        "test": "__tests__"
-    },
-    "files": [
-        "lib"
-    ],
-    "publishConfig": {
-        "access": "public"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/otp-js/otp-js.git"
-    },
-    "scripts": {
-        "lint": "eslint src"
-    },
-    "bugs": {
-        "url": "https://github.com/otp-js/otp-js/issues"
-    },
-    "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e",
-    "dependencies": {
-        "@otpjs/matching": "file:../matching",
-        "@otpjs/test_utils": "file:../test_utils",
-        "@otpjs/types": "file:../types",
-        "inspect-custom-symbol": "^1.1.1",
-        "nanoid": "^5.1.7"
-    },
-    "devDependencies": {
-        "chai": "^6.2.2",
-        "chai-as-promised": "^8.0.2",
-        "mocha": "^11.7.5",
-        "sinon": "^21.0.3",
-        "sinon-chai": "^4.0.1"
-    }
+  "name": "@otpjs/core",
+  "version": "1.0.0-next.0",
+  "description": "Open Telecom Platform",
+  "keywords": [
+    "otp",
+    "erlang",
+    "javascript"
+  ],
+  "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
+  "type": "module",
+  "homepage": "https://github.com/otp-js/otp-js#readme",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./symbols": "./lib/symbols.js"
+  },
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/otp-js/otp-js.git"
+  },
+  "scripts": {
+    "lint": "eslint src"
+  },
+  "bugs": {
+    "url": "https://github.com/otp-js/otp-js/issues"
+  },
+  "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e",
+  "dependencies": {
+    "@otpjs/matching": "file:../matching",
+    "@otpjs/test_utils": "file:../test_utils",
+    "@otpjs/types": "file:../types",
+    "inspect-custom-symbol": "^1.1.1",
+    "nanoid": "^5.1.7"
+  },
+  "devDependencies": {
+    "chai": "^6.2.2",
+    "chai-as-promised": "^8.0.2",
+    "mocha": "^11.7.5",
+    "sinon": "^21.0.3",
+    "sinon-chai": "^4.0.1"
+  }
 }

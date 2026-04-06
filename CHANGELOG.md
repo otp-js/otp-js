@@ -1,3 +1,29 @@
+## 1.0.0-next.0 (2026-04-06)
+
+### 🚀 Features
+
+- **matching:** another kase building option ([d7a064d](https://github.com/otp-js/otp-js/commit/d7a064d))
+- **matching:** take over test_utils' jest extensions ([7f35aa3](https://github.com/otp-js/otp-js/commit/7f35aa3))
+- **types:** findIndex for lists ([68df81a](https://github.com/otp-js/otp-js/commit/68df81a))
+
+### 🩹 Fixes
+
+- ⚠️  update root package versions ([a19f10f](https://github.com/otp-js/otp-js/commit/a19f10f))
+- pin conventional-commits-writer version (or try to anyway) ([1efcb0f](https://github.com/otp-js/otp-js/commit/1efcb0f))
+- undo version pinning and skip generateNotes step ([8ef5db5](https://github.com/otp-js/otp-js/commit/8ef5db5))
+- **gen_server:** refactor error handling in loop ([b7d4d46](https://github.com/otp-js/otp-js/commit/b7d4d46))
+- **gen_server:** fixed a timing edge case in a call test ([cf53851](https://github.com/otp-js/otp-js/commit/cf53851))
+- **matching:** correct mismatch handling in kase blocks ([ebe0aab](https://github.com/otp-js/otp-js/commit/ebe0aab))
+- **types:** fix toStringTag ([5c7e84f](https://github.com/otp-js/otp-js/commit/5c7e84f))
+
+### ⚠️  Breaking Changes
+
+- update root package versions  ([a19f10f](https://github.com/otp-js/otp-js/commit/a19f10f))
+
+### ❤️ Thank You
+
+- Zachary Hueras @soup-in-boots
+
 # 0.18.0 (2023-06-24)
 
 
