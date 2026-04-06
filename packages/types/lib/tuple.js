@@ -38,7 +38,7 @@ const traps = {
     },
     getPrototypeOf(object) {
         return Reflect.getPrototypeOf(object);
-    }
+    },
 };
 
 export function Tuple(...elements) {
@@ -52,7 +52,7 @@ export function Tuple(...elements) {
             return size;
         },
         configurable: false,
-        enumerable: false
+        enumerable: false,
     });
     Reflect.defineProperty(this, 'get', {
         value: function get(index) {
@@ -65,7 +65,7 @@ export function Tuple(...elements) {
         },
         configurable: false,
         writable: false,
-        enumerable: false
+        enumerable: false,
     });
     Reflect.defineProperty(this, 'set', {
         value: function set(index, value) {
@@ -78,7 +78,7 @@ export function Tuple(...elements) {
         },
         configurable: false,
         writable: false,
-        enumerable: false
+        enumerable: false,
     });
 
     return new Proxy(this, traps);
@@ -98,7 +98,7 @@ Tuple.prototype[inspect] = function (depth, options, inspect) {
 
     const newOptions = {
         ...options,
-        depth: options.depth === null ? null : options.depth - 1
+        depth: options.depth === null ? null : options.depth - 1,
     };
 
     const prefix = '{';

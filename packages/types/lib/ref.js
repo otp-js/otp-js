@@ -1,8 +1,4 @@
-import inspect from 'inspect-custom-symbol';
-import { OTPError } from './error.js';
-import { t } from './tuple.js';
-
-const invalid_ref_spec = Symbol.for('invalid_ref_spec');
+const inspect = Symbol.for('nodejs.util.inspect.custom');
 
 export function Ref(node, id, serial, creation = 1) {
     if (!(this instanceof Ref)) return new Ref(node, id, serial, creation);
@@ -12,35 +8,35 @@ export function Ref(node, id, serial, creation = 1) {
             return node;
         },
         configurable: false,
-        enumerable: true
+        enumerable: true,
     });
     Reflect.defineProperty(this, 'id', {
         get() {
             return id;
         },
         configurable: false,
-        enumerable: true
+        enumerable: true,
     });
     Reflect.defineProperty(this, 'serial', {
         get() {
             return serial;
         },
         configurable: false,
-        enumerable: true
+        enumerable: true,
     });
     Reflect.defineProperty(this, 'creation', {
         get() {
             return creation;
         },
         configurable: false,
-        enumerable: true
+        enumerable: true,
     });
     Reflect.defineProperty(this, 'reference', {
         get() {
             return (BigInt(id) << 32n) + BigInt(serial);
         },
         configurable: true,
-        enumerable: false
+        enumerable: false,
     });
 }
 
@@ -68,16 +64,16 @@ Ref.compare = (a, b) => {
     else if (a.creation > b.creation) return 1;
     else return 0;
 };
-Ref.prototype.toString = function() {
+Ref.prototype.toString = function () {
     return `Ref<${this.node}.${this.id}.${this.serial}>`;
 };
-Ref.prototype[Symbol.toPrimitive] = function(hint) {
+Ref.prototype[Symbol.toPrimitive] = function (hint) {
     if (hint === 'string') {
         return this.toString();
     }
     return null;
 };
-Ref.prototype[inspect] = function(depth, options, inspect) {
+Ref.prototype[inspect] = function (depth, options, inspect) {
     if (depth < 0) {
         return options.stylize('[Ref]', 'special');
     }

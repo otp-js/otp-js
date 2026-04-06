@@ -1,71 +1,66 @@
 /* eslint-env mocha */
 import * as chai from 'chai';
-import chaiAsPromised from 'chai-as-promised';
-import * as sinon from 'sinon';
-import sinonChai from 'sinon-chai';
-import chaiMatching from '@otpjs/matching/chai';
-import { Tuple, List, l, il, cons, car, cdr } from '../lib/index.js';
 import crypto from 'crypto';
-import util from 'util';
 import debug from 'debug';
+import * as sinon from 'sinon';
+import util from 'util';
+import { List, Tuple, car, cdr, cons, il, l } from '../lib/index.js';
 
 const log = debug('otpjs:types:list:__tests__');
 
 const inspect = Symbol.for('nodejs.util.inspect.custom');
 
-chai.use(chaiMatching);
-chai.use(sinonChai);
-chai.use(chaiAsPromised);
-
 const { expect } = chai;
 
-describe('List', function() {
-    it('can be nil', function() {
+describe('List', function () {
+    it('can be nil', function () {
         const value = l();
         expect(value).to.equal(l.nil);
     });
-    it('has a length', function() {
+    it('has a length', function () {
         const list1 = l();
         const list2 = l(1, 2, 3);
 
         expect(list1.length()).to.equal(0);
         expect(list2.length()).to.equal(3);
     });
-    it('can add to the end', function() {
+    it('can add to the end', function () {
         const list = l(1, 2, 3);
         expect(list.push(4)).to.matchPattern(l(1, 2, 3, 4));
         expect(l.nil.push(0)).to.matchPattern(l(0));
     });
-    it('cannot add to the end of an improper list', function() {
-        expect(() => il(1, 2, null).push(3)).to.throw('pushed to improper list');
+    it('cannot add to the end of an improper list', function () {
+        expect(() => il(1, 2, null).push(3)).to.throw(
+            'pushed to improper list'
+        );
     });
-    it('can add to the head with cons', function() {
+    it('can add to the head with cons', function () {
         const list = l(1, 2, 3);
         expect(cons(0, list)).to.matchPattern(l(0, 1, 2, 3));
     });
-    describe('isEmpty', function() {
-        describe('given nil', function() {
-            it('returns true', function() {
+    describe('isEmpty', function () {
+        describe('given nil', function () {
+            it('returns true', function () {
                 expect(l.isEmpty(l.nil)).to.equal(true);
                 expect(il.isEmpty(l.nil)).to.equal(true);
                 expect(List.isEmpty(l.nil)).to.equal(true);
             });
         });
-        describe('given a non-nil list', function() {
-            it('returns false', function() {
+        describe('given a non-nil list', function () {
+            it('returns false', function () {
                 expect(l.isEmpty(l(1, 2, 3))).to.equal(false);
                 expect(il.isEmpty(il(1, 2, 3))).to.equal(false);
                 expect(List.isEmpty(l(1, 2, 3))).to.equal(false);
             });
         });
     });
-    describe('replaceWhere', function() {
-        it('substitutes the first value for which the predicate is true', function() {
+    describe('replaceWhere', function () {
+        it('substitutes the first value for which the predicate is true', function () {
             expect(l(1, 2, 3).replaceWhere((n) => n === 2, 4)).to.matchPattern(
                 l(1, 4, 3)
             );
         });
-        it('optionally inserts the value at the end of the list if the predicate is never true', function() {
+        it('optionally inserts the value at the end of the list if the predicate is never true', function () {
             expect(
                 l(1, 2, 3).replaceWhere((n) => n === 4, 5, true)
             ).to.matchPattern(l(1, 2, 3, 5));
@@ -74,20 +69,20 @@ describe('List', function() {
             ).to.matchPattern(l(1, 2, 3));
         });
     });
-    describe('deleteWhere', function() {
-        it('deletes the first value for which the predicate is true', function() {
+    describe('deleteWhere', function () {
+        it('deletes the first value for which the predicate is true', function () {
             expect(l(1, 2, 3).deleteWhere((n) => n === 2)).to.matchPattern(
                 l(1, 3)
             );
         });
-        it('does not modify the list if the predicate is never true', function() {
+        it('does not modify the list if the predicate is never true', function () {
             expect(l(1, 2, 3).deleteWhere((n) => n === 4)).to.matchPattern(
                 l(1, 2, 3)
             );
         });
     });
-    describe('includes', function() {
-        it('scans the list for value, returning true if found, false if not', function() {
+    describe('includes', function () {
+        it('scans the list for value, returning true if found, false if not', function () {
             const list = l(1, 2, 3);
             const improper = il(1, 2, 3);
             expect(list.includes(2)).to.equal(true);
@@ -96,8 +91,8 @@ describe('List', function() {
             expect(improper.includes(4)).to.equal(false);
         });
     });
-    describe('find', function() {
-        it('finds and returns the first value for which predicate is true', function() {
+    describe('find', function () {
+        it('finds and returns the first value for which predicate is true', function () {
             const list = l(1, 2, 3);
             const improper = il(1, 2, 3);
             expect(list.find((value) => value === 2)).to.equal(2);
@@ -106,54 +101,54 @@ describe('List', function() {
             expect(improper.find((value) => value === 4)).to.equal();
         });
     });
-    describe('slice', function() {
-        it('returns a copy of the list when no indexes are specified', function() {
+    describe('slice', function () {
+        it('returns a copy of the list when no indexes are specified', function () {
             const list = l(1, 2, 3);
             const copy = list.slice();
 
             expect(copy).to.matchPattern(list);
             expect(copy).not.to.equal(list);
         });
-        it('retuns the list of items from the starting index', function() {
+        it('retuns the list of items from the starting index', function () {
             const list = l(1, 2, 3, 4, 5);
             const sliced = list.slice(2);
 
             expect(sliced).to.matchPattern(l(3, 4, 5));
         });
-        it('returns the list of items up to the ending index', function() {
+        it('returns the list of items up to the ending index', function () {
             const list = l(1, 2, 3, 4, 5);
             const sliced = list.slice(0, 2);
 
             expect(sliced).to.matchPattern(l(1, 2));
         });
-        it('returns the list of items from the starting index up to the ending index', function() {
+        it('returns the list of items from the starting index up to the ending index', function () {
             const list = l(1, 2, 3, 4, 5);
             const sliced = list.slice(1, 4);
 
             expect(sliced).to.matchPattern(l(2, 3, 4));
         });
-        it('returns the list of items from the starting index up to length minus the ending index', function() {
+        it('returns the list of items from the starting index up to length minus the ending index', function () {
             const list = l(1, 2, 3, 4, 5);
             const sliced = list.slice(1, -2);
 
             expect(sliced).to.matchPattern(l(2, 3));
         });
     });
-    describe('delete', function() {
-        it('removes the first element which is strictly equal to the argument', function() {
+    describe('delete', function () {
+        it('removes the first element which is strictly equal to the argument', function () {
             expect(l(1, 2, 3).delete(1)).to.matchPattern(l(2, 3));
             expect(l(1, 2, 3).delete(2)).to.matchPattern(l(1, 3));
             expect(l(1, 2, 3).delete(3)).to.matchPattern(l(1, 2));
         });
     });
-    describe('deleteIndex', function() {
-        it('removes the Nth item of the list', function() {
+    describe('deleteIndex', function () {
+        it('removes the Nth item of the list', function () {
             expect(l(1, 2, 3).deleteIndex(1)).to.matchPattern(l(1, 3));
             expect(l(1, 2, 3).deleteIndex(3)).to.matchPattern(l(1, 2, 3));
         });
     });
-    describe('nth', function() {
-        it('returns the Nth item of the list', function() {
+    describe('nth', function () {
+        it('returns the Nth item of the list', function () {
             const list = l(1, 2, 3, 4, 5);
             expect(list.nth(0)).to.equal(1);
             expect(list.nth(1)).to.equal(2);
@@ -163,34 +158,34 @@ describe('List', function() {
             expect(list.nth(5)).to.equal(undefined);
         });
     });
-    describe('append', function() {
-        describe('given  another list', function() {
-            it('appends it to this list', function() {
+    describe('append', function () {
+        describe('given  another list', function () {
+            it('appends it to this list', function () {
                 const list = l(1, 2, 3);
                 expect(list.append(l(4, 5, 6))).to.matchPattern(
                     l(1, 2, 3, 4, 5, 6)
                 );
             });
         });
-        describe('given a non-list', function() {
-            it('creates an improper list with the value as the deepest tail', function() {
+        describe('given a non-list', function () {
+            it('creates an improper list with the value as the deepest tail', function () {
                 const list = l(1, 2, 3);
                 expect(list.append(4)).to.matchPattern(il(1, 2, 3, 4));
             });
         });
     });
-    describe('ImproperList', function() {
-        it('is a list node which has a non-list tail', function() {
+    describe('ImproperList', function () {
+        it('is a list node which has a non-list tail', function () {
             const node = il(1, 2);
             expect(l.isList(node)).to.equal(true);
             expect(l.isList(node.tail)).to.equal(false);
         });
-        it('can be constructed with cons', function() {
+        it('can be constructed with cons', function () {
             const node = cons(1, 2);
             expect(l.isList(node)).to.equal(true);
             expect(l.isList(node.tail)).to.equal(false);
         });
-        it('cannot be constructed without a tail', function() {
+        it('cannot be constructed without a tail', function () {
             const valid = il(1);
             const invalid = il();
             expect(l.isList(valid)).to.equal(true);
@@ -198,7 +193,7 @@ describe('List', function() {
             expect(l.isList(invalid)).to.equal(false);
             expect(invalid).to.equal(undefined);
         });
-        it('includes an isList function', function() {
+        it('includes an isList function', function () {
             const improper = il(1, 2);
             expect(il.isList).to.be.an.instanceOf(Function);
             expect(il.isList(improper)).to.equal(true);
@@ -206,23 +201,23 @@ describe('List', function() {
             expect(il.isList(undefined)).to.equal(false);
         });
     });
-    describe('inspection', function() {
-        it('implements a custom inspect function', function() {
+    describe('inspection', function () {
+        it('implements a custom inspect function', function () {
             const list = l(1, 2, 3);
             expect(list[inspect]).not.to.equal(undefined);
             expect(list[inspect]).to.be.an.instanceOf(Function);
         });
 
-        it('returns a string', function() {
+        it('returns a string', function () {
             const list = l(1, 2, 3);
             expect(util.inspect(list)).to.be.a.string;
         });
 
-        it('returns a shortened form if depth is consumed', function() {
+        it('returns a shortened form if depth is consumed', function () {
             expect(util.inspect(l(1, 2, 3), { depth: -1 })).to.equal('[List]');
         });
 
-        it('returns a shortened form if size is greater than maxArrayLength', function() {
+        it('returns a shortened form if size is greater than maxArrayLength', function () {
             expect(util.inspect(l(1, 2, 3), { maxArrayLength: 0 })).to.equal(
                 '[ ... 3 more items ]'
             );
@@ -234,21 +229,21 @@ describe('List', function() {
             );
         });
 
-        it('handles null depth', function() {
+        it('handles null depth', function () {
             expect(util.inspect(l(1, 2, 3), { depth: null })).to.equal(
                 '[ 1, 2, 3 ]'
             );
         });
     });
-    describe('toString', function() {
-        it('returns a string', function() {
+    describe('toString', function () {
+        it('returns a string', function () {
             expect(l(1, 2, 3).toString()).to.equal('[ 1, 2, 3 ]');
             expect(il(1, 2, 3).toString()).to.equal('[ 1, 2 | 3 ]');
             expect(l.nil.toString()).to.equal('[ ]');
         });
 
-        describe('with an object child containing a toString method', function() {
-            it('calls the toString method on the object', function() {
+        describe('with an object child containing a toString method', function () {
+            it('calls the toString method on the object', function () {
                 const toString = sinon.spy(() => 'object');
                 const object = { toString };
                 const list = l(1, 2, object);
@@ -256,9 +251,9 @@ describe('List', function() {
             });
         });
 
-        describe('with a symbol child', function() {
-            describe('which is a known symbol', function() {
-                it('converts the symbol to its key', function() {
+        describe('with a symbol child', function () {
+            describe('which is a known symbol', function () {
+                it('converts the symbol to its key', function () {
                     const symbol = Symbol.for('well_known');
                     const list = l(1, 2, symbol);
                     expect(list.toString()).to.equal(
@@ -266,15 +261,17 @@ describe('List', function() {
                     );
                 });
             });
-            describe('which is a named symbol', function() {
-                it('converts it to a string representation', function() {
+            describe('which is a named symbol', function () {
+                it('converts it to a string representation', function () {
                     const symbol = Symbol('anonymous');
                     const list = l(1, 2, symbol);
-                    expect(list.toString()).to.equal('[ 1, 2, Symbol(anonymous) ]');
+                    expect(list.toString()).to.equal(
+                        '[ 1, 2, Symbol(anonymous) ]'
+                    );
                 });
             });
-            describe('which is an anonymous symbol', function() {
-                it('converts it to a string representation', function() {
+            describe('which is an anonymous symbol', function () {
+                it('converts it to a string representation', function () {
                     const symbol = Symbol();
                     const list = l(1, 2, symbol);
                     expect(list.toString()).to.equal('[ 1, 2, Symbol() ]');
@@ -282,9 +279,9 @@ describe('List', function() {
             });
         });
     });
-    describe('toStringTag', function() {
-        describe('when coerced to a string', function() {
-            it('returns the name of the object', function() {
+    describe('toStringTag', function () {
+        describe('when coerced to a string', function () {
+            it('returns the name of the object', function () {
                 const list = l(1, 2, 3);
                 expect(Object.prototype.toString.call(list)).to.equal(
                     '[object List]'
@@ -292,38 +289,38 @@ describe('List', function() {
             });
         });
     });
-    it('can be reversed', function() {
+    it('can be reversed', function () {
         const list = l(1, 2, 3);
         expect(list.reverse()).to.matchPattern(l(3, 2, 1));
     });
-    it('accepts an arbitrary number of items', function() {
+    it('accepts an arbitrary number of items', function () {
         const list1 = l(1, 2, 3);
         expect(list1.length()).to.equal(3);
 
         const list2 = l(...new Array(100));
         expect(list2.length()).to.equal(100);
     });
-    it('can be iterated over', function() {
+    it('can be iterated over', function () {
         const list = l(1, 2, 3);
-        expect(function() {
+        expect(function () {
             let index = 0;
             for (const item of list) {
                 expect(item).to.equal(list.nth(index++));
             }
         }).not.to.throw();
     });
-    describe('map', function() {
-        it('handles nil', function() {
+    describe('map', function () {
+        it('handles nil', function () {
             const fn = sinon.stub();
             expect(l.nil).to.have.property('map');
-            expect(function() {
+            expect(function () {
                 l.nil.map(fn);
             }).not.to.throw();
         });
-        it('returns a promise', function() {
+        it('returns a promise', function () {
             expect(l.nil.map()).to.be.an.instanceOf(Promise);
         });
-        it('runs the given function over every element of the list', async function() {
+        it('runs the given function over every element of the list', async function () {
             const elements = crypto.randomBytes(8);
             const list = l(...elements);
             const fn = sinon.stub();
@@ -335,7 +332,7 @@ describe('List', function() {
                 expect(fn.getCall(index).args[0]).to.equal(elements[index]);
             }
         });
-        it('creates a new list of the return values for each run', async function() {
+        it('creates a new list of the return values for each run', async function () {
             const transform = (value) => value * 4;
             const elements = Array.from(crypto.randomBytes(8));
             const nextElements = elements.map(transform);
@@ -355,7 +352,9 @@ describe('List', function() {
             );
             for (let index = 0; index < elements.length; index++) {
                 expect(fn.getCall(index).args[0]).to.equal(elements[index]);
-                expect(fn.getCall(index).returnValue).to.equal(nextElements[index]);
+                expect(fn.getCall(index).returnValue).to.equal(
+                    nextElements[index]
+                );
 
                 const head = car(it);
                 expect(head).to.equal(nextElements[index]);
@@ -363,18 +362,18 @@ describe('List', function() {
             }
         });
     });
-    describe('filter', function() {
-        it('handles nil', function() {
+    describe('filter', function () {
+        it('handles nil', function () {
             const fn = sinon.stub();
             expect(l.nil).to.have.property('map');
-            expect(function() {
+            expect(function () {
                 l.nil.map(fn);
             }).not.to.throw();
         });
-        it('returns a promise', function() {
+        it('returns a promise', function () {
             expect(l.nil.map()).to.be.an.instanceOf(Promise);
         });
-        it('creates a list of elements for which the function returned true', async function() {
+        it('creates a list of elements for which the function returned true', async function () {
             const filter = (value) => value > 3;
             const elements = [0, 7, 1, 6, 2, 5, 3, 4];
             const results = elements.map(filter);
@@ -405,20 +404,20 @@ describe('List', function() {
             }
         });
     });
-    describe('split', function() {
-        describe('on nil', function() {
-            it('does not throw', function() {
-                expect(function() {
+    describe('split', function () {
+        describe('on nil', function () {
+            it('does not throw', function () {
+                expect(function () {
                     l.nil.split();
                 }).not.to.throw();
             });
-            it('returns a tuple with two nils', function() {
+            it('returns a tuple with two nils', function () {
                 const result = l.nil.split(() => true);
                 expect(result).to.be.an.instanceOf(Tuple);
                 expect(result[0]).to.equal(l.nil);
                 expect(result[1]).to.equal(l.nil);
             });
-            it('splits the list at the point where the predicate returns true', function() {
+            it('splits the list at the point where the predicate returns true', function () {
                 const expectedA = [0, 1, 2, 3];
                 const expectedB = [4, 5, 6, 7];
                 const result = l(0, 1, 2, 3, 4, 5, 6, 7).split(
