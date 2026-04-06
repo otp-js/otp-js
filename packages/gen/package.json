@@ -45,7 +45,9 @@
     "sinon-chai": "^4.0.1"
   },
   "dependencies": {
-    "@otpjs/proc_lib": "file:../proc_lib"
+    "@otpjs/proc_lib": "file:../proc_lib",
+    "@otpjs/types": "file:../types",
+    "debug": "^4.4.3"
   },
   "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e"
 }

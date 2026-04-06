@@ -45,5 +45,9 @@
     "mocha": "^11.7.5",
     "sinon": "^21.0.3",
     "sinon-chai": "^4.0.1"
+  },
+  "dependencies": {
+    "@otpjs/types": "file:../types",
+    "debug": "^4.4.3"
   }
 }

@@ -37,7 +37,8 @@
         "url": "https://github.com/otp-js/otp-js/issues"
     },
     "dependencies": {
-        "@otpjs/core": "file:../core"
+        "@otpjs/core": "file:../core",
+        "@otpjs/types": "file:../types"
     },
     "devDependencies": {
         "chai": "^6.2.2",

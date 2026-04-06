@@ -33,6 +33,7 @@
     "@otpjs/types": "file:../../packages/types"
   },
   "devDependencies": {
+    "@otpjs/node": "file:../../packages/node",
     "chai": "^6.2.2",
     "chai-as-promised": "^8.0.2",
     "mocha": "^11.7.5",

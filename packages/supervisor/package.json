@@ -37,10 +37,13 @@
         "url": "https://github.com/otp-js/otp-js/issues"
     },
     "dependencies": {
-        "@otpjs/gen_server": "file:../gen_server"
+        "@otpjs/gen_server": "file:../gen_server",
+        "@otpjs/types": "file:../types",
+        "debug": "^4.4.3"
     },
     "devDependencies": {
         "@otpjs/core": "file:../core",
+        "@otpjs/node": "file:../node",
         "chai": "^6.2.2",
         "chai-as-promised": "^8.0.2",
         "mocha": "^11.7.5",

@@ -38,7 +38,9 @@
   },
   "dependencies": {
     "@otpjs/core": "file:../../packages/core",
-    "@otpjs/serializer-json": "file:../../serializers/json"
+    "@otpjs/serializer-json": "file:../../serializers/json",
+    "@otpjs/types": "file:../../packages/types",
+    "debug": "^4.4.3"
   },
   "peerDependencies": {
     "socket.io": "^3.1.0||^4.0.0",
