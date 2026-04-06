@@ -2,7 +2,7 @@ export default {
     branches: ['main', { name: 'develop', channel: 'next', prerelease: true }],
     plugins: [
         '@semantic-release/commit-analyzer',
-        ['semantic-release-lerna', { generateNotes: true }],
+        'semantic-release-lerna',
         '@semantic-release/changelog',
         [
             '@semantic-release/git',
