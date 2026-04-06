@@ -3,7 +3,6 @@ import * as chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import * as sinon from 'sinon';
 import sinonChai from 'sinon-chai';
-import { ok } from '@otpjs/core/symbols';
 import { OTPError, t } from '@otpjs/types';
 import * as matching from '../lib/index.js';
 import { case_clause, route_clause, skip_matching, _ } from '#symbols';
@@ -15,36 +14,36 @@ chai.use(chaiAsPromised);
 
 const { expect } = chai;
 
-describe('@otpjs/matching/advanced', function() {
-    describe('buildCase', function() {
-        it('takes a "build function" argument', function() {
+describe('@otpjs/matching/advanced', function () {
+    describe('buildCase', function () {
+        it('takes a "build function" argument', function () {
             const fn = sinon.spy();
-            expect(function() {
+            expect(function () {
                 matching.buildCase();
             }).to.throw();
-            expect(function() {
+            expect(function () {
                 matching.buildCase(fn);
             }).not.to.throw();
         });
-        describe('build function', function() {
+        describe('build function', function () {
             let fn;
-            beforeEach(function() {
+            beforeEach(function () {
                 fn = sinon.spy();
             });
-            it('is called with "build case" helper method', function() {
+            it('is called with "build case" helper method', function () {
                 matching.buildCase(fn);
                 expect(fn).to.have.callCount(1);
                 expect(fn.getCall(0).args[0]).to.be.an.instanceOf(Function);
             });
-            describe('case builder', function() {
+            describe('case builder', function () {
                 let catchAll;
                 let numbersOnly;
-                beforeEach(function() {
+                beforeEach(function () {
                     catchAll = handler(() => 0);
                     numbersOnly = handler(() => 1);
                 });
 
-                it('needs "pattern" and "handler" arguments', function() {
+                it('needs "pattern" and "handler" arguments', function () {
                     fn = sinon.spy((kase) => {
                         expect(() => kase()).to.throw();
                         expect(() => kase(_)).to.throw();
@@ -53,7 +52,7 @@ describe('@otpjs/matching/advanced', function() {
                     matching.buildCase(fn);
                 });
 
-                it('returns a compiled case block', function() {
+                it('returns a compiled case block', function () {
                     fn = sinon.spy((kase) => {
                         kase(Number.isInteger, numbersOnly);
                         kase(_, catchAll);
@@ -62,12 +61,12 @@ describe('@otpjs/matching/advanced', function() {
                     expect(block).to.be.an.instanceOf(Object);
                 });
 
-                describe('compiled case block', function() {
+                describe('compiled case block', function () {
                     let block;
                     let handlerA;
                     let handlerB;
                     let handlerC;
-                    beforeEach(function() {
+                    beforeEach(function () {
                         handlerA = handler((_value) => 0);
                         handlerB = handler((_value) => 1);
                         handlerC = handler((_value) => 2);
@@ -78,9 +77,9 @@ describe('@otpjs/matching/advanced', function() {
                         };
                         block = matching.buildCase(fn);
                     });
-                    describe('has properties "for" and "with"', function() {
-                        describe('for', function() {
-                            it('returns the first matching handler without calling it', function() {
+                    describe('has properties "for" and "with"', function () {
+                        describe('for', function () {
+                            it('returns the first matching handler without calling it', function () {
                                 expect(block.for(t(0, 0))).to.equal(handlerA);
                                 expect(handlerA.inner).not.to.have.been.called;
                                 expect(handlerB.inner).not.to.have.been.called;
@@ -97,8 +96,8 @@ describe('@otpjs/matching/advanced', function() {
                                 expect(handlerC.inner).not.to.have.been.called;
                             });
 
-                            describe('with no matching handler', function() {
-                                it('throws a case_clause error', function() {
+                            describe('with no matching handler', function () {
+                                it('throws a case_clause error', function () {
                                     let error;
                                     expect(() => {
                                         try {
@@ -114,8 +113,8 @@ describe('@otpjs/matching/advanced', function() {
                                 });
                             });
                         });
-                        describe('with', function() {
-                            it('runs the first matching handler', function() {
+                        describe('with', function () {
+                            it('runs the first matching handler', function () {
                                 expect(block.with(t(0, 0))).to.equal(0);
                                 expect(handlerA.inner).to.have.been.called;
                                 expect(handlerB.inner).not.to.have.been.called;
@@ -136,8 +135,8 @@ describe('@otpjs/matching/advanced', function() {
                                 expect(handlerC.inner).to.have.been.called;
                             });
 
-                            describe('with no matching handler', function() {
-                                it('throws a case_clause error', function() {
+                            describe('with no matching handler', function () {
+                                it('throws a case_clause error', function () {
                                     let error;
                                     expect(() => {
                                         try {
@@ -158,28 +157,28 @@ describe('@otpjs/matching/advanced', function() {
             });
         });
     });
-    describe('clauses', function() {
-        it('takes a "build function" argument', function() {
+    describe('clauses', function () {
+        it('takes a "build function" argument', function () {
             const fn = sinon.spy();
-            expect(function() {
+            expect(function () {
                 matching.clauses();
             }).to.throw();
-            expect(function() {
+            expect(function () {
                 matching.clauses(fn);
             }).not.to.throw();
         });
-        describe('build function', function() {
+        describe('build function', function () {
             let fn;
-            beforeEach(function() {
+            beforeEach(function () {
                 fn = sinon.spy();
             });
-            it('is called with "build case" helper method', function() {
+            it('is called with "build case" helper method', function () {
                 matching.clauses(fn);
                 expect(fn).to.have.callCount(1);
                 expect(fn.getCall(0).args[0]).to.be.an.instanceOf(Function);
             });
-            describe('clause builder', function() {
-                it('returns a clause mapper', function() {
+            describe('clause builder', function () {
+                it('returns a clause mapper', function () {
                     matching.clauses((kase) => {
                         const mapperA = kase(Number.isInteger);
                         expect(mapperA).to.be.an.instanceOf(Object);
@@ -187,30 +186,30 @@ describe('@otpjs/matching/advanced', function() {
                     });
                 });
 
-                describe('clause mapper', function() {
-                    it('needs a handler function', function() {
+                describe('clause mapper', function () {
+                    it('needs a handler function', function () {
                         matching.clauses((route) => {
                             const mapper = route(Number.isInteger);
-                            expect(function() {
+                            expect(function () {
                                 mapper.to();
                             }).to.throw();
                         });
                         matching.clauses((route) => {
                             const mapper = route(Number.isInteger);
-                            expect(function() {
+                            expect(function () {
                                 mapper.to(() => true);
                             }).not.to.throw();
                         });
                     });
                 });
             });
-            describe('compiled clauses', function() {
+            describe('compiled clauses', function () {
                 let fn;
                 let handlerA;
                 let handlerB;
                 let handlerC;
 
-                beforeEach(function() {
+                beforeEach(function () {
                     handlerA = handler((value) => 0);
                     handlerB = handler((value) => 1);
                     handlerC = handler((value) => 2);
@@ -221,7 +220,7 @@ describe('@otpjs/matching/advanced', function() {
                     });
                 });
 
-                it('returns the first handler matching the arguments', function() {
+                it('returns the first handler matching the arguments', function () {
                     expect(fn(0, 0)).to.equal(0);
                     expect(handlerA.inner).to.have.been.called;
                     expect(handlerB.inner).not.to.have.been.called;
@@ -241,32 +240,32 @@ describe('@otpjs/matching/advanced', function() {
                     expect(handlerB.inner).not.to.have.been.called;
                     expect(handlerC.inner).to.have.been.called;
                 });
-                describe('a skip-marked argument', function() {
-                    it('is not considered', function() {
+                describe('a skip-marked argument', function () {
+                    it('is not considered', function () {
                         const skipMe = { [skip_matching]: true };
-                        expect(function() {
+                        expect(function () {
                             fn(skipMe, 0, 0);
                         }).not.to.throw();
                         expect(handlerA.inner).to.have.been.called;
 
                         sinon.reset();
 
-                        expect(function() {
+                        expect(function () {
                             fn(0, skipMe, 1);
                         }).not.to.throw();
                         expect(handlerB.inner).to.have.been.called;
 
                         sinon.reset();
 
-                        expect(function() {
+                        expect(function () {
                             fn(1, 1, skipMe);
                         }).not.to.throw();
                         expect(handlerC.inner).to.have.been.called;
                     });
                 });
 
-                describe('with no matching handler', function() {
-                    it('throws a route_clause error', function() {
+                describe('with no matching handler', function () {
+                    it('throws a route_clause error', function () {
                         let error;
                         expect(() => {
                             try {
@@ -284,20 +283,20 @@ describe('@otpjs/matching/advanced', function() {
             });
         });
     });
-    describe('kase', function() {
-        it('returns a kase block', function() {
+    describe('kase', function () {
+        it('returns a kase block', function () {
             expect(() => matching.kase()).not.to.throw();
             const blockBuilder = matching.kase();
             expect(blockBuilder).to.be.an.instanceOf(Object);
             expect(blockBuilder.of).to.be.an.instanceOf(Function);
         });
 
-        describe('block', function() {
+        describe('block', function () {
             let block;
-            beforeEach(function() {
+            beforeEach(function () {
                 block = matching.kase();
             });
-            it('runs a provided builder function', function() {
+            it('runs a provided builder function', function () {
                 const block = matching.kase();
                 const result = block.of((builder) => {
                     expect(builder).to.be.an.instanceOf(Function);
@@ -305,13 +304,13 @@ describe('@otpjs/matching/advanced', function() {
                     expect(clause).to.be.an.instanceOf(Object);
                     expect(clause.then).to.be.an.instanceOf(Function);
                     expect(clause.when).to.be.an.instanceOf(Function);
-                    clause.then(() => ok);
+                    clause.then(() => true);
                 });
-                expect(result).to.equal(ok);
+                expect(result).to.equal(true);
             });
-            describe('with a matching clause', function() {
-                describe('with no guards', function() {
-                    it('returns the result of that clause', function() {
+            describe('with a matching clause', function () {
+                describe('with no guards', function () {
+                    it('returns the result of that clause', function () {
                         const payload = 123;
                         const isNumber = sinon.spy((id) => id);
                         const isArray = sinon.spy((id) => id);
@@ -324,8 +323,8 @@ describe('@otpjs/matching/advanced', function() {
                         expect(isArray).not.to.have.been.called;
                     });
                 });
-                describe('with passing guards', function() {
-                    it('returns the result of that clause', function() {
+                describe('with passing guards', function () {
+                    it('returns the result of that clause', function () {
                         const payload = 123;
                         const isNumber = sinon.spy((id) => id);
                         const isArray = sinon.spy((id) => id);
@@ -342,8 +341,8 @@ describe('@otpjs/matching/advanced', function() {
                         expect(isArray).not.to.have.been.called;
                     });
                 });
-                describe('with failing guards', function() {
-                    it('throws a case_clause error', function() {
+                describe('with failing guards', function () {
+                    it('throws a case_clause error', function () {
                         const payload = 123;
                         const isNumber = sinon.spy();
                         const isArray = sinon.spy();
@@ -363,13 +362,13 @@ describe('@otpjs/matching/advanced', function() {
                     });
                 });
             });
-            describe('without a matching clause', function() {
-                it('throws a case_clause error', function() {
+            describe('without a matching clause', function () {
+                it('throws a case_clause error', function () {
                     const payload = '123';
                     const isNumber = sinon.spy();
                     const isArray = sinon.spy();
 
-                    expect(function() {
+                    expect(function () {
                         matching.kase(payload).of((match) => {
                             match(Number.isInteger).then(isNumber);
                             match(Array.isArray).then(isArray);
