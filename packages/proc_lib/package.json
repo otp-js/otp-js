@@ -1,51 +1,50 @@
 {
-  "name": "@otpjs/proc_lib",
-  "version": "1.0.0-next.0",
-  "description": "An implementation of the proc_lib functionality of Erlang",
-  "keywords": [
-    "erlang",
-    "otp",
-    "open",
-    "telecom",
-    "platform",
-    "javascript"
-  ],
-  "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
-  "type": "module",
-  "homepage": "https://otpjs.dev",
-  "license": "MIT",
-  "main": "lib/index.js",
-  "directories": {
-    "lib": "lib",
-    "test": "__tests__"
-  },
-  "files": [
-    "lib"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/otp-js/otp-js.git"
-  },
-  "scripts": {
-    "test": "mocha '__tests__/**/*.test.js'",
-    "lint": "eslint src"
-  },
-  "bugs": {
-    "url": "https://github.com/otp-js/otp-js/issues"
-  },
-  "dependencies": {
-    "@otpjs/core": "file:../core"
-  },
-  "devDependencies": {
-    "@otpjs/test_utils": "file:../test_utils",
-    "chai": "^6.2.2",
-    "chai-as-promised": "^8.0.2",
-    "mocha": "^11.7.5",
-    "sinon": "^21.0.3",
-    "sinon-chai": "^4.0.1"
-  },
-  "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e"
+    "name": "@otpjs/proc_lib",
+    "version": "1.0.0-next.0",
+    "description": "An implementation of the proc_lib functionality of Erlang",
+    "keywords": [
+        "erlang",
+        "otp",
+        "open",
+        "telecom",
+        "platform",
+        "javascript"
+    ],
+    "author": "Zachary Hueras <zhueras@amdtelemedicine.com>",
+    "type": "module",
+    "homepage": "https://otpjs.dev",
+    "license": "MIT",
+    "main": "lib/index.js",
+    "directories": {
+        "lib": "lib",
+        "test": "__tests__"
+    },
+    "files": [
+        "lib"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/otp-js/otp-js.git"
+    },
+    "scripts": {
+        "test": "mocha '__tests__/**/*.test.js'",
+        "lint": "eslint src"
+    },
+    "bugs": {
+        "url": "https://github.com/otp-js/otp-js/issues"
+    },
+    "dependencies": {
+        "@otpjs/core": "file:../core"
+    },
+    "devDependencies": {
+        "chai": "^6.2.2",
+        "chai-as-promised": "^8.0.2",
+        "mocha": "^11.7.5",
+        "sinon": "^21.0.3",
+        "sinon-chai": "^4.0.1"
+    },
+    "gitHead": "0dbbec0fdb6cd005d8d52e7b169763d084d84e0e"
 }
