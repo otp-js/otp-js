@@ -1,4 +1,3 @@
-import { ok } from '@otpjs/core/symbols';
 import { cons, list, OTPError, tuple, t } from '@otpjs/types';
 import debug from 'debug';
 import { compile, compare } from './core.js';
