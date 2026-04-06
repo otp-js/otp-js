@@ -1,55 +1,58 @@
 {
-        "name": "root",
-        "version": "0.18.0",
-        "private": true,
-        "type": "module",
-        "scripts": {
-                "lint": "nx run-many --target=lint",
-                "test": "nx run-many --target=test"
-        },
-        "devDependencies": {
-                "@nrwl/nx-cloud": "^19.1.0",
-                "@otpjs/core": "file:packages/core",
-                "@otpjs/gen": "file:packages/gen",
-                "@otpjs/gen_server": "file:packages/gen_server",
-                "@otpjs/proc_lib": "file:packages/proc_lib",
-                "@otpjs/supervisor": "file:packages/supervisor",
-                "@otpjs/transports-socket.io": "file:transports/socket.io",
-                "@semantic-release/changelog": "^6.0.3",
-                "@semantic-release/git": "^10.0.1",
-                "@semantic-release/npm": "^13.1.5",
-                "c8": "^11.0.0",
-                "chai": "^6.2.2",
-                "chai-as-promised": "^8.0.2",
-                "coveralls": "^3.1.1",
-                "lerna": "^9.0.7",
-                "mocha": "^11.7.5",
-                "monocart-coverage-reports": "^2.12.9",
-                "nx": "^22.6.1",
-                "semantic-release": "^25.0.3",
-                "semantic-release-lerna": "^2.18.1",
-                "sinon": "^21.0.3",
-                "sinon-chai": "^4.0.1",
-                "socket.io": "^4.8.3",
-                "socket.io-client": "^4.8.3",
-                "source-map-support": "^0.5.21"
-        },
-        "workspaces": [
-                "packages/core",
-                "packages/gen",
-                "packages/gen_server",
-                "packages/matching",
-                "packages/node",
-                "packages/proc_lib",
-                "packages/supervisor",
-                "packages/types",
-                "packages/cluster",
-                "serializers/json",
-                "transports/socket.io"
-        ],
-        "dependencies": {
-                "@otpjs/serializer-ertf": "file:serializers/ertf",
-                "@otpjs/transports-epmd": "file:transports/epmd",
-                "@otpjs/transports-tcp": "file:transports/tcp"
-        }
+    "name": "root",
+    "version": "0.18.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "lint": "nx run-many --target=lint",
+        "test": "nx run-many --target=test"
+    },
+    "devDependencies": {
+        "@nrwl/nx-cloud": "^19.1.0",
+        "@otpjs/core": "file:packages/core",
+        "@otpjs/gen": "file:packages/gen",
+        "@otpjs/gen_server": "file:packages/gen_server",
+        "@otpjs/proc_lib": "file:packages/proc_lib",
+        "@otpjs/supervisor": "file:packages/supervisor",
+        "@otpjs/transports-socket.io": "file:transports/socket.io",
+        "@semantic-release/changelog": "^6.0.3",
+        "@semantic-release/git": "^10.0.1",
+        "@semantic-release/npm": "^13.1.5",
+        "c8": "^11.0.0",
+        "chai": "^6.2.2",
+        "chai-as-promised": "^8.0.2",
+        "coveralls": "^3.1.1",
+        "lerna": "^9.0.7",
+        "mocha": "^11.7.5",
+        "monocart-coverage-reports": "^2.12.9",
+        "nx": "^22.6.1",
+        "semantic-release": "^25.0.3",
+        "semantic-release-lerna": "^2.18.1",
+        "sinon": "^21.0.3",
+        "sinon-chai": "^4.0.1",
+        "socket.io": "^4.8.3",
+        "socket.io-client": "^4.8.3",
+        "source-map-support": "^0.5.21"
+    },
+    "workspaces": [
+        "packages/core",
+        "packages/gen",
+        "packages/gen_server",
+        "packages/matching",
+        "packages/node",
+        "packages/proc_lib",
+        "packages/supervisor",
+        "packages/types",
+        "packages/cluster",
+        "serializers/json",
+        "transports/socket.io"
+    ],
+    "dependencies": {
+        "@otpjs/serializer-ertf": "file:serializers/ertf",
+        "@otpjs/transports-epmd": "file:transports/epmd",
+        "@otpjs/transports-tcp": "file:transports/tcp"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
 }
