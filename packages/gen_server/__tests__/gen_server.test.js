@@ -25,7 +25,9 @@ const { _, spread } = matching.Symbols;
 const { reply, noreply, stop } = gen_server.Symbols;
 const stop_ignore = Symbol.for('stop_ignore');
 
-async function wait(ms = 50) {
+const WAIT_MS = 50;
+
+async function wait(ms = WAIT_MS) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -91,28 +93,28 @@ function describeGenServer() {
     let node = null;
     let ctx = null;
 
-    beforeEach(function() {
+    beforeEach(function () {
         node = new Node();
         ctx = node.makeContext();
         ctx.processFlag(trap_exit, true);
     });
 
-    describe('during startup', function() {
-        it('returns the tuple {ok, Pid}', async function() {
+    describe('during startup', function () {
+        it('returns the tuple {ok, Pid}', async function () {
             expect(gen_server.start).to.be.an.instanceOf(Function);
 
             expect(await gen_server.start(ctx, callbacks)).to.matchPattern(
                 t(ok, Pid.isPid)
             );
         });
-        it('can be linked', async function() {
+        it('can be linked', async function () {
             expect(gen_server.startLink).to.be.an.instanceOf(Function);
 
             const [_ok, pid] = await gen_server.startLink(ctx, callbacks);
             expect(pid).to.be.an.instanceOf(Pid);
         });
 
-        it('fails if the init callback errors', async function() {
+        it('fails if the init callback errors', async function () {
             const response = await gen_server.start(ctx, {
                 ...callbacks,
                 init,
@@ -127,7 +129,7 @@ function describeGenServer() {
             }
         });
 
-        it('fails if the init callback indicates stopping', async function() {
+        it('fails if the init callback indicates stopping', async function () {
             const response = await gen_server.start(ctx, {
                 ...callbacks,
                 init,
@@ -141,7 +143,7 @@ function describeGenServer() {
             }
         });
 
-        it('fails if the init callback returns an unhandled response', async function() {
+        it('fails if the init callback returns an unhandled response', async function () {
             const response = gen_server.start(ctx, { ...callbacks, init });
             expect(response).to.eventually.matchPattern(
                 t(error, { term: 'invalid_init_response', [spread]: _ })
@@ -151,7 +153,7 @@ function describeGenServer() {
             }
         });
 
-        it('sends an exit signal if the init callback fails', async function() {
+        it('sends an exit signal if the init callback fails', async function () {
             let resolvePid;
             const promisedPid = new Promise(
                 (resolve) => (resolvePid = resolve)
@@ -181,8 +183,8 @@ function describeGenServer() {
             }
         });
     });
-    describe('through messaging', function() {
-        it('receives calls', async function() {
+    describe('through messaging', function () {
+        it('receives calls', async function () {
             expect(gen_server.call).to.be.an.instanceOf(Function);
 
             const [_ok, pid] = await gen_server.start(ctx, callbacks);
@@ -197,7 +199,7 @@ function describeGenServer() {
             expect(resultB).to.equal(value);
         });
 
-        it('receives casts', async function() {
+        it('receives casts', async function () {
             expect(gen_server.cast).to.be.an.instanceOf(Function);
 
             const [_ok, pid] = await gen_server.start(ctx, callbacks);
@@ -210,7 +212,7 @@ function describeGenServer() {
             expect(result).to.equal(value);
         });
 
-        it('receives arbitrary messages', async function() {
+        it('receives arbitrary messages', async function () {
             const [_ok, pid] = await gen_server.start(ctx, callbacks);
             const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
@@ -221,8 +223,8 @@ function describeGenServer() {
             expect(result).to.equal(value);
         });
     });
-    describe('when reacting to messages', function() {
-        it('does not throw an error if stopped normally', async function() {
+    describe('when reacting to messages', function () {
+        it('does not throw an error if stopped normally', async function () {
             const response = await gen_server.start(ctx, {
                 ...callbacks,
                 init,
@@ -235,7 +237,7 @@ function describeGenServer() {
                 return t(stop, reason);
             }
         });
-        it('throws an error if it responds abnormally', async function() {
+        it('throws an error if it responds abnormally', async function () {
             const [, pid] = await gen_server.startLink(ctx, {
                 ...callbacks,
                 handleCast,
@@ -256,14 +258,16 @@ function describeGenServer() {
             }
         });
 
-        describe('like exit signals', function() {
-            describe('with trap_exit', function() {
-                it('receives the message via handleInfo', async function() {
+        describe('like exit signals', function () {
+            describe('with trap_exit', function () {
+                it('receives the message via handleInfo', async function () {
                     const reason = Math.floor(
                         Math.random() * Number.MAX_SAFE_INTEGER
                     );
                     const handleInfo = sinon.spy((ctx, info, state) => {
-                        expect(info).to.matchPattern(t(EXIT, Pid.isPid, reason));
+                        expect(info).to.matchPattern(
+                            t(EXIT, Pid.isPid, reason)
+                        );
                         return t(noreply, state);
                     });
                     const init = sinon.spy(async (ctx) => {
@@ -283,23 +287,28 @@ function describeGenServer() {
                     expect(handleInfo).to.have.been.called;
                 });
             });
-            describe('without trap_exit', function() { });
+            describe('without trap_exit', function () {});
         });
-        describe('its response patterns', function() {
-            describe('when handling a call', function() {
-                describe('given a reply with a timeout', function() {
+        describe('its response patterns', function () {
+            describe('when handling a call', function () {
+                describe('given a reply with a timeout', function () {
                     let handleCall;
                     let handleInfo;
                     let callbacks;
                     let server;
                     let serverCtx;
 
-                    beforeEach(async function() {
+                    beforeEach(async function () {
                         handleInfo = sinon.spy((_ctx, _info, state) =>
                             t(noreply, state)
                         );
                         handleCall = sinon.spy((_ctx, _call, _from, state) =>
-                            t(reply, 'call reply', state, 100)
+                            t(
+                                reply,
+                                'call reply',
+                                state,
+                                Math.floor(WAIT_MS / 2)
+                            )
                         );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCall(_, handleCall);
@@ -312,15 +321,15 @@ function describeGenServer() {
                         gen_server.enterLoop(serverCtx, callbacks, {});
                     });
 
-                    it('sends the reply to the caller', async function() {
+                    it('sends the reply to the caller', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call')
                         ).to.eventually.matchPattern('call reply');
                         expect(handleCall).to.have.been.called;
                     });
-                    it('sends itself a message when timeout expires', async function() {
+                    it('sends itself a message when timeout expires', async function () {
                         await gen_server.call(ctx, server, 'call');
-                        await wait(100);
+                        await wait(WAIT_MS);
                         expect(handleInfo).to.have.been.calledWithPattern(
                             _,
                             timeout,
@@ -328,14 +337,14 @@ function describeGenServer() {
                         );
                     });
                 });
-                describe('given a reply with no timeout', function() {
+                describe('given a reply with no timeout', function () {
                     let handleCall;
                     let handleInfo;
                     let callbacks;
                     let server;
                     let serverCtx;
 
-                    beforeEach(async function() {
+                    beforeEach(async function () {
                         handleInfo = sinon.spy((_ctx, _info, state) =>
                             t(noreply, state)
                         );
@@ -353,21 +362,21 @@ function describeGenServer() {
                         gen_server.enterLoop(serverCtx, callbacks, {});
                     });
 
-                    it('sends the reply to the caller', async function() {
+                    it('sends the reply to the caller', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call')
                         ).to.eventually.matchPattern('call reply');
                         expect(handleCall).to.have.been.called;
                     });
                 });
-                describe('given noreply with no timeout', function() {
+                describe('given noreply with no timeout', function () {
                     let handleCall;
                     let handleInfo;
                     let callbacks;
                     let server;
                     let serverCtx;
 
-                    beforeEach(async function() {
+                    beforeEach(async function () {
                         handleInfo = sinon.spy((_ctx, _info, state) =>
                             t(noreply, state)
                         );
@@ -385,7 +394,7 @@ function describeGenServer() {
                         gen_server.enterLoop(serverCtx, callbacks, {});
                     });
 
-                    it('waits for the next message', async function() {
+                    it('waits for the next message', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'without', 100)
                         ).to.be.rejectedWithTerm(timeout);
@@ -393,19 +402,19 @@ function describeGenServer() {
                         expect(handleInfo).not.to.have.been.called;
                     });
                 });
-                describe('given noreply with a timeout', function() {
+                describe('given noreply with a timeout', function () {
                     let handleCall;
                     let handleInfo;
                     let callbacks;
                     let server;
                     let serverCtx;
 
-                    beforeEach(async function() {
+                    beforeEach(async function () {
                         handleInfo = sinon.spy((_ctx, _info, state) =>
                             t(noreply, state)
                         );
                         handleCall = sinon.spy((_ctx, _call, _from, state) =>
-                            t(noreply, state, 100)
+                            t(noreply, state, Math.floor(WAIT_MS))
                         );
                         callbacks = gen_server.callbacks((server) => {
                             server.onCall(_, handleCall);
@@ -418,13 +427,13 @@ function describeGenServer() {
                         gen_server.enterLoop(serverCtx, callbacks, {});
                     });
 
-                    it('waits for the next message', async function() {
+                    it('waits for the next message', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'without', 100)
                         ).to.be.rejectedWithTerm(timeout);
                         expect(handleCall).to.have.been.called;
                     });
-                    it('sends itself a message when timeout expires', async function() {
+                    it('sends itself a message when timeout expires', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call', 100)
                         ).to.be.rejectedWithTerm(timeout);
@@ -436,7 +445,7 @@ function describeGenServer() {
                         );
                     });
                 });
-                describe('given stop with a reply', function() {
+                describe('given stop with a reply', function () {
                     let handleCall;
                     let handleInfo;
                     let handleTerminate;
@@ -444,7 +453,7 @@ function describeGenServer() {
                     let server;
                     let serverCtx;
 
-                    beforeEach(async function() {
+                    beforeEach(async function () {
                         handleInfo = sinon.spy((_ctx, _info, state) =>
                             t(noreply, state)
                         );
@@ -467,16 +476,16 @@ function describeGenServer() {
                         gen_server.enterLoop(serverCtx, callbacks, {});
                     });
 
-                    it('sends the reply to the caller', async function() {
+                    it('sends the reply to the caller', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call')
                         ).to.eventually.matchPattern('call reply');
                         expect(handleCall).to.have.been.called;
                     });
-                    it('terminates the server', async function() {
+                    it('terminates the server', async function () {
                         await gen_server.call(ctx, server, 'call');
                         expect(handleCall).to.have.been.called;
-                        await wait(50);
+                        await wait(WAIT_MS);
                         expect(handleTerminate).to.have.been.calledWithPattern(
                             _,
                             normal,
@@ -484,14 +493,14 @@ function describeGenServer() {
                         );
                     });
                 });
-                describe('throwing an Error instance', function() {
+                describe('throwing an Error instance', function () {
                     let handleCall;
                     let handleTerminate;
                     let callbacks;
                     let server;
                     let serverCtx;
 
-                    beforeEach(async function() {
+                    beforeEach(async function () {
                         handleCall = sinon.spy((_ctx, _call, _from, state) => {
                             throw Error('test error');
                         });
@@ -511,18 +520,18 @@ function describeGenServer() {
                         gen_server.enterLoop(serverCtx, callbacks, {});
                     });
 
-                    it('exits the caller for the same reason', async function() {
+                    it('exits the caller for the same reason', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call', 500)
                         ).to.be.rejectedWithTerm('test error');
                         expect(handleCall).to.have.been.called;
                     });
-                    it('terminates the server', async function() {
+                    it('terminates the server', async function () {
                         await expect(
                             gen_server.call(ctx, server, 'call', 500)
                         ).to.be.rejectedWithTerm(_);
                         expect(handleCall).to.have.been.called;
-                        await wait(50);
+                        await wait(WAIT_MS);
                         expect(handleTerminate).to.have.been.calledWithPattern(
                             _,
                             'test error',
@@ -531,15 +540,15 @@ function describeGenServer() {
                     });
                 });
             });
-            describe('when handling a cast', function() {
-                describe('given noreply with no timeout', function() {
+            describe('when handling a cast', function () {
+                describe('given noreply with no timeout', function () {
                     let handleCast;
                     let handleInfo;
                     let callbacks;
                     let server;
                     let serverCtx;
 
-                    beforeEach(async function() {
+                    beforeEach(async function () {
                         handleInfo = sinon.spy((_ctx, _info, state) =>
                             t(noreply, state)
                         );
@@ -557,7 +566,7 @@ function describeGenServer() {
                         gen_server.enterLoop(serverCtx, callbacks, {});
                     });
 
-                    it('waits for the next message', async function() {
+                    it('waits for the next message', async function () {
                         await expect(
                             gen_server.cast(ctx, server, 'without')
                         ).to.eventually.equal(ok);
@@ -566,14 +575,14 @@ function describeGenServer() {
                         expect(handleInfo).not.to.have.been.called;
                     });
                 });
-                describe('given noreply with a timeout', function() {
+                describe('given noreply with a timeout', function () {
                     let handleCast;
                     let handleInfo;
                     let callbacks;
                     let server;
                     let serverCtx;
 
-                    beforeEach(async function() {
+                    beforeEach(async function () {
                         handleInfo = sinon.spy((_ctx, _info, state) =>
                             t(noreply, state)
                         );
@@ -591,14 +600,14 @@ function describeGenServer() {
                         gen_server.enterLoop(serverCtx, callbacks, {});
                     });
 
-                    it('waits for the next message', async function() {
+                    it('waits for the next message', async function () {
                         await expect(
                             gen_server.cast(ctx, server, 'without', 100)
                         ).to.eventually.equal(ok);
                         await wait(200);
                         expect(handleCast).to.have.been.called;
                     });
-                    it('sends itself a message when timeout expires', async function() {
+                    it('sends itself a message when timeout expires', async function () {
                         await expect(
                             gen_server.cast(ctx, server, 'call', 100)
                         ).to.eventually.equal(ok);
@@ -610,7 +619,7 @@ function describeGenServer() {
                         );
                     });
                 });
-                describe('given stop with no reply', function() {
+                describe('given stop with no reply', function () {
                     let handleCast;
                     let handleInfo;
                     let handleTerminate;
@@ -618,7 +627,7 @@ function describeGenServer() {
                     let server;
                     let serverCtx;
 
-                    beforeEach(async function() {
+                    beforeEach(async function () {
                         handleInfo = sinon.spy((_ctx, _info, state) =>
                             t(noreply, state)
                         );
@@ -641,11 +650,11 @@ function describeGenServer() {
                         gen_server.enterLoop(serverCtx, callbacks, {});
                     });
 
-                    it('terminates the server', async function() {
+                    it('terminates the server', async function () {
                         await gen_server.cast(ctx, server, 'cast');
                         await wait();
                         expect(handleCast).to.have.been.called;
-                        await wait(50);
+                        await wait(WAIT_MS);
                         expect(handleTerminate).to.have.been.calledWithPattern(
                             _,
                             normal,
@@ -653,14 +662,14 @@ function describeGenServer() {
                         );
                     });
                 });
-                describe('throwing an Error instance', function() {
+                describe('throwing an Error instance', function () {
                     let handleCast;
                     let handleTerminate;
                     let callbacks;
                     let server;
                     let serverCtx;
 
-                    beforeEach(async function() {
+                    beforeEach(async function () {
                         handleCast = sinon.spy((_ctx, _cast, _state) => {
                             throw Error('test error');
                         });
@@ -680,13 +689,13 @@ function describeGenServer() {
                         gen_server.enterLoop(serverCtx, callbacks, {});
                     });
 
-                    it('terminates the server', async function() {
+                    it('terminates the server', async function () {
                         await expect(
                             gen_server.cast(ctx, server, 'cast')
                         ).to.eventually.equal(ok);
                         await wait();
                         expect(handleCast).to.have.been.called;
-                        await wait(50);
+                        await wait(WAIT_MS);
                         expect(handleTerminate).to.have.been.calledWithPattern(
                             _,
                             'test error',
@@ -697,15 +706,15 @@ function describeGenServer() {
             });
         });
     });
-    describe('when terminating', function() {
-        describe('given a terminate callback', function() {
-            describe('which throws an OTPError', function() {
+    describe('when terminating', function () {
+        describe('given a terminate callback', function () {
+            describe('which throws an OTPError', function () {
                 let ctx;
                 let serverCtx;
                 let handleCall;
                 let terminate;
                 let pid;
-                beforeEach(function() {
+                beforeEach(function () {
                     ctx = node.makeContext();
                     ctx.processFlag(trap_exit, true);
                     serverCtx = node.makeContext();
@@ -726,11 +735,11 @@ function describeGenServer() {
                     gen_server.enterLoop(serverCtx, callbacks, {});
                 });
 
-                it('exits with the termination error', async function() {
+                it('exits with the termination error', async function () {
                     await expect(
                         gen_server.call(ctx, pid, 'fake')
                     ).to.be.rejectedWithTerm('bad terminate');
-                    await wait(50);
+                    await wait(WAIT_MS);
                     expect(terminate).to.have.been.calledWithPattern(
                         _,
                         'bad call',
@@ -742,13 +751,13 @@ function describeGenServer() {
                     });
                 });
             });
-            describe('which throws an Error', function() {
+            describe('which throws an Error', function () {
                 let ctx;
                 let serverCtx;
                 let handleCall;
                 let terminate;
                 let pid;
-                beforeEach(function() {
+                beforeEach(function () {
                     ctx = node.makeContext();
                     ctx.processFlag(trap_exit, true);
                     serverCtx = node.makeContext();
@@ -769,11 +778,11 @@ function describeGenServer() {
                     gen_server.enterLoop(serverCtx, callbacks, {});
                 });
 
-                it('exits with the termination error', async function() {
+                it('exits with the termination error', async function () {
                     await expect(
                         gen_server.call(ctx, pid, 'fake')
                     ).to.be.rejectedWithTerm('bad terminate');
-                    await wait(50);
+                    await wait(WAIT_MS);
                     expect(terminate).to.have.been.calledWithPattern(
                         _,
                         'bad call',
@@ -785,7 +794,7 @@ function describeGenServer() {
                     });
                 });
             });
-            it('invokes the callback and terminates the server', async function() { });
+            it('invokes the callback and terminates the server', async function () {});
         });
     });
 
@@ -810,7 +819,9 @@ function describeGenServer() {
         [
             'cast',
             (ctx, pid, message) =>
-                expect(gen_server.cast(ctx, pid, message)).to.eventually.equal(ok),
+                expect(gen_server.cast(ctx, pid, message)).to.eventually.equal(
+                    ok
+                ),
         ],
         [
             'info',
@@ -819,35 +830,32 @@ function describeGenServer() {
     ];
 
     // Use these if testing a single method instead of the foreach wrapper
-    // const methodName = methods[0][0];
-    // const method = methods[0][1];
-    // it.only(`dies when the ${methodName} callback handler throws an error`, async function() {
+    // Don't forget about the line below that needs to be commented out too
+    //const type = methods[0][0];
+    //const method = methods[0][1];
+    //it.only(`dies when the ${type} callback handler throws an error`, async function () {
     methods.forEach(([type, method]) => {
-        it(`dies when the ${type} callback handler throws an OTPError`, async function() {
+        it(`dies when the ${type} callback handler throws an OTPError`, async function () {
             const [, pid] = await gen_server.startLink(ctx, callbacks);
-
-            await wait(100);
 
             const message = 'die';
             await method(ctx, pid, message);
 
-            await wait(100);
+            await wait(WAIT_MS);
 
             await expect(ctx.receive()).to.eventually.matchPattern(
                 t(EXIT, pid, _)
             );
         });
 
-        it(`dies when the ${type} callback handler throws an Error`, async function() {
+        it(`dies when the ${type} callback handler throws an Error`, async function () {
             const [, pid] = await gen_server.startLink(ctx, callbacks);
-
-            await wait(100);
 
             const reason = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
             const message = t('error', reason);
             await method(ctx, pid, message);
 
-            await wait(100);
+            await wait(WAIT_MS);
 
             await expect(ctx.receive()).to.eventually.matchPattern(
                 t(EXIT, pid, _)
@@ -856,13 +864,13 @@ function describeGenServer() {
     });
     // Above line goes away when testing single method
 
-    describe('callback builder', function() {
-        it('calls the passed function', function() {
+    describe('callback builder', function () {
+        it('calls the passed function', function () {
             const fn = sinon.spy();
             gen_server.callbacks(fn);
             expect(fn).to.have.been.called;
         });
-        it('receives an object of helper methods', function() {
+        it('receives an object of helper methods', function () {
             const fn = sinon.spy();
             gen_server.callbacks(fn);
             expect(fn.getCall(0).args[0]).to.be.an.instanceOf(Object);
@@ -874,7 +882,7 @@ function describeGenServer() {
             expect(server).to.have.property('onInfo');
             expect(server).to.have.property('onTerminate');
         });
-        it('produces a server callback interface', function() {
+        it('produces a server callback interface', function () {
             const init = sinon.spy((_ctx) => t(ok, {}));
             const calls = sinon.spy((_ctx, _call, _from, state) =>
                 t(noreply, state)
@@ -882,7 +890,7 @@ function describeGenServer() {
             const casts = sinon.spy((_ctx, _cast, state) => t(noreply, state));
             const info = sinon.spy((_ctx, _info, state) => t(noreply, state));
             const terminate = sinon.spy((_ctx, _reason, _state) => ok);
-            const fn = sinon.spy(function(server) {
+            const fn = sinon.spy(function (server) {
                 server.onInit(init);
                 server.onCall(_, calls);
                 server.onCast(_, casts);
@@ -899,10 +907,10 @@ function describeGenServer() {
             expect(callbacks).to.have.property('terminate');
         });
 
-        describe('when started', function() {
-            describe('given the arguments', function() {
-                describe('ctx, name, and callbacks', function() {
-                    it('registers the server under that name', async function() {
+        describe('when started', function () {
+            describe('given the arguments', function () {
+                describe('ctx, name, and callbacks', function () {
+                    it('registers the server under that name', async function () {
                         const name = Symbol.for('test_server');
                         const args = l();
                         const startPromise = gen_server.start(
@@ -920,8 +928,8 @@ function describeGenServer() {
                         expect(ctx.whereis(name)).to.matchPattern(pid);
                     });
                 });
-                describe('ctx, name, callbacks, and args', function() {
-                    it('registers the server under that name', async function() {
+                describe('ctx, name, callbacks, and args', function () {
+                    it('registers the server under that name', async function () {
                         const name = Symbol.for('test_server');
                         const startPromise = gen_server.start(
                             ctx,
@@ -937,8 +945,8 @@ function describeGenServer() {
                         expect(ctx.whereis(name)).to.matchPattern(pid);
                     });
                 });
-                describe('ctx, callbacks, and args', function() {
-                    it('starts the process', async function() {
+                describe('ctx, callbacks, and args', function () {
+                    it('starts the process', async function () {
                         const args = l(1, 2, 3);
                         const startPromise = gen_server.start(
                             ctx,
@@ -951,8 +959,8 @@ function describeGenServer() {
                         );
                     });
                 });
-                describe('ctx and callbacks', function() {
-                    it('starts the process', async function() {
+                describe('ctx and callbacks', function () {
+                    it('starts the process', async function () {
                         const startPromise = gen_server.start(ctx, callbacks);
 
                         await expect(startPromise).to.eventually.matchPattern(
@@ -960,22 +968,22 @@ function describeGenServer() {
                         );
                     });
                 });
-                describe('ctx only', function() {
-                    it('fails horribly', async function() {
+                describe('ctx only', function () {
+                    it('fails horribly', async function () {
                         await expect(
                             gen_server.start(ctx)
                         ).to.eventually.matchPattern(t(error, _));
                     });
                 });
-                describe('ctx and an explicit undefined', function() {
-                    it('fails horribly', async function() {
+                describe('ctx and an explicit undefined', function () {
+                    it('fails horribly', async function () {
                         await expect(
                             gen_server.start(ctx, undefined)
                         ).to.eventually.matchPattern(t(error, _));
                     });
                 });
             });
-            it('it calls the init callback provided', async function() {
+            it('it calls the init callback provided', async function () {
                 const init = sinon.spy((ctx) => t(ok, {}));
                 const callbacks = gen_server.callbacks((server) => {
                     server.onInit(init);
@@ -986,20 +994,20 @@ function describeGenServer() {
                 expect(init).to.have.callCount(1);
                 expect(init.getCall(0).args[1]).to.equal(arg);
             });
-            describe('init returns an ok response', function() {
-                describe('uses signal handlers', function() {
+            describe('init returns an ok response', function () {
+                describe('uses signal handlers', function () {
                     let init;
-                    beforeEach(function() {
+                    beforeEach(function () {
                         init = sinon.spy((ctx, arg) => t(ok, { arg }));
                     });
 
-                    describe('for calls', function() {
+                    describe('for calls', function () {
                         let onCallA;
                         let onCallB;
                         let onCallC;
                         let callbacks;
                         let server;
-                        beforeEach(async function() {
+                        beforeEach(async function () {
                             onCallA = sinon.spy((ctx, call, from, state) =>
                                 t(reply, ok, state)
                             );
@@ -1025,7 +1033,7 @@ function describeGenServer() {
                             server = pid;
                         });
 
-                        it('uses the first matching handler', async function() {
+                        it('uses the first matching handler', async function () {
                             await expect(
                                 gen_server.call(ctx, server, t(0, 0))
                             ).to.eventually.equal(ok);
@@ -1045,21 +1053,23 @@ function describeGenServer() {
                             expect(onCallC).to.have.callCount(1);
                         });
 
-                        it('dies if no handler is found', async function() {
+                        it('dies if no handler is found', async function () {
                             const message = Symbol('fake_call');
                             await expect(
                                 gen_server.call(ctx, server, message)
-                            ).to.be.rejectedWithTerm(t('unhandled_call', message));
+                            ).to.be.rejectedWithTerm(
+                                t('unhandled_call', message)
+                            );
                             expect(ctx.processInfo(server)).to.be.undefined;
                         });
                     });
-                    describe('for casts', function() {
+                    describe('for casts', function () {
                         let onCastA;
                         let onCastB;
                         let onCastC;
                         let callbacks;
                         let server;
-                        beforeEach(async function() {
+                        beforeEach(async function () {
                             onCastA = sinon.spy((ctx, cast, state) =>
                                 t(noreply, state)
                             );
@@ -1085,7 +1095,7 @@ function describeGenServer() {
                             server = pid;
                         });
 
-                        it('uses the first matching handler', async function() {
+                        it('uses the first matching handler', async function () {
                             await expect(
                                 gen_server.cast(ctx, server, t(0, 0))
                             ).to.eventually.equal(ok);
@@ -1108,7 +1118,7 @@ function describeGenServer() {
                             expect(onCastC).to.have.callCount(1);
                         });
 
-                        it('dies if no handler is found', async function() {
+                        it('dies if no handler is found', async function () {
                             const message = Symbol();
                             await expect(
                                 gen_server.cast(ctx, server, message)
@@ -1117,13 +1127,13 @@ function describeGenServer() {
                             expect(ctx.processInfo(server)).to.be.undefined;
                         });
                     });
-                    describe('for infos', function() {
+                    describe('for infos', function () {
                         let onInfoA;
                         let onInfoB;
                         let onInfoC;
                         let callbacks;
                         let server;
-                        beforeEach(async function() {
+                        beforeEach(async function () {
                             onInfoA = sinon.spy((ctx, info, state) =>
                                 t(noreply, state)
                             );
@@ -1149,7 +1159,7 @@ function describeGenServer() {
                             server = pid;
                         });
 
-                        it('uses the first matching handler', async function() {
+                        it('uses the first matching handler', async function () {
                             expect(ctx.send(server, t(0, 0))).to.equal(ok);
                             await wait();
                             expect(onInfoA).to.have.callCount(1);
@@ -1166,7 +1176,7 @@ function describeGenServer() {
                             expect(onInfoC).to.have.callCount(1);
                         });
 
-                        it('dies if no handler is found', async function() {
+                        it('dies if no handler is found', async function () {
                             const message = Symbol();
                             expect(ctx.send(server, message)).to.equal(ok);
                             await wait(10);
@@ -1175,32 +1185,32 @@ function describeGenServer() {
                     });
                 });
             });
-            describe('init returns a stop response', function() {
+            describe('init returns a stop response', function () {
                 let init;
                 let callbacks;
-                beforeEach(function() {
+                beforeEach(function () {
                     init = sinon.spy((ctx, arg) => t(stop, arg));
                     callbacks = gen_server.callbacks((server) => {
                         server.onInit(init);
                     });
                 });
-                it('ends the process', async function() {
+                it('ends the process', async function () {
                     const reason = crypto.randomInt(0xffffffff);
                     await expect(
                         gen_server.start(ctx, callbacks, l(reason))
                     ).to.eventually.matchPattern(t(error, reason));
                 });
             });
-            describe('init returns an unknown response', function() {
+            describe('init returns an unknown response', function () {
                 let init;
                 let callbacks;
-                beforeEach(function() {
+                beforeEach(function () {
                     init = sinon.spy((ctx, arg) => arg);
                     callbacks = gen_server.callbacks((server) => {
                         server.onInit(init);
                     });
                 });
-                it('ends the process', async function() {
+                it('ends the process', async function () {
                     await expect(
                         gen_server.start(ctx, callbacks, l())
                     ).to.eventually.matchPattern(
@@ -1209,8 +1219,8 @@ function describeGenServer() {
                 });
             });
         });
-        describe('when stopped', function() {
-            describe('by stop return', function() {
+        describe('when stopped', function () {
+            describe('by stop return', function () {
                 let init;
                 let onCast;
                 let onCall;
@@ -1219,7 +1229,7 @@ function describeGenServer() {
                 let server;
                 let response;
 
-                beforeEach(async function() {
+                beforeEach(async function () {
                     response = crypto.randomInt(0xffffffff);
                     init = sinon.spy((ctx) => t(ok, {}));
                     onCast = sinon.spy((ctx, [, reason], state) =>
@@ -1233,7 +1243,7 @@ function describeGenServer() {
                     );
                     terminate = sinon.spy((ctx, reason, state) => ok);
 
-                    const callbacks = gen_server.callbacks(function(server) {
+                    const callbacks = gen_server.callbacks(function (server) {
                         server.onInit(init);
                         server.onCall(t(stop, _), onCall);
                         server.onCall(t(stop_ignore, _), onCallIgnore);
@@ -1245,7 +1255,7 @@ function describeGenServer() {
                     server = pid;
                 });
 
-                it('calls terminate', async function() {
+                it('calls terminate', async function () {
                     const reason = crypto.randomInt(0xffffffff);
                     await gen_server.cast(
                         ctx,
@@ -1258,8 +1268,8 @@ function describeGenServer() {
                         t(error, reason)
                     );
                 });
-                describe('to a call', function() {
-                    it('can respond to the call while doing so', async function() {
+                describe('to a call', function () {
+                    it('can respond to the call while doing so', async function () {
                         const reason = crypto.randomInt(0xffffffff);
                         await expect(
                             gen_server.call(
@@ -1274,7 +1284,7 @@ function describeGenServer() {
                             t(error, reason)
                         );
                     });
-                    it('can choose not to respond to the call while doing so', async function() {
+                    it('can choose not to respond to the call while doing so', async function () {
                         const reason = crypto.randomInt(0xffffffff);
                         const callPromise = gen_server.call(
                             ctx,
@@ -1294,18 +1304,18 @@ function describeGenServer() {
                     });
                 });
             });
-            describe('by a bad response', function() {
+            describe('by a bad response', function () {
                 let init;
                 let onCast;
                 let terminate;
                 let server;
 
-                beforeEach(async function() {
+                beforeEach(async function () {
                     init = sinon.spy((ctx) => t(ok, {}));
                     onCast = sinon.spy((ctx, [, reason], state) => reason);
                     terminate = sinon.spy((ctx, reason, state) => ok);
 
-                    const callbacks = gen_server.callbacks(function(server) {
+                    const callbacks = gen_server.callbacks(function (server) {
                         server.onInit(init);
                         server.onCast(t(stop, _), onCast);
                         server.onTerminate(terminate);
@@ -1314,7 +1324,7 @@ function describeGenServer() {
                     const [, pid] = await gen_server.start(ctx, callbacks, l());
                     server = pid;
                 });
-                it('calls terminate', async function() {
+                it('calls terminate', async function () {
                     const reason = crypto.randomInt(0xffffffff);
                     await gen_server.cast(
                         ctx,
@@ -1328,7 +1338,7 @@ function describeGenServer() {
                     );
                 });
             });
-            describe('by exit signal', function() { });
+            describe('by exit signal', function () {});
         });
     });
 }
