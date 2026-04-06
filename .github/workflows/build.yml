@@ -22,7 +22,7 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
             - name: Install
-              run: pnpm ci
+              run: pnpm i
             - name: Test
               run: pnpm test
     release:
@@ -38,7 +38,7 @@ jobs:
               with:
                   node-version: 24.x
             - name: Install
-              run: pnpm ci
+              run: pnpm i
             - name: Test
               run: pnpm dlx c8 --reporter=lcovonly --reporter=text --include='packages/*/lib/**/*.js' --include='serializers/*/lib/**/*.js' --include='transports/*/lib/**/*.js' pnpm test
             - name: Report Coverage
