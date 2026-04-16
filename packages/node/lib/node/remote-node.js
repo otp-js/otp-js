@@ -1,4 +1,4 @@
-import { error } from '@otpjs/core/symbols';
+import { error } from '#symbols';
 import { OTPError, Pid, t } from '@otpjs/types';
 
 const invalid_source = Symbol.for('invalid_source');
